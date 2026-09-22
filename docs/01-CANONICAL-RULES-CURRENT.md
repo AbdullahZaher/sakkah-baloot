@@ -75,6 +75,43 @@ Project Winner is independent from Round Winner. All eligible projects of winnin
 ## Baloot
 Hokum only. Same player owns trump K+Q. Declare when playing the second K/Q before card commit. Optional. Raw 20, qaid 2, multiplier ×1. Independent of Project Winner. If inside Hundred, Baloot is absorbed and not separately scored.
 
+## Trick Legality — Canonical G-1 / G-2 / G-2P
+
+Ika predicate:
+- Hokum only.
+- Trick leader only.
+- Non-trump lead only.
+- The declared card must be the highest remaining card of its suit.
+- Declaration is optional; invalid declaration rejects the entire PLAY_CARD with zero state mutation.
+
+Ika Partner Exemption applies only when:
+- trick position is THIRD;
+- the player lacks the lead suit;
+- the partner opened the trick;
+- the partner is the current winner; and
+- the partner's lead card is an Ace or the partner declared valid Ika.
+
+When the exemption applies, the third player may play ANY_CARD, including trump.
+
+Partner-winning trump cases are position/card-origin dependent:
+- third player + partner's trump winning → no forced overtrump; any trump is legal;
+- fourth player + partner's trump winning → no forced overtrump; any trump is legal.
+
+Opponent-winning trump cases:
+- higher trump available → MUST_OVERTRUMP;
+- no higher trump but trump available → any trump is legal;
+- no trump → any non-trump/remaining legal card according to lead-suit rules.
+
+For non-trump lead with no lead suit:
+- third + partner winning + no Ika exemption + trump → MUST_TRUMP;
+- third + opponent winning + current winner non-trump + trump → MUST_TRUMP;
+- third + opponent winning + current winner trump + higher trump → MUST_OVERTRUMP;
+- third + opponent winning + current winner trump + no higher trump + trump → any trump;
+- fourth + partner winning → ANY_CARD;
+- fourth + opponent winning follows the same current-winner-card trump obligations.
+
+Locked Hokum affects leading only. A valid Ika declaration does not bypass the Locked lead restriction.
+
 ## Contract Resolution
 1. Project eligibility
 2. Project ownership
@@ -93,7 +130,13 @@ Use the exact approved contract-specific conversion table in RuleProfile. Do not
 
 ## Kaboot
 Derived; no DECLARE_KABOOT action.
-Normal: Hokum 25, Sun 44; one team wins all 8 tricks. Never multiply by contract multiplier.
+Normal: one team wins all 8 tricks.
+
+Dedicated Rule Profile table:
+- Hokum: Normal 25, Double 50, Triple 75, Four 100.
+- Sun: Normal 44, Double 88.
+- Values are explicit table entries; do not derive them at runtime from the generic contract multiplier.
+
 Reverse: Sun only; buyer is dealer-right under CCW mapping; buyer had Ace in original 8-card hand; buyer team wins 0 tricks; value 88; never doubles. Gahwa overrides Kaboot.
 
 ## Ika / Legal Moves
@@ -119,6 +162,9 @@ Kasho → HAND_CANCELLED → 0–0 → dealer rotates right → DEALING.
 Gahwa → MATCH_WIN → MATCH_FINISHED.
 Rule incident → INCIDENT_DETECTED → WAIT_FOR_DECISION → CONTINUE or CANCEL_HAND.
 Termination is idempotent.
+
+## Normal Successful Round Allocation
+On a successful contract, each team retains its own eligible card/project/Baloot allocation, converted per the contract-specific conversion table.
 
 ## Match
 Target 152 Qaid. Gahwa bypasses the 152 race. If both teams cross 152 in one completed round, higher final match total wins; exact equal final totals cause an extra deal.
