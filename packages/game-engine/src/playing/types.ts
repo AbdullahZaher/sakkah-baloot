@@ -1,4 +1,5 @@
-import type { CardId, PlayerId, Seat, Contract, HokumPlayMode } from "../rules/types.js";
+import type { CardId } from "../cards.js";
+import type { PlayerId, Seat, Contract, HokumPlayMode } from "../rules/types.js";
 import type { Card, Suit } from "../cards.js";
 
 export interface CompletedTrick {
