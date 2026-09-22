@@ -888,7 +888,7 @@ updateScores()
 checkMatchEnd()
         ↓
 if finished:
-    GAME_RESULT
+    MATCH_COMPLETE
 else:
     next dealer
     ↓
