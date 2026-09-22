@@ -1648,26 +1648,9 @@ This is the core engine contract.
 
 ---
 
-# 72. Open Decisions
+# 72. Frozen Domain Transition Decisions
 
-Before freezing:
-
-1. Exact event names.
-2. Exact event ordering.
-3. Whether system transitions are represented as actions or internal transitions.
-4. Exact timeout semantics.
-5. Exact lobby-to-game transition.
-6. Exact project declaration timing.
-7. Doubling transition timing.
-8. Round-end score transition structure.
-9. Dealer rotation.
-10. Match tie/end semantics.
-11. Persistence transaction strategy.
-12. Outbox implementation.
-13. Snapshot frequency.
-14. Replay storage format.
-15. State hash algorithm.
-16. Corruption recovery procedure.
+The domain event names, ordering, timeout semantics, project timing, doubling timing, dealer rotation, and match-end semantics are frozen by `docs/EVENT-CATALOG.md`, `docs/game/09-state-transitions.md`, and Rule Freeze v1. Persistence/outbox implementation details remain infrastructure work after the pure engine.
 
 ---
 
