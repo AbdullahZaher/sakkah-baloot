@@ -1899,6 +1899,6 @@ No duplicate gameplay rules should exist in the mobile UI or networking layer.
 
 ## Document Status
 
-**Current status:** Draft for Review — NOT FROZEN
+**Current status:** FROZEN — IMPLEMENTATION AUTHORIZED
 
 Final approval should occur only after the complete foundation specification has been reviewed together.
