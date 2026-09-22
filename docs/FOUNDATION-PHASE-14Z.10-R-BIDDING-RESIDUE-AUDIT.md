@@ -1,6 +1,6 @@
 # Phase 14.Z.10-R — Bidding Residue Audit
 
-**Status:** COMPLETE — PARTIALLY CLOSED  
+**Status:** CLOSED FOR TRANSCRIBED BOUNDARIES — SECOND-ROUND NON-ACE PRIORITY REMAINS STATE-MACHINE DEFINED  
 **Branch:** `phase-14z10r-canonical-reconciliation`
 
 ## Closed / already canonical
@@ -60,3 +60,15 @@ but the Owner Decision Register still lists timeout policy as open. Therefore th
 **Bidding residue = PARTIALLY CLOSED.**
 
 No new priority or timeout behavior is invented by this audit.
+
+
+## Phase 14.Z.11 closure
+
+Closed in the current project profile:
+- Ace → Sun priority is dealer-right in both bidding rounds.
+- valid purchase finalization is atomic;
+- purchase closes the bidding window and waives Kasho;
+- PASS remains one wire action;
+- no third bidding round after exposed Ace.
+
+No broader second-round priority is inferred beyond the explicitly frozen Ace → Sun rule.
