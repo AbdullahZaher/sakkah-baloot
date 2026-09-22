@@ -79,20 +79,62 @@ export const SAUDI_BASELINE_CCW_V1 = {
     buyerFailureAllocation: "FULL_CONTRACT_ROUND_VALUE_TO_OPPONENT",
   },
   conversion: { mode: "CONTRACT_SPECIFIC_TABLE", floatingPoint: false, exactTableRequired: true },
-  kaboot: {
-    normal: { HOKUM: 25, SUN: 44 },
-    escalation: {
-      HOKUM: { NORMAL: 25, DOUBLE: 25, TRIPLE: 25, FOUR: 25 },
-      SUN: { NORMAL: 44, DOUBLE: 44 },
+    kaboot: {
+      normal: { HOKUM: 25, SUN: 44 },
+      escalation: {
+        HOKUM: { NORMAL: 25, DOUBLE: 50, TRIPLE: 75, FOUR: 100 },
+        SUN: { NORMAL: 44, DOUBLE: 88 },
+      },
+      reverse: {
+        enabled: true, contract: "SUN", value: 88,
+        buyerRelativeSeat: "DEALER_RIGHT", originalHandMustContainAce: true,
+        buyerTeamTricks: 0, doubles: false,
+      },
+      gahwaOverridesKaboot: true, derivedOnly: true,
     },
-    reverse: {
-      enabled: true, contract: "SUN", value: 88,
-      buyerRelativeSeat: "DEALER_RIGHT", originalHandMustContainAce: true,
-      buyerTeamTricks: 0, doubles: false,
+  ika: {
+    contract: "HOKUM",
+    optional: true,
+    leaderOnly: true,
+    nonTrumpOnly: true,
+    condition: "HIGHEST_REMAINING_CARD_OF_SUIT",
+    representedOnCardPlayed: true,
+    wrongDeclarationRejectsAction: true,
+    partnerExemption: {
+      enabled: true,
+      trickPosition: "THIRD",
+      partnerMustHaveOpenedTrick: true,
+      partnerMustBeCurrentWinner: true,
+      playerMustLackLeadSuit: true,
+      qualifyingLead: ["ACE", "VALID_IKA"],
+      legalBehavior: "ANY_CARD",
     },
-    gahwaOverridesKaboot: true, derivedOnly: true,
   },
-  ika: { contract: "HOKUM", optional: true, representedOnCardPlayed: true, wrongDeclarationRejectsAction: true },
+  trickLegality: {
+    trumpLed: {
+      thirdPartnerWinning: "ANY_TRUMP",
+      thirdOpponentWinningHigherAvailable: "MUST_OVERTRUMP",
+      thirdOpponentWinningNoHigherTrump: "ANY_TRUMP",
+      fourthPartnerWinning: "ANY_TRUMP",
+      fourthOpponentWinningHigherAvailable: "MUST_OVERTRUMP",
+      fourthOpponentWinningNoHigherTrump: "ANY_TRUMP",
+    },
+    nonTrumpLedNoLeadSuit: {
+      thirdPartnerWinningExempt: "ANY_CARD",
+      thirdPartnerWinningWithTrump: "MUST_TRUMP",
+      thirdOpponentWinningCurrentNonTrumpWithTrump: "MUST_TRUMP",
+      thirdOpponentWinningCurrentTrumpHigherAvailable: "MUST_OVERTRUMP",
+      thirdOpponentWinningCurrentTrumpNoHigher: "ANY_TRUMP",
+      fourthPartnerWinning: "ANY_CARD",
+      fourthOpponentWinningCurrentNonTrumpWithTrump: "MUST_TRUMP",
+      fourthOpponentWinningCurrentTrumpHigherAvailable: "MUST_OVERTRUMP",
+      fourthOpponentWinningCurrentTrumpNoHigher: "ANY_TRUMP",
+    },
+    lockedHokum: {
+      affectsLeadingOnly: true,
+      validIkaDoesNotBypass: true,
+    },
+  },
   kasho: {
     bushatRanks: ["7","8","9"], trumpNineAllowed: true,
     explicitDeclaration: true, anyEligiblePlayerMayDeclare: true,
@@ -104,3 +146,5 @@ export const SAUDI_BASELINE_CCW_V1 = {
 ```
 
 **Critical:** the exact approved contract-specific conversion table must be stored explicitly; never replace it with generic division or floating-point rounding.
+
+**Trick-legality canonicalization:** G-1/G-2/G-2P from Phase 14.Z.3 are represented explicitly above. The legal-move specification remains the behavioral source; this profile stores the configuration/predicate inputs only.
