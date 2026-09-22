@@ -61,7 +61,6 @@ export function declareKasho(
 export function resolveKasho(
   declaration: KashoDeclaration,
   dealerSeat: Seat,
-  processedDeclarationIds: readonly string[] = [],
 ): KashoResolution {
   const nextDealerSeat = ({
     NORTH: "WEST",
