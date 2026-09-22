@@ -1,7 +1,7 @@
 import type { Card, CardId, Suit } from "../cards.js";
 import { isTrump } from "../cards.js";
 import type { Contract, Seat, TeamId } from "../rules/types.js";
-import { partnerOfSeat, teamOfSeat } from "../rules/profile.js";
+import { teamOfSeat } from "../rules/profile.js";
 
 export interface BalootDeclaration {
   readonly declarationId: string;
@@ -14,7 +14,7 @@ export interface BalootDeclaration {
 }
 
 export function isBalootPair(cards: readonly Card[], contract: Contract, trumpSuit: Suit | null): cards is readonly [Card, Card] {
-  if (contract !== "HOKUM" || trumpSuit === null) return false;
+  if (cards.length !== 2 || contract !== "HOKUM" || trumpSuit === null) return false;
   const trumpCards = cards.filter((c) => isTrump(c, contract, trumpSuit));
   const hasKing = trumpCards.some((c) => c.rank === "K");
   const hasQueen = trumpCards.some((c) => c.rank === "Q");
