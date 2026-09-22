@@ -5,8 +5,8 @@ export const SAUDI_BASELINE_CCW_V1 = {
   direction: "COUNTER_CLOCKWISE",
   match: {
     targetQaid: 152,
-    bothCrossPolicy: "HIGHER_FINAL_TOTAL",
-    equalFinalTotalPolicy: "EXTRA_DEAL",
+    // OPEN — present as a profile candidate only; Owner has not frozen the both-cross-152 policy.\n    bothCrossPolicy: "HIGHER_FINAL_TOTAL",
+    // OPEN — present as a profile candidate only; Owner has not frozen equal-final-total handling.\n    equalFinalTotalPolicy: "EXTRA_DEAL",
     doubledTiePolicy: "INITIAL_DOUBLER_LOSES",
   },
   dealing: {
@@ -40,7 +40,7 @@ export const SAUDI_BASELINE_CCW_V1 = {
       closesWhen: "BUYER_RAISES_FINAL_CARDS",
       afterTrickStarts: false,
     },
-    sun: { chain: ["NORMAL", "DOUBLE"] },
+    sun: {\n      chain: ["NORMAL", "DOUBLE"],\n      // OPEN — exact Sun Double open/close fields are not yet Owner-frozen.\n    },
   },
   hokumPlayMode: {
     normal: "OPEN",
@@ -64,8 +64,8 @@ export const SAUDI_BASELINE_CCW_V1 = {
         HUNDRED: { raw: 100, qaid: 20 }, FOUR_HUNDRED: { raw: 200, qaid: 40 },
       },
     },
-    multiplier: { NORMAL: 1, DOUBLE: 2, TRIPLE: 3, FOUR: 4, BALOOT: 1 },
-    tieBreak: "DEALER_RELATIVE_SEAT",
+    // OPEN — numeric Triple/Four project multipliers are research/profile candidates, not Owner-frozen behavior.\n    multiplier: { NORMAL: 1, DOUBLE: 2, TRIPLE: 3, FOUR: 4, BALOOT: 1 },
+    // OPEN — project comparison/coexistence edge semantics remain under Owner review.\n    tieBreak: "DEALER_RELATIVE_SEAT",
   },
   baloot: {
     enabledContracts: ["HOKUM"], samePlayerRequired: true,
