@@ -176,3 +176,65 @@ Purchaser-wins-tie, initial-doubler-loses, and both-cross-152 rules all suggeste
 
 Each-side-keeps-own-share is implied but never written. Requires one explicit Owner sentence. **Status: OPEN — DOCUMENTATION CONFIRMATION.**
 
+
+---
+
+## Phase 14.Z.3 Canonicalization Addendum — 2026-09-22
+
+The following entries supersede the stale/open statuses in earlier historical appendices. Historical records remain preserved for audit provenance.
+
+### C-03 — Kaboot with doubling
+**Current Status: CLOSED BY OWNER DECISION — V-04 = A.**
+
+Canonical dedicated table:
+- Hokum: Normal 25 / Double 25 / Triple 25 / Four 25
+- Sun: Normal 44 / Double 44
+- Reverse Kaboot: 88, independent special outcome, never doubles
+- Gahwa overrides Kaboot
+
+No runtime multiplication is permitted. RD-09 has been reconciled to V-04=A.
+
+### C-16 — V-06b
+**Current Status: OPEN — TRANSCRIPTION/LEVEL-SCOPE.**
+
+Headline remains: Initial Doubler Loses an exact doubled-contract tie. Extension to Triple/Four remains explicitly OPEN and is not inferred.
+
+### C-17 — V-11
+**Current Status: CLOSED — TRANSCRIBED.**
+
+Canonical sentence is now present in 01-CANONICAL-RULES-CURRENT.md: on a successful contract, each team retains its own eligible card/project/Baloot allocation, converted per the contract-specific conversion table.
+
+### C-18 — Kasho dealer transition
+**Current Status: CLOSED BY OWNER DECISION — ROTATE_RIGHT.**
+
+Use the shared relative-seat utility; no numeric seat arithmetic.
+
+### C-19 — Ika partner exemption
+**Current Status: CLOSED BY OWNER DECISION.**
+
+Canonical predicate and result are now defined in the owner decision register, Rule Profile, canonical rules, and legal-move specification.
+
+### C-20 — Trick legality G-1
+**Current Status: CLOSED BY OWNER DECISION.**
+
+Partner-winning trump cases are position/card-origin dependent. No forced overtrump against a partner's winning trump. Opponent-winning trump requires overtrump only when a higher trump is available.
+
+### C-21 — Trick legality G-2
+**Current Status: CLOSED BY OWNER DECISION.**
+
+Ika requires Hokum + leader + non-trump + highest remaining card of that suit.
+
+### C-22 — Trick legality G-2P
+**Current Status: CLOSED BY OWNER DECISION.**
+
+Third-player Ika Partner Exemption requires partner-opened trick, partner winning, no lead suit, and partner lead Ace or valid Ika; result is ANY_CARD including trump.
+
+### C-23 — Trick legality G-3
+**Current Status: CLOSED AS SPECIFICATION REQUIREMENT.**
+
+The final test specification now includes the partner/trump/Ika/Locked combinations identified by the Phase 14.Z.2 forensic audit.
+
+### Provenance policy
+These closures are Owner Decisions recorded on 2026-09-22. Web research remains evidence, not authority. The canonical chain is:
+
+Source Evidence -> Conflict -> Rules Owner Decision -> Canonical Rule -> Rule Profile -> Tests
