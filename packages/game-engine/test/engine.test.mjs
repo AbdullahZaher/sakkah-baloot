@@ -13,6 +13,7 @@ import {
   resolveTrick,
   evaluateMatchEnd,
   projectMultiplier,
+  scoreRound,
   teamOfSeat,
   nextCounterClockwise,
 } from "../dist/index.js";
@@ -160,4 +161,64 @@ test("seat direction is canonical counter-clockwise", () => {
   assert.equal(nextCounterClockwise("NORTH"), "WEST");
   assert.equal(nextCounterClockwise("WEST"), "SOUTH");
   assert.equal(teamOfSeat("NORTH"), "NORTH_SOUTH");
+});
+
+
+test("Sun scoring conserves 130 raw points and converts to 26 Qaid", () => {
+  const tricks = [];
+  const seats = ["NORTH","WEST","SOUTH","EAST"];
+  const groups = [
+    ["CLUBS-A","CLUBS-10","CLUBS-K","CLUBS-Q"],
+    ["CLUBS-J","CLUBS-9","CLUBS-8","CLUBS-7"],
+    ["DIAMONDS-A","DIAMONDS-10","DIAMONDS-K","DIAMONDS-Q"],
+    ["DIAMONDS-J","DIAMONDS-9","DIAMONDS-8","DIAMONDS-7"],
+    ["HEARTS-A","HEARTS-10","HEARTS-K","HEARTS-Q"],
+    ["HEARTS-J","HEARTS-9","HEARTS-8","HEARTS-7"],
+    ["SPADES-A","SPADES-10","SPADES-K","SPADES-Q"],
+    ["SPADES-J","SPADES-9","SPADES-8","SPADES-7"],
+  ];
+  for (let i = 0; i < groups.length; i++) {
+    const plays = groups[i].map((id, j) => ({
+      playerId: "p" + j,
+      seat: seats[j],
+      card: card(id),
+      ikaDeclared: false,
+      sequence: j + 1,
+    }));
+    tricks.push({ trickNumber: i + 1, leaderSeat: "NORTH", plays, winnerSeat: "NORTH" });
+  }
+  const score = scoreRound({
+    contract: "SUN",
+    trumpSuit: null,
+    purchaserSeat: "NORTH",
+    dealerSeat: "EAST",
+    buyerOriginallyHeldAce: true,
+    escalation: "NORMAL",
+    tricks,
+    projectRaw: { NORTH_SOUTH: 0, EAST_WEST: 0 },
+    projectQaid: { NORTH_SOUTH: 0, EAST_WEST: 0 },
+    balootRaw: { NORTH_SOUTH: 0, EAST_WEST: 0 },
+    balootQaid: { NORTH_SOUTH: 0, EAST_WEST: 0 },
+  });
+  assert.equal(score.cardRaw.NORTH_SOUTH, 130);
+  assert.equal(score.cardRaw.EAST_WEST, 0);
+  assert.equal(score.convertedQaid.NORTH_SOUTH, 26);
+  assert.equal(score.finalQaid.NORTH_SOUTH, 26);
+});
+
+test("overtrump is mandatory when opponent trump is beatable", () => {
+  const state = legalState({
+    currentPlayerId: "pS",
+    hands: {
+      pN: hand("CLUBS-A"),
+      pE: hand("HEARTS-9"),
+      pS: hand("HEARTS-J","HEARTS-8"),
+      pW: hand("SPADES-7"),
+    },
+    currentTrick: [
+      { playerId: "pN", seat: "NORTH", card: card("CLUBS-A"), ikaDeclared: false, sequence: 1 },
+      { playerId: "pE", seat: "EAST", card: card("HEARTS-9"), ikaDeclared: false, sequence: 2 },
+    ],
+  });
+  assert.deepEqual(getLegalMoves(state, "pS").map((m) => m.cardId), ["HEARTS-J"]);
 });
