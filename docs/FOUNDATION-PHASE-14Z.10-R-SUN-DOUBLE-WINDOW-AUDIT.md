@@ -1,6 +1,6 @@
 # Phase 14.Z.10-R — Sun Double Window Audit
 
-**Status:** COMPLETE — OPEN
+**Status:** CLOSED — OWNER/SAUDI BASELINE RECONCILIATION
 **Branch:** phase-14z10r-canonical-reconciliation
 
 ## Current profile
@@ -24,3 +24,18 @@ The semantic candidate is documented, but the Rule Profile schema is incomplete.
 Sun Double semantic window = documented candidate / not Freeze-authorized.
 
 No production behavior is promoted by this audit.
+
+
+## Phase 14.Z.11 closure
+
+The Rule Profile now contains the complete semantic window:
+
+- OPEN = CONTRACT_FINALIZED
+- CLOSE = FINAL_CARDS_RAISED
+- after card commit = false
+- after trick start = false
+- eligibility = doubler team Qaid ≤100 and opponent team Qaid >100
+- Sun supports DOUBLE only
+
+The eligibility condition is consistent with the Saudi baseline rules. citeturn4search0
+
