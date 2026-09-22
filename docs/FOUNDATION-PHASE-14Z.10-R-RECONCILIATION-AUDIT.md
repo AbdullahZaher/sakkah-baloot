@@ -62,3 +62,17 @@ Before merging this branch:
 5. Run the final Rule Freeze audit.
 
 **Production implementation remains unauthorized until the Rule Freeze Gate passes.**
+
+
+## 14.Z.10-R review correction
+
+The first branch audit identified one remaining architecture-consistency issue in `09-state-transitions.md`: its lifecycle diagram still presented `GAME_CREATED`, `COMPLETE_DEAL`, and `MATCH_END_CHECK` alongside observable phases.
+
+That was corrected on commit `84b1411c334db6a109ea4fdd56166c858901da71`:
+
+- observable lifecycle now uses `WAITING_FOR_PLAYERS`, `SEATING`, `ROUND_STARTING`, `DEALING`, `BIDDING`, `CONTRACT_SELECTED`, `PROJECT_DECLARATION`, `PLAYING`, `SCORING`, `ROUND_COMPLETE`, and `MATCH_COMPLETE`;
+- `MATCH_END_CHECK` is explicitly internal;
+- `COMPLETE_DEAL` is explicitly internal;
+- the continue path is `ROUND_COMPLETE → ROUND_STARTING`.
+
+This is a documentation/architecture reconciliation only. No gameplay implementation was introduced.
