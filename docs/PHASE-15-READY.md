@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-22  
 **Branch:** `phase-14z10r-canonical-reconciliation`  
-**Status:** READY FOR PHASE 15 — PURE DOMAIN ENGINE
+**Status:** PHASE 15 IN IMPLEMENTATION — PURE DOMAIN ENGINE
 
 ## 1. Repository Integrity Audit
 
@@ -56,8 +56,28 @@ The one commit currently ahead on `main` is `fd1533b904ea83effb1e6268ddccf75e10b
 
 Transport, persistence, Redis, WebSocket, and UI integration are explicitly deferred until the pure engine passes its invariant suite.
 
-## 5. Gate Result
+## 5. Current Implementation Progress
 
-**PHASE 15: AUTHORIZED TO START.**
+Implemented in the pure engine:
+
+- 15.1 Rule Profile / constants
+- 15.2 Card + deck model
+- 15.3 Deal state machine
+- 15.4 Bidding + Ashkal completion
+- 15.5 Escalation state
+- 15.6 Project declaration/resolution + Baloot declaration
+- 15.7 Legal move generation
+- 15.8 Trick resolution / authoritative card play
+- 15.9 Raw-first scoring + Qaid conversion + match-end evaluation
+
+Remaining Phase 15 gates:
+
+- replay/event reducer
+- exhaustive invariant and regression tests
+- final pure-engine typecheck/build verification
+
+**PHASE 15: IMPLEMENTATION ACTIVE.**
+
+Any newly discovered rule ambiguity is not to be solved by implementation guesswork. It must be recorded as an owner decision and, if it changes a frozen rule, requires a new Rule Freeze revision.
 
 Any newly discovered rule ambiguity is not to be solved by implementation guesswork. It must be recorded as an owner decision and, if it changes a frozen rule, requires a new Rule Freeze revision.
