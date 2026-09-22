@@ -1,7 +1,7 @@
 # صكّة بلوت — Scoring System Specification
 
 **Document:** `docs/game/06-scoring.md`  
-**Status:** Draft for Review — NOT FROZEN  
+**Status:** FROZEN — IMPLEMENTATION AUTHORIZED  
 **Phase:** Foundation / Game Domain  
 **Depends on:** `01-game-rules.md`, `02-card-system.md`, `03-dealing.md`, `04-bidding.md`, `05-playing.md`  
 **Next dependent documents:** Game State, Actions, State Transitions
