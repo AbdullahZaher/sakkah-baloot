@@ -30,7 +30,7 @@ No React Native, Expo, Supabase, PostgreSQL, Redis, WebSocket, or UI dependencie
 
 Current branch comparison against `main`:
 
-- Ahead: 192 commits
+- Ahead: 217 commits
 - Behind: 1 commit
 - Merge base: `2773c69b375377e46f584c3f6ad6e1ccbd925d27`
 
@@ -75,6 +75,8 @@ Remaining Phase 15 gates:
 - replay/event reducer
 - exhaustive invariant and regression tests
 - final pure-engine typecheck/build verification
+
+**Latest pure-engine CI:** PASS — `npm run typecheck` on the Phase 15 branch.
 
 **PHASE 15: IMPLEMENTATION ACTIVE.**
 
