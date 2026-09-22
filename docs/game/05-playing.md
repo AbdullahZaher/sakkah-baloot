@@ -1751,20 +1751,9 @@ A replay that fails validation must not be treated as authoritative.
 
 ---
 
-# 72. Open Decisions
+# 72. Frozen Playing Decisions
 
-The following MUST be finalized:
-
-1. Exact first trick leader.
-2. Exact counter-clockwise/seat convention.
-3. Any special follow-suit exceptions.
-4. Exact void/Trump rules.
-5. Any project-related play exceptions.
-6. Timeout automatic-play policy.
-7. Whether timeout selection is deterministic.
-8. Exact final trick bonus boundary.
-9. Any variant-specific trick behavior.
-10. Exact Rule Profile version.
+The historical playing-rule open decisions are closed by Rule Freeze v1. The implementation must use the frozen counter-clockwise seat convention, follow-suit/cutting/overtrump rules, Ika semantics, locked-Hokum lead restriction, timeout policy, trick bonus boundary, and Rule Profile. No undocumented play variant may be introduced.
 
 ---
 
