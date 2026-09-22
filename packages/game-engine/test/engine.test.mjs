@@ -20,6 +20,9 @@ import {
   canEscalate,
   escalate,
   closeEscalation,
+  declareProject,
+  resolveProjects,
+  replay,
 } from "../dist/index.js";
 
 const card = (id) => DECK.find((c) => c.id === id);
@@ -563,4 +566,61 @@ test("closing escalation freezes the final locked play mode", () => {
   assert.equal(closed.window, "CLOSED");
   assert.equal(closed.lockedPlayMode, "LOCKED");
   assert.equal(canEscalate(closed), false);
+});
+
+
+test("project overlap is rejected and exact ties use dealer-relative counter-clockwise priority", () => {
+  const seraN = detectProjects(hand("CLUBS-7","CLUBS-8","CLUBS-9"), "SUN", null, "NORTH")[0];
+  const seraE = detectProjects(hand("DIAMONDS-7","DIAMONDS-8","DIAMONDS-9"), "SUN", null, "EAST")[0];
+  assert.ok(seraN && seraE);
+  const first = declareProject(seraN, "p1", "PLAYING", 1, 0, []);
+  assert.throws(
+    () => declareProject(seraN, "p2", "PLAYING", 1, 0, [first]),
+    /Project card overlap/,
+  );
+  const second = declareProject(seraE, "p2", "PLAYING", 1, 0, [first]);
+  const resolution = resolveProjects([first, second], "NORTH");
+  assert.equal(resolution.projectWinnerTeamId, "EAST_WEST");
+});
+
+test("project resolution awards every eligible project owned by the winning team", () => {
+  const n1 = detectProjects(hand("CLUBS-7","CLUBS-8","CLUBS-9"), "SUN", null, "NORTH")[0];
+  const n2 = detectProjects(hand("DIAMONDS-7","DIAMONDS-8","DIAMONDS-9"), "SUN", null, "NORTH")[0];
+  const e = detectProjects(hand("HEARTS-7","HEARTS-8","HEARTS-9","HEARTS-10"), "SUN", null, "EAST")[0];
+  assert.ok(n1 && n2 && e);
+  const d1 = declareProject(n1, "n1", "PLAYING", 1, 0, []);
+  const d2 = declareProject(n2, "n2", "PLAYING", 1, 0, [d1]);
+  const de = declareProject(e, "e1", "PLAYING", 1, 0, [d1,d2]);
+  const resolution = resolveProjects([d1,d2,de], "NORTH");
+  assert.equal(resolution.projectWinnerTeamId, "EAST_WEST");
+  assert.deepEqual(resolution.awardedProjectIds, [e.id]);
+  assert.deepEqual(resolution.discardedProjectIds, [n1.id,n2.id]);
+});
+
+test("raw conversion complement totals remain canonical for both contracts", () => {
+  const sunPairs = [[0,130],[34,96],[65,65],[66,64],[100,30]];
+  for (const [a,b] of sunPairs) {
+    assert.equal(convertRawToQaid("SUN", a) + convertRawToQaid("SUN", b), 26);
+  }
+  const hokumPairs = [[0,162],[34,128],[81,81],[86,76],[120,42]];
+  for (const [a,b] of hokumPairs) {
+    assert.equal(convertRawToQaid("HOKUM", a) + convertRawToQaid("HOKUM", b), 16);
+  }
+});
+
+test("replay is deterministic and duplicate event IDs are idempotent", () => {
+  const all = DECK.slice();
+  const hands = {
+    pN: all.slice(0,8), pE: all.slice(8,16), pS: all.slice(16,24), pW: all.slice(24,32),
+  };
+  const initial = legalState({
+    hands,
+    contract: "SUN",
+    trumpSuit: null,
+    currentPlayerId: "pN",
+  });
+  const event = { type: "CARD_PLAYED", eventId: "evt-1", playerId: "pN", cardId: hands.pN[0].id, ikaDeclared: false };
+  const once = replay(initial, [event]);
+  const twice = replay(initial, [event,event]);
+  assert.deepEqual(twice, once);
 });
