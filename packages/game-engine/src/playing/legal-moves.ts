@@ -4,13 +4,13 @@ import type { PlayerId, Seat } from "../rules/types.js";
 import { partnerOfSeat, teamOfSeat } from "../rules/profile.js";
 import type { GameState, LegalMove, MoveConstraint, TrickPlay } from "./types.js";
 
-function leadSuit(state: GameState): Suit | null {
+export function getLeadSuit(state: GameState): Suit | null {
   return state.currentTrick[0]?.card.suit ?? null;
 }
 
-function winnerPlay(state: GameState): TrickPlay | null {
+export function getCurrentWinner(state: GameState): TrickPlay | null {
   if (state.currentTrick.length === 0) return null;
-  const led = leadSuit(state)!;
+  const led = getLeadSuit(state)!;
   let winner = state.currentTrick[0]!;
   for (let i = 1; i < state.currentTrick.length; i += 1) {
     const candidate = state.currentTrick[i]!;
@@ -74,7 +74,7 @@ export function getLegalMoves(state: GameState, playerId: PlayerId): LegalMove[]
   if (!hand) throw new Error("Unknown player");
   if (hand.length === 0) return [];
 
-  const led = leadSuit(state);
+  const led = getLeadSuit(state);
   const playerSeat = state.players[playerId]!;
   const leader = state.currentTrick[0];
   const position = state.currentTrick.length;
