@@ -10,3 +10,5 @@ export * from "./playing/types.js";
 export * from "./playing/legal-moves.js";
 export * from "./projects/baloot.js";
 export * from "./playing/trick-engine.js";
+export * from "./scoring/scoring-types.js";
+export * from "./scoring/scoring-engine.js";
