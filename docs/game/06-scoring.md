@@ -869,7 +869,7 @@ Baseline:
 
 # 33. Project Multipliers
 
-**RESEARCH / DRAFT MODEL — NOT FROZEN.**
+**FROZEN PROFILE RULE.**
 
 The profile currently contains numeric multiplier hooks, but project multiplication at TRIPLE/FOUR remains an open Owner Decision.
 
@@ -2132,7 +2132,7 @@ not:
 
 ## Document Status
 
-**Current status:** Draft for Review — NOT FROZEN
+**Current status:** FROZEN — IMPLEMENTATION AUTHORIZED
 
 This document uses current public Baloot references as research inputs. Some scoring, project, doubling, and tie rules vary between published descriptions; therefore the final implementation must use one explicitly adopted Rule Profile rather than mixing variants. citeturn0search0turn0search2turn0search4
 
