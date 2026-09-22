@@ -14,7 +14,7 @@
 | V-06b | Doubled exact tie | CLOSED headline — initial doubler loses | Triple/Four scope open |
 | V-07 | Counting-side terminology | OPEN / avoid generic concept | No |
 | V-08 | Project raw-value table | OPEN provenance/closure | No |
-| V-09 | Reverse Kaboot trigger | CLOSED in current project protocol/profile | Verify final transcription before Freeze |
+| V-09 | Reverse Kaboot trigger | CLOSED in current project protocol/profile | Yes, after Rule Freeze |
 | V-11 | Successful allocation | CLOSED — each team retains own eligible allocation | Yes, after Rule Freeze |
 | C-01 | Hokum doubling window | Project-specific rule recorded; broader source conflict remains | No global generalization |
 | C-04 | Kasho violation matrix | Baseline closed; full violation decision matrix open | No |
@@ -68,3 +68,12 @@
 11. Only then authorize production engine implementation.
 
 **Important:** this matrix is a working audit artifact. It does not itself close any Owner Decision.
+
+
+## Latest audit closure
+
+V-09 has now been independently reconciled against RD-09 and the Saudi Rule Profile. Its predicate and 88-Qaid special award are consistent and closed for transcription.
+
+V-08 remains OPEN: profile numeric values exist, but explicit Owner provenance for the complete raw-value table and its interaction semantics is not yet closed.
+
+Bidding, timeout, incident, and first-dealer audits preserve OPEN items rather than inventing behavior.
