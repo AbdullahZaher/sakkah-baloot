@@ -2158,3 +2158,22 @@ not:
 This document uses current public Baloot references as research inputs. Some scoring, project, doubling, and tie rules vary between published descriptions; therefore the final implementation must use one explicitly adopted Rule Profile rather than mixing variants. citeturn0search0turn0search2turn0search4
 
 Final approval should occur only after the complete foundation specification has been reviewed together.
+
+
+# Phase 14.Z.12 — Final Freeze Scoring Closure
+
+## V-02b Complement Invariant
+
+Successful allocation is authoritative per-team conversion using V-02-A. For validation only:
+
+- Sun converted totals conserve to 26 Qaid.
+- Hokum converted totals conserve to 16 Qaid.
+
+The opposing-side value may be checked as contractTotalQaid minus the independently converted own-side value. The resolver must not use complement arithmetic as a replacement for independent conversion.
+
+## Match-End Equal Total
+
+After a completed round:
+- both above 152 with unequal totals → higher final total wins;
+- both exactly equal and both satisfy the target → EXTRA_DEAL;
+- match evaluation is atomic after round scoring.
