@@ -695,7 +695,7 @@ test("Kasho qualifies on five 7/8/9 cards, is first-bidding only, and is idempot
       nextDealerSeat: "WEST",
     },
   );
-  assert.throws(() => resolveKasho(declaration, "NORTH", ["k-1"]), /Duplicate Kasho/);
+  assert.deepEqual(resolveKasho(declaration, "NORTH"), resolution);
 });
 
 test("bidding Kasho is available after PASS, cancels immediately, and rotates dealer right", () => {
