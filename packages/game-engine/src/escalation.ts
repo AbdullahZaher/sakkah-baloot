@@ -1,4 +1,4 @@
-import type { Contract, EscalationLevel, Seat } from "../rules/types.js";
+import type { Contract, EscalationLevel, Seat } from "./rules/types.js";
 
 export type EscalationWindow =
   | "CLOSED"
