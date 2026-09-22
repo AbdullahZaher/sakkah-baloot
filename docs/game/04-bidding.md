@@ -1,7 +1,7 @@
 # صكّة بلوت — Bidding System Specification
 
 **Document:** `docs/game/04-bidding.md`  
-**Status:** Draft for Review — NOT FROZEN  
+**Status:** FROZEN — IMPLEMENTATION AUTHORIZED  
 **Phase:** Foundation / Game Domain  
 **Depends on:** `01-game-rules.md`, `02-card-system.md`, `03-dealing.md`  
 **Next dependent documents:** Playing, Scoring, Game State, Actions, State Transitions
