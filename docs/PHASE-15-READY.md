@@ -72,11 +72,13 @@ Implemented in the pure engine:
 
 Remaining Phase 15 gates:
 
-- replay/event reducer
-- exhaustive invariant and regression tests
-- final pure-engine typecheck/build verification
+- authoritative bidding edge semantics still requiring explicit state inputs: second-round Ace→Sun priority, PASS_FINAL/Kasho integration, and timeout policy
+- authoritative incident/cancellation state machine
+- final pure-engine typecheck/build verification after the complete bidding/incident closure
 
 **Latest pure-engine CI:** PASS — `npm run typecheck` + `npm test` on the Phase 15 branch.
+
+The regression suite now covers legal-move edge cases, Ika validation/mutation safety, project overlap/tie/ownership resolution, Sun/Hokum Qaid complement invariants, Kaboot/Reverse Kaboot, escalation transitions, and replay idempotency/determinism.
 
 **PHASE 15: IMPLEMENTATION ACTIVE.**
 
