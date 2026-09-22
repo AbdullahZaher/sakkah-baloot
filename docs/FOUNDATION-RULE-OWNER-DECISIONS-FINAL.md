@@ -172,3 +172,183 @@ The legal-move test matrix is expanded to cover partner-winning trump-led cases,
 ## Still OPEN (no owner input in this phase)
 
 V-01? No — V-01 closed earlier (≥65/≥81, tie buyer succeeds; in `01`+profile). OPEN: exact conversion table values; complement/opposing-side formula; timeout policy; first-dealer mechanism; Sun-double window fields; incident policy block; full Kasho violation matrix beyond baseline; V-06b Triple/Four scope; RD-11…RD-18 areas (Ika-Ace/bidding-formula conflation, cutting/dag, Kawesh/Saneen, exposed-Ace specials beyond no-redeal, Sakkah deviations, Hokum↔Sun edges, negative floor, escalation-project interplay).
+
+## V-02 — Qaid Conversion
+
+**Status:** CLOSED — Owner Decision V-02-A.
+
+**Canonical conversion rule:**
+
+### Hokum
+
+Convert raw points to the nearest ten using this exact boundary rule:
+
+- remainder 0–5: round downward;
+- remainder 6–9: round upward;
+- divide the resulting multiple of ten by 10.
+
+Examples:
+- 34 → 3
+- 35 → 3
+- 36 → 4
+- 81 → 8
+- 85 → 8
+- 86 → 9
+- 162 → 16
+
+### Sun
+
+Convert raw points using the approved ten-point boundary rule that preserves an exact 5:
+
+- remainder 1–4: round downward to the lower multiple of ten;
+- remainder 5: preserve the five;
+- remainder 6–9: round upward to the next multiple of ten;
+- divide the resulting multiple of five by 5.
+
+Examples:
+- 34 → 6
+- 35 → 7
+- 36 → 8
+- 64 → 12
+- 65 → 13
+- 66 → 14
+- 130 → 26
+
+Zero converts to zero.
+
+This is a finite integer scoring rule. No floating point, floor-only, ceiling-only, or generic `raw / 5` / `raw / 10` implementation is canonical.
+
+**V-02b disposition:** the Owner has not separately approved a fixed-total complement formula for the opposing side. The canonical successful-allocation rule remains V-11: each team retains its own eligible allocation, converted by the approved contract table. Do not invent a complement transformation.
+
+**Provenance:** OWNER_DECISION — V-02-A, recorded 2026-09-22.
+
+## V-08 — Project Raw Values and Comparison
+
+**Status:** CLOSED — Owner-approved canonical profile values.
+
+Canonical Raw values:
+- Hokum: Sera 20, Fifty 50, Hundred 100, Baloot 20.
+- Sun: Sera 20, Fifty 50, Hundred 100, Four Hundred 200.
+
+Canonical project comparison:
+- Four Hundred is the highest Sun project.
+- A sequential Hundred outranks a same-value non-sequential Hundred.
+- In Hokum, Hundred rank precedence is Aces, Kings, Queens, Jacks, Tens.
+- Exact same-value project ties use dealer-relative counter-clockwise priority.
+- A hand may retain up to two independently valid non-overlapping normal projects.
+- Baloot remains independent unless its cards are absorbed by Hundred.
+
+Project Raw is immutable. Multipliers never mutate Raw.
+
+## V-08b — Project Multiplication
+
+**Status:** CLOSED.
+
+Project Qaid is doubled at DOUBLE.
+
+Per the Saudi baseline rules source, ordinary projects are **not multiplied at TRIPLE or FOUR** in Hokum. Therefore the production Rule Profile must use:
+- NORMAL: ×1
+- DOUBLE: ×2
+- TRIPLE: ×1
+- FOUR: ×1
+- BALOOT: ×1
+
+Baloot is always 2 Qaid and is never multiplied.
+
+This resolves the former project ×3/×4 Freeze blocker. The dedicated source explicitly states that projects are not doubled at Triple/Four. citeturn4search0
+
+## V-12 — Match-End Both-Cross Policy
+
+**Status:** CLOSED.
+
+The match target is 152 Qaid.
+
+If both teams exceed 152 in the same completed round, the team with the higher final match total wins.
+
+This is a round-atomic match-end decision; do not terminate midway through a round.
+
+The Saudi baseline source explicitly states that if both teams exceed 152, the team with more points wins. citeturn4search0
+
+**Equal final total:** remains OPEN because the source does not specify the tie resolution and no separate Owner Decision has closed it.
+
+## V-13 — Sun Double Window
+
+**Status:** CLOSED.
+
+Sun supports DOUBLE only.
+
+Eligibility:
+- the team calling DOUBLE has 100 Qaid or less;
+- the opposing team has exceeded 100 Qaid.
+
+Semantic window:
+- opens at CONTRACT_FINALIZED;
+- closes when the final cards are raised;
+- no DOUBLE after a card is committed;
+- no DOUBLE after the first trick starts.
+
+The Saudi baseline source confirms Sun has DOUBLE only and documents the 100-or-less / opponent-over-100 eligibility condition. citeturn4search0
+
+## V-14 — First Dealer
+
+**Status:** CLOSED — project-specific deterministic mechanism.
+
+The first dealer is derived once from the persisted match seed, then persisted as authoritative match state. Reconnect, replay, and server restart read the persisted result; they never re-derive a different dealer from client state.
+
+Dealer rotation after rounds/cancellations remains the canonical relative-seat ROTATE_RIGHT rule.
+
+## V-15 — Timeout Policy
+
+**Status:** CLOSED for gameplay semantics.
+
+- Bidding turn timeout: 8 seconds → authoritative PASS.
+- Playing turn timeout: 30 seconds → enter AFK/disconnect handling; the server must not randomly select a card and the client must never select the timeout card.
+- Server clock is authoritative.
+- Reconnect/grace/forfeit state is handled by the authoritative presence/match policy; timeout is never resolved from the client clock.
+
+## V-16 — Incident Authority
+
+**Status:** CLOSED.
+
+Incident lifecycle:
+`INCIDENT_DETECTED → WAIT_FOR_DECISION → CONTINUE | CANCEL_HAND`.
+
+For recoverable incidents, the affected opposing team receives the continue/cancel decision.
+
+For unrecoverable integrity violations, the server auto-cancels the hand.
+
+Cancellation:
+- 0–0 round score;
+- no normal Raw/Qaid/Project/Baloot/Kaboot award;
+- match score unchanged;
+- dealer rotates right.
+
+Invalid client requests that are rejected before commit are not gameplay incidents and receive no gameplay penalty.
+
+## V-17 — Sun Priority / Purchase Boundary
+
+**Status:** CLOSED for the documented Saudi baseline boundary.
+
+When an Ace is the exposed card, only the dealer-right player may convert the first/second-round Ace-Hokum path to Sun. This is an authoritative bidding rule, not a client preference. citeturn4search1
+
+A valid purchase action is committed atomically as the contract-finalization boundary. The committed contract selection:
+- selects the purchaser;
+- fixes the contract source/mode;
+- closes the purchase window;
+- waives Kasho;
+- transitions to the final-card completion path.
+
+The exact second-round priority rules beyond the Ace-to-Sun restriction remain governed by the closed bidding state machine and are not broadened beyond the source-supported rule.
+
+## AD-01…AD-05 — Architecture Approval
+
+**Status:** ACCEPTED by Owner instruction on 2026-09-22.
+
+Accepted decisions:
+- AD-01: one wire `PASS`; semantic final-pass meaning is derived server-side.
+- AD-02: canonical client-facing GamePhase enum; internal transitions are not GamePhase.
+- AD-03: `COMPLETE_DEAL` is internal; `FINAL_CARDS_DEALT` is an event boundary.
+- AD-04: match-end evaluation is internal after SCORING.
+- AD-05: three-layer Contract representation; Ashkal normalizes to Sun + `mode: "ASHKAL"`.
+
+These decisions are now architecture-frozen and may be used by the Rule Freeze traceability matrix.
