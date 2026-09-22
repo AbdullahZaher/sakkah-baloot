@@ -79,11 +79,11 @@ export const SAUDI_BASELINE_CCW_V1 = {
     buyerFailureAllocation: "FULL_CONTRACT_ROUND_VALUE_TO_OPPONENT",
   },
   conversion: { mode: "CONTRACT_SPECIFIC_TABLE", floatingPoint: false, exactTableRequired: true },
-    kaboot: {
-      normal: { HOKUM: 25, SUN: 44 },
-      escalation: {
-        HOKUM: { NORMAL: 25, DOUBLE: 50, TRIPLE: 75, FOUR: 100 },
-        SUN: { NORMAL: 44, DOUBLE: 88 },
+  kaboot: {
+    normal: { HOKUM: 25, SUN: 44 },
+    escalation: {
+      HOKUM: { NORMAL: 25, DOUBLE: 25, TRIPLE: 25, FOUR: 25 },
+      SUN: { NORMAL: 44, DOUBLE: 44 },
       },
       reverse: {
         enabled: true, contract: "SUN", value: 88,
