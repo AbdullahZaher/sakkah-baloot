@@ -232,11 +232,13 @@ export function resolveProjects(
     best.set(team, list[0] ?? null);
   }
 
-  const a = best.get(teams[0])!;
-  const b = best.get(teams[1])!;
+  const teamA = teams[0]!;
+  const teamB = teams[1]!;
+  const a = best.get(teamA)!;
+  const b = best.get(teamB)!;
   let winner: TeamId | null = null;
-  if (a && !b) winner = teams[0];
-  else if (b && !a) winner = teams[1];
+  if (a && !b) winner = teamA;
+  else if (b && !a) winner = teamB;
   else if (a && b) {
     const cmp = compareCandidates(a.candidate, b.candidate);
     winner = cmp > 0 ? a.candidate.teamId : cmp < 0 ? b.candidate.teamId :
