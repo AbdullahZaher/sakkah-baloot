@@ -21,3 +21,4 @@ jobs:
           cache-dependency-path: packages/game-engine/package.json
       - run: npm install --ignore-scripts
       - run: npm run typecheck
+      - run: npm test
