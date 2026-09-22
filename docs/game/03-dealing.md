@@ -128,7 +128,7 @@ The dealing sequence MUST be represented explicitly.
 The baseline direction is:
 
 ```text
-Dealer → next seat clockwise → next → next
+Dealer → next seat according to the canonical counter-clockwise direction → next → next
 ```
 
 For the four canonical seats:
@@ -185,7 +185,7 @@ The engine should never determine dealer rotation from:
 
 # 8. First Dealer
 
-The first dealer of a new match is a Rule Profile decision.
+The first dealer of a new match is a Rule Profile decision. The mechanism remains OPEN until an explicit Owner Decision closes it.
 
 Possible mechanisms may include:
 
