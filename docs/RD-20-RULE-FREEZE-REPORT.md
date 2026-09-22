@@ -86,3 +86,32 @@ Do not implement production behavior while blocked. Do not "fix" F-01 by editing
 ## Addendum — game/10 legal-move specification (14.Z.2; history above preserved)
 
 `docs/game/10-legal-move-specification.md` (CANONICAL / FREEZE-READY CORE, documentation only) was accepted into the repo after forensic verification: consistent with the `01`/`02` pack, governance-clean, freeze-honest. Partially addresses P1 items #12 (Must-Overtrump content), #13 (Must-Trump definition/OD-PL-02 content), #14 (partner-exemption content) — each downgraded to P2 pending trail cleanup, which game/10 §33 itself lists as outstanding. New P2 edge gaps G-1/G-2/G-3 recorded in `REMAINING-ISSUES.md`. Overall verdict unchanged: `RULE_FREEZE = BLOCKED`.
+
+---
+
+## Phase 14.Z.3 Addendum — Canonicalization Complete
+
+**Date:** 2026-09-22
+**Scope:** G-1 / G-2 / G-2P / G-3 trick-legality edge gaps; V-07 terminology; Kasho dealer transition; V-04 stale Kaboot transcription.
+
+### Resolved documentation conflicts
+
+- **G-1 CLOSED:** partner-winning + trump-on-table is position/card-origin dependent. No forced overtrump against a partner's winning trump. Opponent-winning trump requires a higher trump for MUST_OVERTRUMP.
+- **G-2 CLOSED:** Ika = Hokum + leader + non-trump + highest remaining card of that suit.
+- **G-2P CLOSED:** third-player partner exemption requires partner-opened trick, partner winning, no lead suit, and partner lead Ace or valid Ika; result ANY_CARD including trump.
+- **G-3 CLOSED:** legal-move verification matrix expanded to cover the canonical edge combinations.
+- **V-07 CLOSED:** generic counting-side terminology removed in favor of precise allocation/ownership terminology.
+- **Kasho dealer transition CLOSED:** ROTATE_RIGHT.
+- **V-04 transcription reconciled:** canonical owner decision remains V-04=A, with explicit flat table Hokum 25/25/25/25 and Sun 44/44. Historical conflicting RD-09 text was superseded and the current RD-09 protocol was reconciled.
+
+### Freeze impact
+
+The Phase 14.Z.3 work does not authorize production implementation and does not change:
+
+```text
+RULE_FREEZE = BLOCKED
+```
+
+Remaining blockers are outside these trick-legality edge gaps, including exact conversion/complement rules, remaining bidding/incident/timeout decisions, architecture gates, frozen action/event catalogs, and implementation/test evidence.
+
+The historical Phase 14.Z.1 and Phase 14.Z.2 findings remain preserved above; this addendum is the current canonical disposition.
