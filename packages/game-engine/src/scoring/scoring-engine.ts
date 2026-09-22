@@ -96,7 +96,7 @@ export function scoreRound(input: RoundScoreInput): RoundScoreBreakdown {
     const value = SAUDI_RULE_PROFILE_V1.scoring.kabootQaid[input.contract][input.escalation === "GAHWA" ? "NORMAL" : input.escalation];
     out[kaboot] =
       value +
-      input.projectQaid[kaboot] * projectMultiplier(input.escalation) +
+      input.projectQaid[kaboot] * projectMultiplier(input.escalation === "GAHWA" ? "NORMAL" : input.escalation) +
       input.balootQaid[kaboot];
     return {
       cardRaw: card.cardRaw, projectRaw, balootRaw, contractRaw,
@@ -109,7 +109,7 @@ export function scoreRound(input: RoundScoreInput): RoundScoreBreakdown {
   if (purchaserSucceeded) {
     for (const team of TEAMS) {
       converted[team] = convertRawToQaid(input.contract, card.cardRaw[team]) * escalationCardMultiplier(input.escalation);
-      projects[team] = input.projectQaid[team] * projectMultiplier(input.escalation);
+      projects[team] = input.projectQaid[team] * projectMultiplier(input.escalation === "GAHWA" ? "NORMAL" : input.escalation);
       baloot[team] = input.balootQaid[team];
     }
   } else {
