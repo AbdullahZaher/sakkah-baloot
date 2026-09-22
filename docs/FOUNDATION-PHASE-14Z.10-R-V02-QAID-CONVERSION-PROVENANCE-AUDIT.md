@@ -1,6 +1,6 @@
 # Phase 14.Z.10-R — V-02 Qaid Conversion Provenance Audit
 
-**Status:** COMPLETE — NO CANONICAL CONVERSION TABLE FOUND  
+**Status:** CLOSED FOR V-02-A — V-02b COMPLEMENT REMAINS OPEN  
 **Branch:** `phase-14z10r-canonical-reconciliation`  
 **Production code:** NOT AUTHORIZED  
 **Rule Freeze:** BLOCKED
@@ -115,3 +115,13 @@ Rule Freeze: BLOCKED
 ```
 
 This is a provenance closure result, not a new rules decision.
+
+
+## Phase 14.Z.11 closure
+
+V-02-A is now explicitly transcribed from the Owner Decision:
+- Hokum: remainder 0–5 down, 6–9 up, /10.
+- Sun: remainder 1–4 down, 5 preserved, 6–9 up, /5.
+- exact examples are part of the Owner Decision.
+
+V-02b remains open: no fixed-total complement formula has been separately approved.
