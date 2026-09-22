@@ -79,9 +79,11 @@ Research is evidence, not authority.
 
 ## Gate
 
-**Rule Freeze: BLOCKED until the remaining Owner Decision dependencies are explicitly closed.**
+**Rule Freeze v1: CLOSED / AUTHORIZED.**
 
-**Production engine implementation: NOT AUTHORIZED.**
+**Production engine implementation: AUTHORIZED.**
+
+Historical blocker wording above is superseded by Rule Freeze v1 and retained only as closure history.
 
 
 ## Phase 14.Z.11 completion update
