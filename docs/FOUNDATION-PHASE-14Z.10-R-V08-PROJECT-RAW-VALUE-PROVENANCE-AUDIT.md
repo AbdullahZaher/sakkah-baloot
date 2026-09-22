@@ -1,6 +1,6 @@
 # Phase 14.Z.10-R — V-08 Project Raw-Value Provenance Audit
 
-**Status:** COMPLETE — OPEN  
+**Status:** CLOSED — OWNER DECISION TRANSCRIBED  
 **Branch:** `phase-14z10r-canonical-reconciliation`
 
 ## Finding
@@ -55,3 +55,16 @@ Do not implement a production raw-project lookup as Freeze-authorized until the 
 - exact project-vs-project tie behavior.
 
 **No numeric values were changed by this audit.**
+
+
+## Phase 14.Z.11 closure
+
+The complete raw-value table is now explicitly Owner-approved and transcribed into the Rule Profile:
+
+| Contract | Sera | Fifty | Hundred | Four Hundred | Baloot |
+|---|---:|---:|---:|---:|---:|
+| Hokum | 20 | 50 | 100 | — | 20 |
+| Sun | 20 | 50 | 100 | 200 | — |
+
+These are Raw values, not Qaid values. Project Raw is immutable and is never multiplied.
+
