@@ -86,9 +86,10 @@ function dealInitial(
 ): { hands: Record<Seat, CardId[]>; remainder: CardId[] } {
   const hands = emptyHands();
   let cursor = 0;
-  const order = [dealerSeat, ...Array.from({ length: 3 }, (_, i) => {
-    let seat = dealerSeat;
-    for (let j = 0; j <= i; j += 1) seat = nextCounterClockwise(seat);
+  const firstReceiver = nextCounterClockwise(dealerSeat);
+  const order = [firstReceiver, ...Array.from({ length: 3 }, (_, i) => {
+    let seat = firstReceiver;
+    for (let j = 0; j < i + 1; j += 1) seat = nextCounterClockwise(seat);
     return seat;
   })];
 
@@ -160,7 +161,13 @@ export function completeDeal(
   // The exposed card is transferred to the purchaser/receiver first, then the
   // remaining 11 hidden cards are distributed: receiver gets 2, others get 3.
   hands[exposedCardReceiverSeat].push(state.exposedCardId);
-  const remainingSeats = SEATS.filter((seat) => seat !== exposedCardReceiverSeat);
+  const firstReceiver = nextCounterClockwise(state.dealerSeat);
+  const distributionOrder = [firstReceiver, ...Array.from({ length: 3 }, (_, i) => {
+    let seat = firstReceiver;
+    for (let j = 0; j < i + 1; j += 1) seat = nextCounterClockwise(seat);
+    return seat;
+  })];
+  const remainingSeats = distributionOrder.filter((seat) => seat !== exposedCardReceiverSeat);
   let cursor = 0;
 
   for (let i = 0; i < 2; i += 1) {
