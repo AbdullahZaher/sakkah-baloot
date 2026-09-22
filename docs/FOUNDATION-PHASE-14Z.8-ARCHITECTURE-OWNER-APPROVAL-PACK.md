@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-22  
 **Phase:** 14.Z.8 — Architecture Owner Approval / Reconciliation Gate  
-**Status:** PROPOSED — AWAITING EXPLICIT OWNER DECISION  
+**Status:** ACCEPTED — OWNER APPROVED 2026-09-22  
 **Scope:** AD-01 through AD-05 + protocol reconciliation prerequisites
 
 ## 1. Purpose
@@ -63,7 +63,7 @@ The authoritative server derives the semantic meaning from `BiddingState.phase`:
 
 ### Owner decision
 
-- [ ] ACCEPT
+- [x] ACCEPT
 - [ ] REVISE
 - [ ] DEFER
 
@@ -112,7 +112,7 @@ Canonical replacements:
 
 ### Owner decision
 
-- [ ] ACCEPT
+- [x] ACCEPT
 - [ ] REVISE
 - [ ] DEFER
 
@@ -140,7 +140,7 @@ If UI animation requires the boundary, `FINAL_CARDS_DEALT` is an event rather th
 
 ### Owner decision
 
-- [ ] ACCEPT
+- [x] ACCEPT
 - [ ] REVISE
 - [ ] DEFER
 
@@ -166,7 +166,7 @@ The client does not observe `MATCH_END_CHECK`.
 
 ### Owner decision
 
-- [ ] ACCEPT
+- [x] ACCEPT
 - [ ] REVISE
 - [ ] DEFER
 
@@ -226,7 +226,7 @@ The UI may localize Sun/Hokum/Ashkal and source labels without changing domain o
 
 ### Owner decision
 
-- [ ] ACCEPT
+- [x] ACCEPT
 - [ ] REVISE
 - [ ] DEFER
 
