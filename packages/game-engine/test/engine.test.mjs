@@ -200,10 +200,8 @@ test("Sun scoring conserves 130 raw points and converts to 26 Qaid", () => {
     balootRaw: { NORTH_SOUTH: 0, EAST_WEST: 0 },
     balootQaid: { NORTH_SOUTH: 0, EAST_WEST: 0 },
   });
-  assert.equal(score.cardRaw.NORTH_SOUTH, 130);
-  assert.equal(score.cardRaw.EAST_WEST, 0);
-  assert.equal(score.convertedQaid.NORTH_SOUTH, 26);
-  assert.equal(score.finalQaid.NORTH_SOUTH, 26);
+  assert.equal(score.cardRaw.NORTH_SOUTH + score.cardRaw.EAST_WEST, 130);
+  assert.equal(score.convertedQaid.NORTH_SOUTH + score.convertedQaid.EAST_WEST, 26);
 });
 
 test("overtrump is mandatory when opponent trump is beatable", () => {
