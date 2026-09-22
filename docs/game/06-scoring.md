@@ -1191,6 +1191,33 @@ The final Rule Profile must define the exact approved conversion table and purch
 
 ---
 
+# 47A. Canonical Qaid Conversion — V-02-A
+
+The exact Owner-approved conversion is:
+
+### Hokum
+
+- remainder 0–5 → round down to the lower multiple of 10;
+- remainder 6–9 → round up to the next multiple of 10;
+- divide the resulting multiple of 10 by 10.
+
+Examples: 34→3, 35→3, 36→4, 81→8, 85→8, 86→9, 162→16.
+
+### Sun
+
+- remainder 1–4 → round down to the lower multiple of 10;
+- remainder 5 → preserve the 5;
+- remainder 6–9 → round up to the next multiple of 10;
+- divide the resulting multiple of 5 by 5.
+
+Examples: 34→6, 35→7, 36→8, 64→12, 65→13, 66→14, 130→26.
+
+Zero maps to zero.
+
+This is the canonical finite integer rule. Generic division, floating-point rounding, floor-only, and ceiling-only implementations are not authorized.
+
+V-02b remains separate: no fixed-total complement formula has been Owner-approved. On successful rounds, V-11 governs allocation: each team retains its own eligible allocation and converts it using the canonical table.
+
 # 48. Do Not Use Floating Point
 
 Scoring must use integer arithmetic.
