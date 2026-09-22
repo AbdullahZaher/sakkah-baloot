@@ -1,7 +1,7 @@
 # صكّة بلوت — Game State Specification
 
 **Document:** `docs/game/07-game-state.md`  
-**Status:** Draft for Review — NOT FROZEN  
+**Status:** Draft for Review — PROPOSED RECONCILIATION (14.Z.10-R) — NOT FROZEN  
 **Phase:** Foundation / Game Domain  
 **Depends on:** `01-game-rules.md`, `02-card-system.md`, `03-dealing.md`, `04-bidding.md`, `05-playing.md`, `06-scoring.md`  
 **Next dependent documents:** Actions, State Transitions
@@ -220,6 +220,8 @@ type GamePhase =
   | "MATCH_COMPLETE"
   | "CANCELLED";
 ```
+
+The canonical transition graph is defined in `09-state-transitions.md`; internal transitions such as `COMPLETE_DEAL` and `MATCH_END_CHECK` are not client-facing GamePhase values.
 
 The exact transition graph belongs in:
 

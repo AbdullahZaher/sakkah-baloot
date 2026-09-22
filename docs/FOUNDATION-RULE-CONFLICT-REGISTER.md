@@ -256,3 +256,48 @@ Source Evidence -> Conflict -> Rules Owner Decision -> Canonical Rule -> Rule Pr
 | C-23 G-3 test coverage | CLOSED as specification requirement |
 
 Historical Phase 14.y entries C-11–C-15 remain preserved as audit history; current owner decisions supersede their stale OPEN statuses where applicable.
+
+
+---
+
+## Current-status overrides — Phase 14.Z.10-R
+
+The following entries reconcile historical Phase 14.y records with later Owner Decision records. Historical evidence remains preserved above.
+
+| Conflict | Current status | Authority / disposition |
+|---|---|---|
+| C-02 Baloot inside Hundred | CLOSED — ABSORBED | Current Rule Profile + V-05/B carried canonical rule |
+| C-07 Project multiplication | OPEN / RESEARCH-SUPPORTED | Numeric profile values exist, but canonical acceptance of ×3/×4 remains a Freeze dependency |
+| C-11 Purchaser success threshold | CLOSED | V-01: Sun ≥65, Hokum ≥81; equality succeeds for buyer |
+| C-12 Qaid conversion rounding | OPEN | Exact conversion table and complement formula not supplied by Owner |
+| C-13 Failed-contract allocation | CLOSED SEMANTICS | `FULL_CONTRACT_ROUND_VALUE_TO_OPPONENT`; exact numeric conversion table remains open |
+| C-14 Tie policies | PARTIALLY CLOSED | V-06b headline closed: initial doubler loses exact tie; Triple/Four extension remains open; other match-end tie edges require explicit closure |
+| C-15 Normal successful allocation | CLOSED | V-11 canonical sentence transcribed into scoring specification |
+| C-01 Doubling-window conflict | OPEN / PROJECT-SPECIFIC RULE ALREADY RECORDED | RD-03 defines current Hokum window; broader source disagreement remains provenance context and must not be silently generalized |
+
+### V-02 provenance
+
+C-12 is intentionally **not** closed by common `/5` or `/10` representations. The exact contract-specific lookup/rounding table and any complement/opposing-side formula remain an explicit Owner Decision dependency.
+
+### Freeze implication
+
+This addendum changes historical conflict interpretation only. It does not declare Rule Freeze and does not authorize production implementation.
+
+
+## Current-status overrides — Phase 14.Z.11
+
+| Conflict | Current status | Authority |
+|---|---|---|
+| V-02-A Qaid conversion | CLOSED — exact Owner table | Owner Decision V-02-A |
+| V-02b complement | OPEN — no separate approval | Owner decision history |
+| V-08 project Raw values | CLOSED | Owner Decision / Rule Profile |
+| Project ×3/×4 | CLOSED — no multiplication at Triple/Four | Saudi baseline + Owner closure |
+| Sun Double window | CLOSED | Project decision + Saudi baseline eligibility |
+| Both teams cross 152 | CLOSED — higher final total wins | Saudi baseline |
+| Equal final total | OPEN | no authoritative closure |
+| First dealer | CLOSED — deterministic match-seed derived and persisted | Project architecture decision |
+| Timeouts | CLOSED — 8s bidding PASS; 30s playing AFK/disconnect handling | Project policy |
+| Incident authority | CLOSED baseline | Project incident policy |
+| Kasho violation matrix | CLOSED | Project authoritative transaction semantics |
+| AD-01…AD-05 | CLOSED — Owner approved | Architecture Owner Approval Pack |
+| Ace→Sun priority | CLOSED — dealer-right in both rounds | Saudi baseline |

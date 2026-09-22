@@ -1644,28 +1644,11 @@ When implementation begins:
 
 ---
 
-# 52. Open Decisions
+# 52. Frozen Card-System Decisions
 
-The following MUST remain open until the relevant rule documents are finalized:
+The card-system decisions that were previously listed as open are closed by Rule Freeze v1. The implementation must use the frozen Saudi Rule Profile and the canonical game specifications; it must not invent card-level variants.
 
-1. Final official Rule Profile.
-2. Exact Ashkal representation.
-3. Any card-level scoring exceptions.
-4. Project card-combination edge cases.
-5. Baloot declaration details.
-6. Variant-specific card behavior, if any.
-7. Whether integer card IDs are used on the wire.
-8. Whether replay files store a seed, shuffle transcript, or both.
-
-Agents MUST NOT silently invent these rules.
-
-If implementation encounters an unresolved decision, stop and mark:
-
-```text
-OPEN_DECISION
-```
-
-rather than embedding an assumption.
+Any future change requires a new Rule Freeze revision.
 
 ---
 

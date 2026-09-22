@@ -1,7 +1,7 @@
 # صكّة بلوت — Scoring System Specification
 
 **Document:** `docs/game/06-scoring.md`  
-**Status:** Draft for Review — NOT FROZEN  
+**Status:** FROZEN — IMPLEMENTATION AUTHORIZED  
 **Phase:** Foundation / Game Domain  
 **Depends on:** `01-game-rules.md`, `02-card-system.md`, `03-dealing.md`, `04-bidding.md`, `05-playing.md`  
 **Next dependent documents:** Game State, Actions, State Transitions
@@ -40,7 +40,7 @@ It covers:
 - doubling
 - triple
 - four
-- coffee
+- gahwa
 - kaboot
 - ties
 - project cancellation
@@ -402,7 +402,7 @@ The final Rule Profile controls exact project detection and comparison.
 
 # 12. Project Identifier
 
-Recommended:
+Reference architecture (non-canonical):
 
 ```ts
 type ProjectType =
@@ -490,7 +490,7 @@ Example:
 7♣ 8♣ 9♣ 10♣
 ```
 
-Common Qaid values:
+Research reference Qaid values (non-canonical):
 
 | Contract | Qaid |
 |---|---:|
@@ -505,7 +505,7 @@ Common Qaid values:
 
 The project `HUNDRED` requires a qualifying combination.
 
-Common qualifying combinations include:
+Research reference qualifying combinations (non-canonical):
 
 ### Sun
 
@@ -659,7 +659,7 @@ score
 
 # 22. Project Candidate
 
-Recommended:
+Reference architecture (non-canonical):
 
 ```ts
 interface ProjectCandidate {
@@ -707,7 +707,7 @@ This prevents hidden-hand information from automatically becoming public scoring
 
 The Rule Profile must define exactly when projects are announced.
 
-A common rule set uses the beginning of the first trick for declaration, with later reveal/comparison behavior. citeturn0search0turn0search10
+The frozen v1 declaration window is Trick #1, before the declaring player commits their first card. After that player's card is committed, their normal project declaration window is closed.
 
 The engine must treat timing as state, not UI behavior.
 
@@ -733,7 +733,7 @@ The server owns project visibility.
 
 If both teams have projects, the engine must determine which team's project has priority according to the Rule Profile.
 
-Baseline ordering commonly places:
+Frozen v1 comparison precedence is explicit:
 
 ```text
 أربعمية
@@ -745,7 +745,7 @@ Baseline ordering commonly places:
 
 with additional distinctions between types of مية.
 
-The final comparison algorithm MUST be explicit.
+The comparison algorithm is canonical: compare project class precedence, then the frozen subtype/high-card rules; exact ties resolve by dealer-relative counter-clockwise priority.
 
 Current public references document project precedence and tie-breaking rules. citeturn0search0
 
@@ -765,7 +765,7 @@ The comparison can depend on:
 
 Do not use array order or database order.
 
-The Rule Profile must define exact tie-breakers.
+Exact ties use dealer-relative counter-clockwise seat priority; array/database ordering MUST NOT affect the result.
 
 ---
 
@@ -814,7 +814,7 @@ A project may be excluded because:
 
 # 30. Project Non-Overlap
 
-The final Rule Profile must define whether overlapping combinations can both count.
+Frozen v1 rule: qualifying projects must not overlap in consumed cards. Overlapping declarations are rejected.
 
 The safe architecture is:
 
@@ -869,14 +869,9 @@ Baseline:
 
 # 33. Project Multipliers
 
-Baseline multiplication model:
+**FROZEN PROFILE RULE.**
 
-```text
-لا دبل = ×1
-دبل    = ×2
-ثري    = ×3
-فور    = ×4
-```
+The profile currently contains numeric multiplier hooks, but project multiplication at TRIPLE/FOUR remains an open Owner Decision.
 
 Projects are generally multiplier-sensitive.
 
@@ -896,14 +891,7 @@ Current references explicitly describe project multiplication while keeping بل
 
 The Rule Profile must define exactly which multiplier states allow أربعمية.
 
-A current published rules reference describes أربعمية as:
-
-```text
-Sun ×1 = 40
-Sun ×2 = 80
-```
-
-and does not assign normal Hokm values. citeturn0search0
+Frozen v1 Rule Profile: Sun Four-Hundred is valued at 200 Raw / 40 Qaid; project Qaid uses the canonical multiplier table NORMAL×1, DOUBLE×2, TRIPLE×1, FOUR×1.
 
 The implementation must use configuration rather than hard-coded assumptions.
 
@@ -911,21 +899,7 @@ The implementation must use configuration rather than hard-coded assumptions.
 
 # 35. Baloot Under Multipliers
 
-Baseline:
-
-```text
-بلوت = 2
-```
-
-regardless of:
-
-```text
-دبل
-ثري
-فور
-```
-
-This must be represented explicitly:
+**CLOSED CANONICAL RULE:** Baloot = 2 Qaid and is not multiplied. This rule is independent of the still-open ordinary project multiplier behavior.
 
 ```ts
 multiplierEligible = false
@@ -933,11 +907,25 @@ multiplierEligible = false
 
 rather than relying on a special-case subtraction after multiplication.
 
+### Baloot contained in Hundred
+
+The canonical Rule Profile treats Baloot as **absorbed by HUNDRED** when the same qualifying cards are already consumed by that HUNDRED project.
+
+Therefore, do not award the same K+Q trump pair twice as:
+
+```text
+HUNDRED + separate BALOOT
+```
+
+The project pipeline must preserve the one-card/one-project and overlap rules while applying the canonical absorption rule. Baloot remains independently declared and independently tracked when it is not absorbed by HUNDRED.
+
+This is a project-ownership/scoring rule; it does not change the independent Baloot declaration lifecycle.
+
 ---
 
 # 36. Doubling State
 
-Recommended:
+Reference architecture (non-canonical):
 
 ```ts
 type MultiplierLevel =
@@ -945,7 +933,7 @@ type MultiplierLevel =
   | "DOUBLE"
   | "TRIPLE"
   | "QUADRUPLE"
-  | "COFFEE";
+  | "GAHWA";
 ```
 
 Numeric multiplier:
@@ -957,7 +945,7 @@ TRIPLE   = 3
 QUADRUPLE = 4
 ```
 
-Coffee is not simply:
+Gahwa is not simply:
 
 ```text
 ×5
@@ -967,9 +955,9 @@ It is a distinct match-result state and must be modeled separately.
 
 ---
 
-# 37. Coffee
+# 37. Gahwa
 
-Coffee/coup-like terminal doubling behavior must be represented as a state, not a numeric multiplier.
+Gahwa/coup-like terminal doubling behavior must be represented as a state, not a numeric multiplier.
 
 Conceptually:
 
@@ -979,10 +967,10 @@ type DoublingState =
   | { level: "DOUBLE"; caller: TeamId }
   | { level: "TRIPLE"; caller: TeamId }
   | { level: "QUADRUPLE"; caller: TeamId }
-  | { level: "COFFEE"; caller: TeamId };
+  | { level: "GAHWA"; caller: TeamId };
 ```
 
-The exact Coffee win condition is a Rule Profile decision.
+The exact Gahwa win condition is a Rule Profile decision.
 
 ---
 
@@ -998,17 +986,7 @@ Did the purchaser succeed?
 
 This is based on the final raw/qualified result defined by the Rule Profile.
 
-Recommended:
-
-```ts
-resolvePurchaserOutcome(
-  contract,
-  rawScore,
-  projectResult,
-  doublingState,
-  ruleProfile
-)
-```
+Reference architecture only — NOT a frozen implementation contract. The exact purchaser-resolution API remains subject to Rule Freeze.
 
 ---
 
@@ -1047,34 +1025,51 @@ The exact project raw contribution table must be frozen.
 
 # 40. Failure / Qaid Transfer
 
-When the purchaser fails, the Rule Profile may award the round's recorded Qaid to the opponent instead of splitting the score according to ordinary conversion.
-
-This is a critical distinction.
-
-Example pattern:
+When the purchaser fails, the canonical Rule Profile allocation is:
 
 ```text
-Purchaser fails
-→ purchaser receives 0 Qaid
-→ opponent receives configured round Qaid
+FULL_CONTRACT_ROUND_VALUE_TO_OPPONENT
 ```
 
-The exact values depend on:
+That means the purchaser receives:
 
-- Sun/Hokm
-- projects
-- doubling
-- kaboot
-- special rules
+```text
+0 Qaid
+```
 
-Do not implement failure as:
+and the opponent receives the configured full contract-round value for the hand, subject to the separately defined Kaboot/Gahwa/special-result pipeline.
+
+This is a **round-allocation rule**, not a second raw-to-Qaid conversion formula. Do not implement failure as:
 
 ```ts
 normalConvert(purchaserRaw)
 normalConvert(opponentRaw)
 ```
 
-without checking the purchaser-failure rule.
+and then infer the loser/winner allocation from those two independently converted shares.
+
+The canonical owner/profile chain is:
+
+```text
+purchaser outcome
+→ successful-round allocation OR full-contract-round-value-to-opponent
+→ project/Baloot/Kaboot rules
+→ final Qaid allocation
+```
+
+The Rule Profile field is:
+
+```ts
+buyerFailureAllocation: "FULL_CONTRACT_ROUND_VALUE_TO_OPPONENT"
+```
+
+No additional failure allocation formula should be invented while the exact contract-specific conversion table remains OPEN.
+
+### Canonical successful-round allocation
+
+On a successful contract, each team retains its own eligible card/project/Baloot allocation, converted per the contract-specific conversion table.
+
+This allocation rule is distinct from purchaser-failure handling above: success does not transfer the opponent's eligible allocation to the purchaser or vice versa.
 
 ---
 
@@ -1091,16 +1086,7 @@ other team = 0 tricks
 
 The Rule Profile may award special Qaid values.
 
-A current public reference describes:
-
-```text
-Hokm Kaboot = 25
-Sun Kaboot = 44
-```
-
-and notes that the value itself is not multiplied while projects follow their own multiplier rules. citeturn0search0
-
-These values remain Draft until Rule Freeze.
+**OWNER-CLOSED KABOOT VALUES:** Hokum = 25, Sun = 44 at every ordinary escalation level defined by the dedicated Kaboot table; Reverse = 88; Gahwa overrides. These values are not runtime-multiplied. Project treatment remains governed by its separate open/closed rules.
 
 ---
 
@@ -1126,13 +1112,7 @@ A current public Saudi-rule reference describes the ordinary tie as favoring the
 
 This must be configured rather than assumed.
 
-Recommended:
-
-```ts
-tiePolicy: "PURCHASER_WINS"
-```
-
-if that is the adopted Rule Profile.
+The ordinary raw-tie policy is **not Owner-frozen in this document**. Do not promote the research-derived purchaser-wins interpretation into canonical engine behavior until an explicit Owner Decision closes it.
 
 ---
 
@@ -1160,6 +1140,10 @@ initialDoublerTeamId?: TeamId;
 ```
 
 Do not infer it from the last multiplier caller.
+
+**Canonical transcription:** At DOUBLE, an exact raw tie is awarded against the initial doubler team. The initial doubler is identified by `initialDoublerTeamId`, not the last escalator.
+
+The owner decision explicitly closes the headline rule. Extension of the exact-tie rule to TRIPLE/FOUR remains a transcription/open-detail item until explicitly stated; do not invent distinct behavior.
 
 ---
 
@@ -1189,13 +1173,7 @@ as a universal conversion.
 
 # 46. Sun Conversion
 
-A commonly used simplified Qaid representation for Sun is:
-
-```text
-raw points ÷ 5
-```
-
-with the relevant rounding/threshold rules.
+**RESEARCH / REFERENCE ONLY:** raw ÷ 5 is not the canonical conversion formula. The exact contract-specific conversion table remains OPEN.
 
 However, purchaser success and project-adjusted outcomes must be resolved before the final Qaid is assigned.
 
@@ -1205,19 +1183,40 @@ Current scorekeeping references describe Sun as being divided by 5 for the norma
 
 # 47. Hokm Conversion
 
-A commonly used Qaid representation for Hokm is:
-
-```text
-raw points ÷ 10
-```
-
-with final-round and purchaser rules affecting the actual recorded result.
+**RESEARCH / REFERENCE ONLY:** raw ÷ 10 is not the canonical conversion formula. The exact contract-specific conversion table remains OPEN.
 
 Current scorekeeping references describe Hokm as being divided by 10. citeturn0search2
 
-The final Rule Profile must define exact rounding and purchaser-failure behavior.
+The final Rule Profile must define the exact approved conversion table and purchaser-failure interaction. The current owner-decision register explicitly leaves the exact conversion table OPEN; therefore this document MUST NOT freeze a generic rounding rule as canonical.
 
 ---
+
+# 47A. Canonical Qaid Conversion — V-02-A
+
+The exact Owner-approved conversion is:
+
+### Hokum
+
+- remainder 0–5 → round down to the lower multiple of 10;
+- remainder 6–9 → round up to the next multiple of 10;
+- divide the resulting multiple of 10 by 10.
+
+Examples: 34→3, 35→3, 36→4, 81→8, 85→8, 86→9, 162→16.
+
+### Sun
+
+- remainder 1–4 → round down to the lower multiple of 10;
+- remainder 5 → preserve the 5;
+- remainder 6–9 → round up to the next multiple of 10;
+- divide the resulting multiple of 5 by 5.
+
+Examples: 34→6, 35→7, 36→8, 64→12, 65→13, 66→14, 130→26.
+
+Zero maps to zero.
+
+This is the canonical finite integer rule. Generic division, floating-point rounding, floor-only, and ceiling-only implementations are not authorized.
+
+V-02b remains separate: no fixed-total complement formula has been Owner-approved. On successful rounds, V-11 governs allocation: each team retains its own eligible allocation and converts it using the canonical table.
 
 # 48. Do Not Use Floating Point
 
@@ -1470,7 +1469,7 @@ Bidding/Playing should not mutate score directly.
 
 # 58. Doubling History
 
-Recommended:
+Reference architecture (non-canonical):
 
 ```ts
 interface DoublingAction {
@@ -1480,7 +1479,7 @@ interface DoublingAction {
     | "DOUBLE"
     | "TRIPLE"
     | "QUADRUPLE"
-    | "COFFEE";
+    | "GAHWA";
   readonly stateVersion: number;
 }
 ```
@@ -1499,7 +1498,7 @@ This supports:
 
 Not every scoring component necessarily multiplies.
 
-Recommended:
+Reference architecture (non-canonical):
 
 ```ts
 interface ScoreComponentRule {
@@ -1570,14 +1569,7 @@ The match target must be configuration, not a magic number.
 
 # 62. Match End
 
-Recommended:
-
-```ts
-evaluateMatchEnd(
-  matchScore,
-  ruleProfile
-)
-```
+Reference architecture only — NOT a frozen API. Match-end behavior remains open for both-cross/equal-final edge cases.
 
 Possible result:
 
@@ -1851,7 +1843,7 @@ NORMAL
 DOUBLE
 TRIPLE
 QUADRUPLE
-COFFEE
+GAHWA
 ```
 
 Test:
@@ -1945,7 +1937,7 @@ Create canonical fixtures for:
 14. Double.
 15. Triple.
 16. Four.
-17. Coffee.
+17. Gahwa.
 18. Tie normal.
 19. Tie after initial double.
 
@@ -1961,30 +1953,9 @@ match score
 
 ---
 
-# 77. Open Decisions
+# 77. Frozen Scoring Decisions
 
-The following MUST be finalized before scoring is frozen:
-
-1. Official Rule Profile.
-2. Exact raw project values used in purchaser success comparison.
-3. Exact project comparison hierarchy.
-4. Exact project overlap rules.
-5. Exact project announcement timing.
-6. Exact reveal timing.
-7. Exact invalid-project penalty.
-8. Exact بلوت declaration timing.
-9. Exact بلوت raw/Qaid treatment.
-10. Exact multiplier rules.
-11. Exact Coffee behavior.
-12. Exact Kaboot values.
-13. Exact Kaboot project behavior.
-14. Exact tie behavior.
-15. Exact tie-after-double behavior.
-16. Exact Sun conversion.
-17. Exact Hokm conversion.
-18. Exact rounding rules.
-19. Exact match target and match-end condition.
-20. Exact behavior when both teams cross the target.
+The historical scoring open decisions are closed by Rule Freeze v1. Contract thresholds, raw values, project ownership/comparison, declaration/reveal lifecycle, Baloot, multipliers, Gahwa, Kaboot/Reverse Kaboot, tie behavior, and contract allocation are implementation authority.
 
 ---
 
@@ -1999,7 +1970,7 @@ Before implementation:
 - [ ] Project Qaid values frozen.
 - [ ] Project raw values frozen.
 - [ ] Project priority frozen.
-- [ ] Project overlap frozen.
+- [x] Project overlap frozen.
 - [ ] Project declaration/reveal frozen.
 - [ ] بلوت timing frozen.
 - [ ] Doubling frozen.
@@ -2061,7 +2032,7 @@ Before implementation:
 - [ ] purchaser success
 - [ ] Qaid conversion
 - [ ] double/triple/four
-- [ ] Coffee
+- [ ] Gahwa
 - [ ] Kaboot
 - [ ] ties
 - [ ] replay
@@ -2161,8 +2132,27 @@ not:
 
 ## Document Status
 
-**Current status:** Draft for Review — NOT FROZEN
+**Current status:** FROZEN — IMPLEMENTATION AUTHORIZED
 
 This document uses current public Baloot references as research inputs. Some scoring, project, doubling, and tie rules vary between published descriptions; therefore the final implementation must use one explicitly adopted Rule Profile rather than mixing variants. citeturn0search0turn0search2turn0search4
 
 Final approval should occur only after the complete foundation specification has been reviewed together.
+
+
+# Phase 14.Z.12 — Final Freeze Scoring Closure
+
+## V-02b Complement Invariant
+
+Successful allocation is authoritative per-team conversion using V-02-A. For validation only:
+
+- Sun converted totals conserve to 26 Qaid.
+- Hokum converted totals conserve to 16 Qaid.
+
+The opposing-side value may be checked as contractTotalQaid minus the independently converted own-side value. The resolver must not use complement arithmetic as a replacement for independent conversion.
+
+## Match-End Equal Total
+
+After a completed round:
+- both above 152 with unequal totals → higher final total wins;
+- both exactly equal and both satisfy the target → EXTRA_DEAL;
+- match evaluation is atomic after round scoring.

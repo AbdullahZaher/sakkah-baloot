@@ -9,7 +9,7 @@
 
 **Purpose:** تحويل قواعد البلوت إلى مواصفة قابلة للتنفيذ والاختبار دون ترك الحالات المهمة لتفسير الـUI أو الـAgent.
 
-> **Important:** هذا المستند هو Domain Specification وليس كودًا. أي قاعدة غير محسومة هنا يجب أن تبقى `OPEN_DECISION` وألا يخترعها أي Agent أثناء التنفيذ.
+> **Important:** هذا المستند هو Domain Specification وليس كودًا. القواعد المجمدة في Rule Freeze v1 هي سلطة التنفيذ. لا يجوز اختراع قواعد أو متغيرات خارج Rule Profile.
 
 ---
 
@@ -1391,31 +1391,15 @@ OPEN_DECISION
 
 ---
 
-# 51. Known Rule Variants / Open Decisions
+# 51. Frozen Rule Variants / Historical Open Decisions
 
-هذه العناصر **لا تزال مفتوحة** في النسخة 0.1.0:
-
-- الصيغة النهائية للشراء في جميع حالات الإكة.
-- تفاصيل الأشكل حسب المقعد والورقة المكشوفة.
-- تفاصيل بعض حالات الدق والقطع.
-- التكويش وإعادة اليد.
-- ترتيب بعض المشاريع عند التعارض.
-- تفاصيل إعلان وكشف المشاريع.
-- البلوت وتوقيته وحالات سقوطه.
-- الدبل والثري والفور والقهوة.
-- مضاعفة المشاريع في مستويات التصعيد.
-- الكبوت والكبوت المقلوب.
-- بعض حالات التعادل.
-- بعض حالات الانتقال بين الحكم والصن.
-- أي اختلاف خاص بنسخة صكّة عن القاعدة المرجعية.
-
-هذه ليست ثغرات في الوثيقة؛ تركها مفتوحة عمدًا أفضل من إدخال قاعدة خاطئة إلى الـEngine.
+The historical open-decision list is closed by Rule Freeze v1. The frozen Rule Profile and canonical game specifications are authoritative.
 
 ---
 
 # 52. Rule Freeze Gate
 
-قبل بدء `packages/game-engine` يجب اعتماد:
+Rule Freeze v1 has authorized production implementation. The following checklist is now an implementation traceability checklist, not a precondition to begin:
 
 ```text
 [ ] Player count
@@ -1531,9 +1515,9 @@ Replay
 
 # 57. Status
 
-**Current status: DRAFT — NOT FROZEN**
+**Current status: FROZEN — IMPLEMENTATION AUTHORIZED**
 
-This document is intentionally not the final source of truth yet.
+This document is part of the frozen domain specification set.
 
 The next documents should refine the unresolved rules into executable specifications:
 
@@ -1543,4 +1527,4 @@ The next documents should refine the unresolved rules into executable specificat
 4. `05-playing.md`
 5. `06-scoring.md`
 
-Only after those documents are complete should the complete Rule Freeze Gate be executed.
+Rule changes after this point require a new Rule Freeze revision.

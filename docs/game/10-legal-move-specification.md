@@ -3,10 +3,10 @@
 
 **Document:** `docs/game/10-legal-move-specification.md`  
 **Phase:** Rule Freeze — Trick Legality Specification  
-**Status:** CANONICAL / FREEZE-READY CORE  
+**Status:** FROZEN — IMPLEMENTATION AUTHORIZED  
 **Scope:** Legal card selection during trick play  
 **Applies to:** Saudi Baseline / Counter-Clockwise Rules Profile  
-**Implementation Status:** Documentation only — no production engine implementation
+**Implementation Status:** Production engine implementation active in `packages/game-engine`
 
 
 ---

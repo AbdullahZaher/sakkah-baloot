@@ -1,7 +1,7 @@
 # صكّة بلوت — State Transitions Specification
 
 **Document:** `docs/game/09-state-transitions.md`  
-**Status:** Draft for Review — NOT FROZEN  
+**Status:** FROZEN — OWNER APPROVED 2026-09-22  
 **Phase:** Foundation / Game Domain  
 **Depends on:** Game Rules, Card System, Dealing, Bidding, Playing, Scoring, Game State, Actions  
 **Purpose:** Define exactly how accepted actions transform authoritative Game State.
@@ -250,12 +250,14 @@ The engine itself should receive already-authenticated domain actions.
 
 # 9. State Machine
 
-Baseline lifecycle:
+Canonical observable lifecycle:
 
 ```text
-GAME_CREATED
+WAITING_FOR_PLAYERS
       ↓
 SEATING
+      ↓
+ROUND_STARTING
       ↓
 DEALING
       ↓
@@ -263,20 +265,22 @@ BIDDING
       ↓
 CONTRACT_SELECTED
       ↓
-COMPLETE_DEAL
-      ↓
 PROJECT_DECLARATION
       ↓
-TRICK_PLAY
+PLAYING
       ↓
-ROUND_SCORING
+SCORING
       ↓
-MATCH_END_CHECK
-      ├── match continues → DEALING
-      └── match complete  → GAME_RESULT
+ROUND_COMPLETE
+      ↓
+MATCH_END_CHECK (internal)
+      ├── match continues → ROUND_STARTING
+      └── match complete  → MATCH_COMPLETE
 ```
 
-The final Rule Profile controls unresolved variant-specific transitions.
+Internal transition concepts such as `MATCH_END_CHECK` are not client-facing `GamePhase` values. `COMPLETE_DEAL` is also an internal transition step between contract finalization and project declaration, not a client-facing phase.
+
+The frozen Saudi Rule Profile controls variant-specific transitions.
 
 ---
 
@@ -361,7 +365,7 @@ shuffle using authoritative RNG
 deal according to Rule Profile
 ```
 
-The exact deal phases remain controlled by the Dealing specification.
+The deal phases are controlled by the frozen Dealing specification.
 
 ---
 
@@ -481,7 +485,7 @@ initialize doubling state if applicable
 
 ---
 
-# 19. PROJECT_DECLARATION → TRICK_PLAY
+# 19. PROJECT_DECLARATION → PLAYING
 
 When the project/declaration window closes according to the Rule Profile.
 
@@ -499,7 +503,7 @@ The engine must not start trick play before all required declaration rules are s
 
 ---
 
-# 20. TRICK_PLAY → TRICK_PLAY
+# 20. PLAYING → PLAYING
 
 Triggered by:
 
@@ -547,7 +551,7 @@ Then:
 if tricks remain:
     winner leads next trick
 else:
-    → ROUND_SCORING
+    → SCORING
 ```
 
 ---
@@ -571,7 +575,7 @@ The engine must never infer ranking from UI/card asset order.
 
 ---
 
-# 23. TRICK_PLAY → TRICK_PLAY
+# 23. PLAYING → PLAYING
 
 If the trick is incomplete:
 
@@ -598,9 +602,9 @@ The transition must be atomic.
 After the eighth trick:
 
 ```text
-TRICK_PLAY
+PLAYING
     ↓
-ROUND_SCORING
+SCORING
 ```
 
 The final trick bonus is applied by the Scoring subsystem.
@@ -609,7 +613,7 @@ The Playing subsystem must not independently calculate final score.
 
 ---
 
-# 25. ROUND_SCORING
+# 25. SCORING
 
 Inputs:
 
@@ -641,7 +645,7 @@ match state
 
 ---
 
-# 26. ROUND_SCORING → MATCH_END_CHECK
+# 26. SCORING → MATCH_END_CHECK
 
 After score application:
 
@@ -657,12 +661,12 @@ The transition layer must not contain duplicate scoring formulas.
 
 ---
 
-# 27. MATCH_END_CHECK → GAME_RESULT
+# 27. MATCH_END_CHECK → MATCH_COMPLETE
 
 If the Rule Profile says the match is complete:
 
 ```text
-GAME_RESULT
+MATCH_COMPLETE
 ```
 
 Effects:
@@ -738,13 +742,13 @@ nextSeat
 
 from the Rule Profile.
 
-Typical baseline:
+Canonical Saudi rule direction:
 
 ```text
-clockwise
+counter-clockwise
 ```
 
-but the transition layer must consume configured direction rather than embedding assumptions.
+The transition layer must consume the canonical Rule Profile direction rather than embedding a conflicting opposite-direction baseline.
 
 ---
 
@@ -795,7 +799,7 @@ forfeit
 disconnect handling
 ```
 
-The final behavior remains an open decision until the Rule Profile is frozen.
+Frozen timeout behavior: bidding = 8 seconds → authoritative PASS; playing = 30 seconds → AFK/disconnect handling. No random timeout card selection.
 
 ---
 
@@ -910,7 +914,7 @@ Examples:
 
 ```text
 PLAY_CARD during BIDDING
-CALL_TRUMP during TRICK_PLAY
+CALL_TRUMP during PLAYING
 READY after match started
 DOUBLE before doubling window
 PLAY_CARD when not active player
@@ -1051,7 +1055,10 @@ TURN_CHANGED
 
 or another explicitly frozen ordering.
 
-The State Transition specification must own this decision.
+This specification owns the frozen ordering.
+
+
+Canonical 14.Z.10-R boundary: events are immutable facts emitted by committed transitions. `PLAYING`, `SCORING`, and `MATCH_COMPLETE` are GamePhase values; `TRICK_RESOLUTION` and `MATCH_END_CHECK` remain internal processing concepts.
 
 ---
 
@@ -1431,12 +1438,12 @@ Never invent a new card, score, or winner to "fix" corruption.
 | BIDDING | CALL_SUN | BIDDING / CONTRACT_SELECTED |
 | BIDDING | CALL_TRUMP | BIDDING / CONTRACT_SELECTED |
 | BIDDING | CALL_ASHKAL | BIDDING / CONTRACT_SELECTED |
-| COMPLETE_DEAL | DECLARE_PROJECT | PROJECT_DECLARATION |
-| TRICK_PLAY | PLAY_CARD | TRICK_PLAY / ROUND_SCORING |
-| ROUND_SCORING | system score | MATCH_END_CHECK |
-| MATCH_END_CHECK | continue | DEALING |
-| MATCH_END_CHECK | finish | GAME_RESULT |
-| GAME_RESULT | PLAY_CARD | REJECT |
+| [internal COMPLETE_DEAL] | DECLARE_PROJECT | PROJECT_DECLARATION |
+| PLAYING | PLAY_CARD | PLAYING / SCORING |
+| SCORING | system score | MATCH_END_CHECK |
+| [internal MATCH_END_CHECK] | continue | ROUND_COMPLETE → ROUND_STARTING |
+| [internal MATCH_END_CHECK] | finish | MATCH_COMPLETE |
+| MATCH_COMPLETE | PLAY_CARD | REJECT |
 
 Exact transitions remain Rule Profile dependent where noted.
 
@@ -1514,7 +1521,7 @@ Input:
 Engine:
 
 ```text
-1. phase = TRICK_PLAY
+1. phase = PLAYING
 2. actor = active player
 3. card exists in hand
 4. card satisfies follow-suit rules
@@ -1589,9 +1596,9 @@ The exact event sequence must be frozen before protocol implementation.
 After final trick:
 
 ```text
-TRICK_PLAY
+PLAYING
     ↓
-ROUND_SCORING
+SCORING
 ```
 
 Scoring calculates the round result.
@@ -1614,7 +1621,7 @@ If match ends:
 
 ```text
 MATCH_COMPLETED
-GAME_RESULT
+MATCH_COMPLETE
 ```
 
 ---
@@ -1641,26 +1648,9 @@ This is the core engine contract.
 
 ---
 
-# 72. Open Decisions
+# 72. Frozen Domain Transition Decisions
 
-Before freezing:
-
-1. Exact event names.
-2. Exact event ordering.
-3. Whether system transitions are represented as actions or internal transitions.
-4. Exact timeout semantics.
-5. Exact lobby-to-game transition.
-6. Exact project declaration timing.
-7. Doubling transition timing.
-8. Round-end score transition structure.
-9. Dealer rotation.
-10. Match tie/end semantics.
-11. Persistence transaction strategy.
-12. Outbox implementation.
-13. Snapshot frequency.
-14. Replay storage format.
-15. State hash algorithm.
-16. Corruption recovery procedure.
+The domain event names, ordering, timeout semantics, project timing, doubling timing, dealer rotation, and match-end semantics are frozen by `docs/EVENT-CATALOG.md`, `docs/game/09-state-transitions.md`, and Rule Freeze v1. Persistence/outbox implementation details remain infrastructure work after the pure engine.
 
 ---
 
