@@ -1,7 +1,7 @@
 # صكّة بلوت — Playing System Specification
 
 **Document:** `docs/game/05-playing.md`  
-**Status:** Draft for Review — NOT FROZEN  
+**Status:** FROZEN — IMPLEMENTATION AUTHORIZED  
 **Phase:** Foundation / Game Domain  
 **Depends on:** `01-game-rules.md`, `02-card-system.md`, `03-dealing.md`, `04-bidding.md`  
 **Next dependent documents:** Scoring, Game State, Actions, State Transitions
