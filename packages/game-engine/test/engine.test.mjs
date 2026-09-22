@@ -259,3 +259,200 @@ test("Ace without valid Ika does not grant partner exemption", () => {
   });
   assert.deepEqual(getLegalMoves(state, "pS").map((m) => m.cardId), ["HEARTS-J"]);
 });
+
+
+test("Sun with no lead suit allows any card", () => {
+  const state = legalState({
+    contract: "SUN",
+    trumpSuit: null,
+    currentPlayerId: "pS",
+    hands: {
+      pN: hand("CLUBS-A"),
+      pE: hand("DIAMONDS-7"),
+      pS: hand("HEARTS-J","SPADES-A"),
+      pW: hand("CLUBS-7"),
+    },
+    currentTrick: [
+      { playerId: "pN", seat: "NORTH", card: card("CLUBS-A"), ikaDeclared: false, sequence: 1 },
+      { playerId: "pE", seat: "EAST", card: card("DIAMONDS-7"), ikaDeclared: false, sequence: 2 },
+    ],
+  });
+  assert.deepEqual(getLegalMoves(state, "pS").map((m) => m.cardId), ["HEARTS-J","SPADES-A"]);
+});
+
+test("opponent winning trump with no higher trump allows any trump", () => {
+  const state = legalState({
+    currentPlayerId: "pS",
+    hands: {
+      pN: hand("CLUBS-A"),
+      pE: hand("HEARTS-J"),
+      pS: hand("HEARTS-8","SPADES-A"),
+      pW: hand("SPADES-7"),
+    },
+    currentTrick: [
+      { playerId: "pN", seat: "NORTH", card: card("CLUBS-A"), ikaDeclared: false, sequence: 1 },
+      { playerId: "pE", seat: "EAST", card: card("HEARTS-J"), ikaDeclared: false, sequence: 2 },
+    ],
+  });
+  assert.deepEqual(getLegalMoves(state, "pS").map((m) => m.cardId), ["HEARTS-8"]);
+});
+
+test("third player with partner winning may play any trump when partner wins with trump", () => {
+  const state = legalState({
+    currentPlayerId: "pS",
+    hands: {
+      pN: hand("CLUBS-A"),
+      pE: hand("HEARTS-J"),
+      pS: hand("HEARTS-9","SPADES-A"),
+      pW: hand("SPADES-7"),
+    },
+    currentTrick: [
+      { playerId: "pN", seat: "NORTH", card: card("CLUBS-A"), ikaDeclared: false, sequence: 1 },
+      { playerId: "pE", seat: "EAST", card: card("HEARTS-J"), ikaDeclared: false, sequence: 2 },
+    ],
+  });
+  assert.deepEqual(getLegalMoves(state, "pS").map((m) => m.cardId), ["HEARTS-9"]);
+});
+
+test("fourth player with partner winning and no lead suit may play any card", () => {
+  const state = legalState({
+    currentPlayerId: "pW",
+    hands: {
+      pN: hand("CLUBS-A"),
+      pE: hand("DIAMONDS-7"),
+      pS: hand("HEARTS-K"),
+      pW: hand("HEARTS-8","SPADES-A"),
+    },
+    currentTrick: [
+      { playerId: "pN", seat: "NORTH", card: card("CLUBS-A"), ikaDeclared: false, sequence: 1 },
+      { playerId: "pE", seat: "EAST", card: card("DIAMONDS-7"), ikaDeclared: false, sequence: 2 },
+      { playerId: "pS", seat: "SOUTH", card: card("HEARTS-K"), ikaDeclared: false, sequence: 3 },
+    ],
+  });
+  assert.deepEqual(getLegalMoves(state, "pW").map((m) => m.cardId), ["HEARTS-8","SPADES-A"]);
+});
+
+test("fourth player with partner winning trump must follow trump when trump is led", () => {
+  const state = legalState({
+    currentPlayerId: "pW",
+    hands: {
+      pN: hand("HEARTS-J"),
+      pE: hand("HEARTS-9"),
+      pS: hand("HEARTS-8"),
+      pW: hand("HEARTS-7","SPADES-A"),
+    },
+    currentTrick: [
+      { playerId: "pN", seat: "NORTH", card: card("HEARTS-J"), ikaDeclared: false, sequence: 1 },
+      { playerId: "pE", seat: "EAST", card: card("HEARTS-9"), ikaDeclared: false, sequence: 2 },
+      { playerId: "pS", seat: "SOUTH", card: card("HEARTS-8"), ikaDeclared: false, sequence: 3 },
+    ],
+  });
+  assert.deepEqual(getLegalMoves(state, "pW").map((m) => m.cardId), ["HEARTS-7"]);
+});
+
+test("Ika requires the highest remaining non-trump card of the led suit", () => {
+  const valid = legalState({
+    currentPlayerId: "pN",
+    hands: {
+      pN: hand("CLUBS-A","CLUBS-K","DIAMONDS-7"),
+      pE: hand("DIAMONDS-7"),
+      pS: hand("HEARTS-7"),
+      pW: hand("SPADES-7"),
+    },
+  });
+  assert.deepEqual(getLegalMoves(valid, "pN").map((m) => m.cardId), ["CLUBS-A","CLUBS-K","DIAMONDS-7"]);
+
+  const invalid = legalState({
+    currentPlayerId: "pN",
+    hands: {
+      pN: hand("CLUBS-K","CLUBS-A","DIAMONDS-7"),
+      pE: hand("DIAMONDS-7"),
+      pS: hand("HEARTS-7"),
+      pW: hand("SPADES-7"),
+    },
+  });
+  assert.throws(
+    () => applyCardPlay(invalid, "pN", "CLUBS-K", true),
+    /Invalid Ika declaration/,
+  );
+});
+
+test("Ika declaration has zero state mutation when invalid", () => {
+  const state = legalState({
+    currentPlayerId: "pN",
+    hands: {
+      pN: hand("CLUBS-K","CLUBS-A"),
+      pE: hand("DIAMONDS-7"),
+      pS: hand("HEARTS-7"),
+      pW: hand("SPADES-7"),
+    },
+  });
+  const before = structuredClone(state);
+  assert.throws(() => applyCardPlay(state, "pN", "CLUBS-K", true), /Invalid Ika declaration/);
+  assert.deepEqual(state, before);
+});
+
+test("valid Ika is recorded on the committed lead play", () => {
+  const state = legalState({
+    currentPlayerId: "pN",
+    hands: {
+      pN: hand("CLUBS-A","CLUBS-K"),
+      pE: hand("DIAMONDS-7"),
+      pS: hand("HEARTS-7"),
+      pW: hand("SPADES-7"),
+    },
+  });
+  const next = applyCardPlay(state, "pN", "CLUBS-A", true);
+  assert.equal(next.currentTrick[0].ikaDeclared, true);
+  assert.equal(next.hands.pN.some((c) => c.id === "CLUBS-A"), false);
+});
+
+test("locked Hokum allows leading trump when hand contains only trump", () => {
+  const state = legalState({
+    hokumPlayMode: "LOCKED",
+    currentPlayerId: "pN",
+    hands: {
+      pN: hand("HEARTS-7","HEARTS-8"),
+      pE: hand("DIAMONDS-7"),
+      pS: hand("CLUBS-7"),
+      pW: hand("SPADES-7"),
+    },
+  });
+  assert.deepEqual(getLegalMoves(state, "pN").map((m) => m.cardId), ["HEARTS-7","HEARTS-8"]);
+});
+
+test("illegal card play is rejected without mutating state", () => {
+  const state = legalState({
+    currentPlayerId: "pE",
+    hands: {
+      pN: hand("CLUBS-A"),
+      pE: hand("DIAMONDS-7","HEARTS-7"),
+      pS: hand("HEARTS-7"),
+      pW: hand("SPADES-7"),
+    },
+    currentTrick: [
+      { playerId: "pN", seat: "NORTH", card: card("DIAMONDS-K"), ikaDeclared: false, sequence: 1 },
+    ],
+  });
+  const before = structuredClone(state);
+  assert.throws(() => applyCardPlay(state, "pE", "HEARTS-7"), /Illegal card/);
+  assert.deepEqual(state, before);
+});
+
+test("trick resolution uses canonical counter-clockwise winner handoff", () => {
+  const state = legalState({
+    currentPlayerId: "pN",
+    hands: {
+      pN: hand("CLUBS-A"),
+      pE: hand("DIAMONDS-7"),
+      pS: hand("HEARTS-7"),
+      pW: hand("SPADES-7"),
+    },
+  });
+  const s1 = applyCardPlay(state, "pN", "CLUBS-A");
+  const s2 = applyCardPlay(s1, "pW", "SPADES-7");
+  const s3 = applyCardPlay(s2, "pS", "HEARTS-7");
+  const s4 = applyCardPlay(s3, "pE", "DIAMONDS-7");
+  assert.equal(s4.completedTricks[0].winnerSeat, "NORTH");
+  assert.equal(s4.currentPlayerId, "pN");
+});
