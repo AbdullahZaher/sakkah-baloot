@@ -1061,34 +1061,45 @@ The exact project raw contribution table must be frozen.
 
 # 40. Failure / Qaid Transfer
 
-When the purchaser fails, the Rule Profile may award the round's recorded Qaid to the opponent instead of splitting the score according to ordinary conversion.
-
-This is a critical distinction.
-
-Example pattern:
+When the purchaser fails, the canonical Rule Profile allocation is:
 
 ```text
-Purchaser fails
-→ purchaser receives 0 Qaid
-→ opponent receives configured round Qaid
+FULL_CONTRACT_ROUND_VALUE_TO_OPPONENT
 ```
 
-The exact values depend on:
+That means the purchaser receives:
 
-- Sun/Hokm
-- projects
-- doubling
-- kaboot
-- special rules
+```text
+0 Qaid
+```
 
-Do not implement failure as:
+and the opponent receives the configured full contract-round value for the hand, subject to the separately defined Kaboot/Gahwa/special-result pipeline.
+
+This is a **round-allocation rule**, not a second raw-to-Qaid conversion formula. Do not implement failure as:
 
 ```ts
 normalConvert(purchaserRaw)
 normalConvert(opponentRaw)
 ```
 
-without checking the purchaser-failure rule.
+and then infer the loser/winner allocation from those two independently converted shares.
+
+The canonical owner/profile chain is:
+
+```text
+purchaser outcome
+→ successful-round allocation OR full-contract-round-value-to-opponent
+→ project/Baloot/Kaboot rules
+→ final Qaid allocation
+```
+
+The Rule Profile field is:
+
+```ts
+buyerFailureAllocation: "FULL_CONTRACT_ROUND_VALUE_TO_OPPONENT"
+```
+
+No additional failure allocation formula should be invented while the exact contract-specific conversion table remains OPEN.
 
 ### Canonical successful-round allocation
 
@@ -1239,7 +1250,7 @@ with final-round and purchaser rules affecting the actual recorded result.
 
 Current scorekeeping references describe Hokm as being divided by 10. citeturn0search2
 
-The final Rule Profile must define exact rounding and purchaser-failure behavior.
+The final Rule Profile must define the exact approved conversion table and purchaser-failure interaction. The current owner-decision register explicitly leaves the exact conversion table OPEN; therefore this document MUST NOT freeze a generic rounding rule as canonical.
 
 ---
 
