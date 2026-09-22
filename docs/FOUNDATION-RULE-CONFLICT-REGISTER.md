@@ -282,3 +282,22 @@ C-12 is intentionally **not** closed by common `/5` or `/10` representations. Th
 ### Freeze implication
 
 This addendum changes historical conflict interpretation only. It does not declare Rule Freeze and does not authorize production implementation.
+
+
+## Current-status overrides — Phase 14.Z.11
+
+| Conflict | Current status | Authority |
+|---|---|---|
+| V-02-A Qaid conversion | CLOSED — exact Owner table | Owner Decision V-02-A |
+| V-02b complement | OPEN — no separate approval | Owner decision history |
+| V-08 project Raw values | CLOSED | Owner Decision / Rule Profile |
+| Project ×3/×4 | CLOSED — no multiplication at Triple/Four | Saudi baseline + Owner closure |
+| Sun Double window | CLOSED | Project decision + Saudi baseline eligibility |
+| Both teams cross 152 | CLOSED — higher final total wins | Saudi baseline |
+| Equal final total | OPEN | no authoritative closure |
+| First dealer | CLOSED — deterministic match-seed derived and persisted | Project architecture decision |
+| Timeouts | CLOSED — 8s bidding PASS; 30s playing AFK/disconnect handling | Project policy |
+| Incident authority | CLOSED baseline | Project incident policy |
+| Kasho violation matrix | CLOSED | Project authoritative transaction semantics |
+| AD-01…AD-05 | CLOSED — Owner approved | Architecture Owner Approval Pack |
+| Ace→Sun priority | CLOSED — dealer-right in both rounds | Saudi baseline |
