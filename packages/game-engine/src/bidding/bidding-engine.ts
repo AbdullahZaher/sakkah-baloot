@@ -10,6 +10,8 @@ import {
 import type { DealState } from "../dealing/deal-engine.js";
 import { completeDeal } from "../dealing/deal-engine.js";
 
+export const BIDDING_TIMEOUT_MS = 8_000;
+
 export type BiddingPhase = "FIRST_ROUND" | "SECOND_ROUND" | "CONTRACT_SELECTED" | "CANCELLED";
 
 export type BiddingAction =
@@ -290,6 +292,27 @@ export function applyBiddingAction(
   }
 
   throw new Error("Invalid second-round action");
+}
+
+export function applyBiddingTimeout(
+  state: BiddingState,
+  dealerSeat: Seat,
+  elapsedMs: number,
+  timeoutActionId: string,
+): BiddingState {
+  if (elapsedMs < BIDDING_TIMEOUT_MS) {
+    throw new Error("Bidding timeout has not elapsed");
+  }
+  if (state.phase !== "FIRST_ROUND" && state.phase !== "SECOND_ROUND") {
+    return state;
+  }
+  return applyBiddingAction(
+    state,
+    { type: "PASS", actionId: timeoutActionId },
+    dealerSeat,
+    null,
+    {},
+  );
 }
 
 export function finalizeBiddingDeal(
