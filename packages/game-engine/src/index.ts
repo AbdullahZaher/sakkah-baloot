@@ -13,3 +13,4 @@ export * from "./playing/trick-engine.js";
 export * from "./scoring/scoring-types.js";
 export * from "./scoring/scoring-engine.js";
 export * from "./validation/invariants.js";
+export * from "./replay/replay.js";
