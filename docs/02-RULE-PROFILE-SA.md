@@ -5,7 +5,7 @@ export const SAUDI_BASELINE_CCW_V1 = {
   direction: "COUNTER_CLOCKWISE",
   match: {
     targetQaid: 152,
-    // OPEN — present as a profile candidate only; Owner has not frozen the both-cross-152 policy.\n    bothCrossPolicy: "HIGHER_FINAL_TOTAL",
+    bothCrossPolicy: "HIGHER_FINAL_TOTAL",
     // OPEN — present as a profile candidate only; Owner has not frozen equal-final-total handling.\n    // OPEN — equal final totals remain unresolved.
     equalFinalTotalPolicy: "OPEN",
     doubledTiePolicy: "INITIAL_DOUBLER_LOSES",
@@ -44,7 +44,7 @@ export const SAUDI_BASELINE_CCW_V1 = {
       closesWhen: "BUYER_RAISES_FINAL_CARDS",
       afterTrickStarts: false,
     },
-    sun: {\n      chain: ["NORMAL", "DOUBLE"],\n      // OPEN — exact Sun Double open/close fields are not yet Owner-frozen.\n    },
+    sun: { chain: ["NORMAL", "DOUBLE"], open: "CONTRACT_FINALIZED", close: "FINAL_CARDS_RAISED", afterCardCommit: false, afterTrickStarts: false, eligibility: "DOUBLER_TEAM_QAID_LE_100_AND_OPPONENT_QAID_GT_100" },
   },
   hokumPlayMode: {
     normal: "OPEN",
@@ -86,7 +86,7 @@ export const SAUDI_BASELINE_CCW_V1 = {
     mode: "CONTRACT_SPECIFIC_TABLE", floatingPoint: false, exactTableRequired: true,
     HOKUM: { remainder_0_to_5: "DOWN", remainder_6_to_9: "UP", divisor: 10, total: 16 },
     SUN: { remainder_1_to_4: "DOWN", remainder_5: "PRESERVE", remainder_6_to_9: "UP", divisor: 5, total: 26 },
-    complement: "NOT_APPROVED",
+    complement: "FIXED_TOTAL_DERIVED_ONLY",
   },
   kaboot: {
     normal: { HOKUM: 25, SUN: 44 },
