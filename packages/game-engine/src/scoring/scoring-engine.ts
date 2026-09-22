@@ -33,7 +33,6 @@ export function calculateCardRaw(
 
 export function convertRawToQaid(contract: Contract, raw: number): number {
   if (!Number.isInteger(raw) || raw < 0) throw new Error("Raw score must be a non-negative integer");
-  const base = contract === "HOKUM" ? 10 : 5;
   const remainder = raw % 10;
   if (contract === "HOKUM") return Math.floor((raw + (remainder >= 6 ? 10 : 0)) / 10);
   if (remainder === 0) return raw / 5;
@@ -95,7 +94,10 @@ export function scoreRound(input: RoundScoreInput): RoundScoreBreakdown {
   if (kaboot !== null) {
     const out = zeroTeamMap();
     const value = SAUDI_RULE_PROFILE_V1.scoring.kabootQaid[input.contract][input.escalation === "GAHWA" ? "NORMAL" : input.escalation];
-    out[kaboot] = value;
+    out[kaboot] =
+      value +
+      input.projectQaid[kaboot] * projectMultiplier(input.escalation) +
+      input.balootQaid[kaboot];
     return {
       cardRaw: card.cardRaw, projectRaw, balootRaw, contractRaw,
       contractResult: purchaserSucceeded ? "SUCCESS" : "FAILURE",
