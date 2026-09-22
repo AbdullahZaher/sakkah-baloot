@@ -40,7 +40,7 @@ It covers:
 - doubling
 - triple
 - four
-- coffee
+- gahwa
 - kaboot
 - ties
 - project cancellation
@@ -933,7 +933,7 @@ type MultiplierLevel =
   | "DOUBLE"
   | "TRIPLE"
   | "QUADRUPLE"
-  | "COFFEE";
+  | "GAHWA";
 ```
 
 Numeric multiplier:
@@ -945,7 +945,7 @@ TRIPLE   = 3
 QUADRUPLE = 4
 ```
 
-Coffee is not simply:
+Gahwa is not simply:
 
 ```text
 ×5
@@ -955,9 +955,9 @@ It is a distinct match-result state and must be modeled separately.
 
 ---
 
-# 37. Coffee
+# 37. Gahwa
 
-Coffee/coup-like terminal doubling behavior must be represented as a state, not a numeric multiplier.
+Gahwa/coup-like terminal doubling behavior must be represented as a state, not a numeric multiplier.
 
 Conceptually:
 
@@ -967,10 +967,10 @@ type DoublingState =
   | { level: "DOUBLE"; caller: TeamId }
   | { level: "TRIPLE"; caller: TeamId }
   | { level: "QUADRUPLE"; caller: TeamId }
-  | { level: "COFFEE"; caller: TeamId };
+  | { level: "GAHWA"; caller: TeamId };
 ```
 
-The exact Coffee win condition is a Rule Profile decision.
+The exact Gahwa win condition is a Rule Profile decision.
 
 ---
 
@@ -1452,7 +1452,7 @@ interface DoublingAction {
     | "DOUBLE"
     | "TRIPLE"
     | "QUADRUPLE"
-    | "COFFEE";
+    | "GAHWA";
   readonly stateVersion: number;
 }
 ```
@@ -1816,7 +1816,7 @@ NORMAL
 DOUBLE
 TRIPLE
 QUADRUPLE
-COFFEE
+GAHWA
 ```
 
 Test:
@@ -1910,7 +1910,7 @@ Create canonical fixtures for:
 14. Double.
 15. Triple.
 16. Four.
-17. Coffee.
+17. Gahwa.
 18. Tie normal.
 19. Tie after initial double.
 
@@ -1940,7 +1940,7 @@ The following MUST be finalized before scoring is frozen:
 8. Exact بلوت declaration timing.
 9. Exact بلوت raw/Qaid treatment.
 10. Exact multiplier rules.
-11. Exact Coffee behavior.
+11. Exact Gahwa behavior.
 12. Exact Kaboot values.
 13. Exact Kaboot project behavior.
 14. Exact tie behavior.
@@ -2026,7 +2026,7 @@ Before implementation:
 - [ ] purchaser success
 - [ ] Qaid conversion
 - [ ] double/triple/four
-- [ ] Coffee
+- [ ] Gahwa
 - [ ] Kaboot
 - [ ] ties
 - [ ] replay
