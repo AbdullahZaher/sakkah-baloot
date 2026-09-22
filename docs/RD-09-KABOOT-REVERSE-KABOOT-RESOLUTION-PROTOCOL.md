@@ -459,9 +459,9 @@ type KabootRuleProfile = {
 
 ## 21. Rule-Owner Decision — V-04 CLOSED
 
-### V-04 = B — Multiplied Kaboot
+### V-04 = A — Saudi Baseline / Flat Dedicated Table
 
-The Rule Owner has explicitly approved the multiplied Kaboot table.
+The Rule Owner has explicitly approved the flat Saudi-baseline Kaboot table.
 
 | Contract | Normal | Double | Triple | Four |
 |---|---:|---:|---:|---:|
@@ -482,7 +482,7 @@ Kaboot values are resolved through the dedicated Kaboot Rule Profile table:
 kabootAward = ruleProfile.kaboot[contract][escalationLevel];
 ```
 
-Do **not** calculate Kaboot through the generic contract multiplier at runtime. The table is canonical and explicit, even though the selected values are numerically equivalent to multiplying the normal Kaboot value for the supported levels.
+Do **not** calculate Kaboot through the generic contract multiplier at runtime. The dedicated flat table is canonical.
 
 ### Important distinction
 
@@ -513,7 +513,7 @@ The normal doubled Sun Kaboot and Reverse Kaboot therefore have the same numeric
 
 ## 22. Status
 
-**RD-09: READY / V-04 CLOSED**
+**RD-09: READY / V-04 CLOSED**\n\nV-04 canonical owner selection: **A — Saudi Baseline / Flat Dedicated Table**.
 
 - Normal Kaboot: defined
 - Reverse Kaboot: defined
