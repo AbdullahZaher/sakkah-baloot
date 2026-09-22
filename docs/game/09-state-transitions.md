@@ -250,12 +250,14 @@ The engine itself should receive already-authenticated domain actions.
 
 # 9. State Machine
 
-Baseline lifecycle:
+Canonical observable lifecycle:
 
 ```text
-GAME_CREATED
+WAITING_FOR_PLAYERS
       ↓
 SEATING
+      ↓
+ROUND_STARTING
       ↓
 DEALING
       ↓
@@ -263,18 +265,20 @@ BIDDING
       ↓
 CONTRACT_SELECTED
       ↓
-COMPLETE_DEAL
-      ↓
 PROJECT_DECLARATION
       ↓
 PLAYING
       ↓
 SCORING
       ↓
-MATCH_END_CHECK
-      ├── match continues → DEALING
+ROUND_COMPLETE
+      ↓
+MATCH_END_CHECK (internal)
+      ├── match continues → ROUND_STARTING
       └── match complete  → MATCH_COMPLETE
 ```
+
+Internal transition concepts such as `MATCH_END_CHECK` are not client-facing `GamePhase` values. `COMPLETE_DEAL` is also an internal transition step between contract finalization and project declaration, not a client-facing phase.
 
 The final Rule Profile controls unresolved variant-specific transitions.
 
