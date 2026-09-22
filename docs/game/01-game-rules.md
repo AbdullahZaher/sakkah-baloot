@@ -9,7 +9,7 @@
 
 **Purpose:** تحويل قواعد البلوت إلى مواصفة قابلة للتنفيذ والاختبار دون ترك الحالات المهمة لتفسير الـUI أو الـAgent.
 
- > **Important:** هذا المستند هو Domain Specification وليس كودًا. القواعد المجمدة في Rule Freeze v1 هي سلطة التنفيذ. لا يجوز اختراع قواعد أو متغيرات خارج Rule Profile.
+> **Important:** هذا المستند هو Domain Specification وليس كودًا. القواعد المجمدة في Rule Freeze v1 هي سلطة التنفيذ. لا يجوز اختراع قواعد أو متغيرات خارج Rule Profile.
 
 ---
 
@@ -140,11 +140,9 @@ Clubs
 المباراة الكاملة تتكون من توزيعات/أيدي متتابعة حتى يتحقق شرط الفوز.
 
 ```text
-WAITING_FOR_PLAYERS
+GAME_CREATED
     ↓
 SEATING
-    ↓
-ROUND_STARTING
     ↓
 DEALING
     ↓
@@ -152,19 +150,19 @@ BIDDING
     ↓
 CONTRACT_SELECTED
     ↓
+COMPLETE_DEAL
+    ↓
 PROJECT_DECLARATION
     ↓
-PLAYING
+TRICK_PLAY
     ↓
-SCORING
+ROUND_SCORING
     ↓
-ROUND_COMPLETE
-    ↓
-MATCH_END_CHECK (internal)
+MATCH_END_CHECK
     │
-    ├── Continue → ROUND_STARTING
+    ├── Continue → DEALING
     │
-    └── End → MATCH_COMPLETE
+    └── End → GAME_RESULT
 ```
 
 المصطلح داخل النظام:
@@ -270,7 +268,7 @@ Q
 المجموع:
 
 ```text
-120
+130
 ```
 
 ثم تضاف:
@@ -282,7 +280,7 @@ Q
 لإجمالي:
 
 ```text
-130
+140
 ```
 
 **NOTE:** يجب تثبيت كيفية تحويل هذه الأبناط إلى نقاط القيد في ملف `06-scoring.md` وفق Rule Profile النهائي. لا يجوز للـUI تنفيذ التحويل بنفسه.
@@ -304,23 +302,13 @@ Q
 | 8 | 0 |
 | 7 | 0 |
 
-مجموع الورق قبل الأرض:
-
-```text
-152
-```
-
-ثم تضاف أرض آخر أكلة:
-
-```text
-+10
-```
-
-لإجمالي:
+مجموع الورق:
 
 ```text
 162
 ```
+
+مع الأرض داخلة في المجموع.
 
 ---
 
@@ -735,7 +723,7 @@ TRIPLE
    ↓
 QUADRUPLE
    ↓
-GAHWA
+COFFEE
 ```
 
 ولكن ليس كل انتقال مسموحًا في كل نوع عقد.
@@ -888,7 +876,7 @@ updateScores()
 checkMatchEnd()
         ↓
 if finished:
-    MATCH_COMPLETE
+    GAME_RESULT
 else:
     next dealer
     ↓
@@ -1405,11 +1393,138 @@ OPEN_DECISION
 
 # 51. Frozen Rule Variants / Historical Open Decisions
 
-كانت هذه الوثيقة تحتوي سابقًا على قائمة Open Decisions. تم إغلاقها ضمن Rule Freeze v1. أي تغيير لاحق يتطلب Rule Freeze revision جديدًا.
+The historical open-decision list is closed by Rule Freeze v1. The frozen Rule Profile and canonical game specifications are authoritative.
 
-التنفيذ يعتمد على:
-- `docs/02-RULE-PROFILE-SA.md`
-- `docs/RD-20-RULE-FREEZE-v1.md`
-- `docs/game/01-game-rules.md` through `docs/game/10-legal-move-specification.md`
+---
 
-لا توجد قرارات قواعد مفتوحة مصرح للـAgent بافتراضها داخل Domain Engine.
+# 52. Rule Freeze Gate
+
+Rule Freeze v1 has authorized production implementation. The following checklist is now an implementation traceability checklist, not a precondition to begin:
+
+```text
+[ ] Player count
+[ ] Teams
+[ ] Deck
+[ ] Card ranking
+[ ] Card values
+[ ] Dealing
+[ ] Dealer rotation
+[ ] Bidding
+[ ] Sun
+[ ] Hokm
+[ ] Ashkal
+[ ] Follow suit
+[ ] Cutting
+[ ] Raising
+[ ] Projects
+[ ] Baloot
+[ ] Doubling
+[ ] Scoring
+[ ] Winning threshold
+[ ] Tie handling
+[ ] Redeal
+[ ] Forfeit
+[ ] Timeout behavior
+```
+
+---
+
+# 53. Engineering Rule
+
+لا يسمح بكتابة Game Engine production قبل اجتياز Rule Freeze Gate.
+
+قبل ذلك يسمح فقط بـ:
+
+- prototypes
+- rule simulations
+- tests
+- documentation
+- UI exploration
+
+ولا يسمح بتثبيت قواعد غير معتمدة داخل production code.
+
+---
+
+# 54. Rule Change Protocol
+
+بعد اعتماد القواعد:
+
+أي تغيير يتطلب:
+
+```text
+Rule Change
+    ↓
+Documentation
+    ↓
+Rule Profile decision
+    ↓
+Engine change
+    ↓
+Regression tests
+    ↓
+Simulation
+    ↓
+Replay compatibility review
+    ↓
+Server/client compatibility review
+```
+
+---
+
+# 55. Source Notes
+
+هذه النسخة صيغت مع مراجعة مصادر قواعد منشورة حديثة، بما في ذلك مرجع يورد بنودًا من القواعد المعتمدة للاتحاد السعودي للرياضات الذهنية، ومراجع رقمية حديثة تفصل القواعد والاختلافات.
+
+من أمثلة النقاط التي تحتاج تثبيتًا قبل Freeze:
+
+- حد الفوز 152.
+- ترتيب الحكم والصن.
+- عتبات نجاح/فشل المشتري.
+- تفاصيل الدبل والتصعيد.
+- بعض اختلافات الأشكل والإكة والمشاريع.
+
+لا تعتبر أي قاعدة متعارضة بين المصادر "محسومة" في صكّة حتى يحدد Product/Rules Owner الـRule Profile النهائي.
+
+---
+
+# 56. Final Rule Contract
+
+بعد الاعتماد، يجب أن يكون بالإمكان تحويل هذه الوثيقة إلى:
+
+```text
+Game Rules
+    ↓
+Pure TypeScript Functions
+    ↓
+Deterministic Game Engine
+    ↓
+Unit Tests
+    ↓
+Simulation Tests
+    ↓
+Bot
+    ↓
+Server
+    ↓
+Replay
+```
+
+إذا كانت قاعدة لا يمكن تحويلها إلى اختبار واضح، فهذه إشارة إلى أن القاعدة نفسها غير محددة بما يكفي.
+
+---
+
+# 57. Status
+
+**Current status: FROZEN — IMPLEMENTATION AUTHORIZED**
+
+This document is part of the frozen domain specification set.
+
+The next documents should refine the unresolved rules into executable specifications:
+
+1. `02-card-system.md`
+2. `03-dealing.md`
+3. `04-bidding.md`
+4. `05-playing.md`
+5. `06-scoring.md`
+
+Rule changes after this point require a new Rule Freeze revision.
