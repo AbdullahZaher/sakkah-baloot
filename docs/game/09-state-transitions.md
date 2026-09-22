@@ -1,7 +1,7 @@
 # صكّة بلوت — State Transitions Specification
 
 **Document:** `docs/game/09-state-transitions.md`  
-**Status:** Draft for Review — PROPOSED RECONCILIATION (14.Z.10-R) — NOT FROZEN  
+**Status:** FROZEN — OWNER APPROVED 2026-09-22  
 **Phase:** Foundation / Game Domain  
 **Depends on:** Game Rules, Card System, Dealing, Bidding, Playing, Scoring, Game State, Actions  
 **Purpose:** Define exactly how accepted actions transform authoritative Game State.
@@ -280,7 +280,7 @@ MATCH_END_CHECK (internal)
 
 Internal transition concepts such as `MATCH_END_CHECK` are not client-facing `GamePhase` values. `COMPLETE_DEAL` is also an internal transition step between contract finalization and project declaration, not a client-facing phase.
 
-The final Rule Profile controls unresolved variant-specific transitions.
+The frozen Saudi Rule Profile controls variant-specific transitions.
 
 ---
 
@@ -365,7 +365,7 @@ shuffle using authoritative RNG
 deal according to Rule Profile
 ```
 
-The exact deal phases remain controlled by the Dealing specification.
+The deal phases are controlled by the frozen Dealing specification.
 
 ---
 
@@ -799,7 +799,7 @@ forfeit
 disconnect handling
 ```
 
-The final behavior remains an open decision until the Rule Profile is frozen.
+Frozen timeout behavior: bidding = 8 seconds → authoritative PASS; playing = 30 seconds → AFK/disconnect handling. No random timeout card selection.
 
 ---
 
@@ -1055,7 +1055,7 @@ TURN_CHANGED
 
 or another explicitly frozen ordering.
 
-The State Transition specification must own this decision.
+This specification owns the frozen ordering.
 
 
 Canonical 14.Z.10-R boundary: events are immutable facts emitted by committed transitions. `PLAYING`, `SCORING`, and `MATCH_COMPLETE` are GamePhase values; `TRICK_RESOLUTION` and `MATCH_END_CHECK` remain internal processing concepts.
