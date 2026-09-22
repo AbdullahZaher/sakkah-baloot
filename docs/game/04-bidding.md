@@ -33,7 +33,7 @@ It covers:
 - deterministic state transitions
 - testing
 
-The exact Saudi Baloot conventions that remain disputed or variant-specific are explicitly marked `OPEN_DECISION` rather than silently invented.
+The Saudi Baloot conventions required by this project are frozen in Rule Freeze v1 and must be implemented exactly; no undocumented variant may be introduced.
 
 Current public rule references describe a two-round purchase process beginning from the player to the dealer's right, with the exposed card determining the first-round Hokm option; sources also describe Ashkal as a special option available to an eligible seat in the first round. citeturn0search0turn0search22
 
@@ -455,7 +455,7 @@ The final Rule Profile must define:
 - whether a no-point cancellation is possible
 - whether special “kawesh/saneen” variants are supported
 
-This is an explicit `OPEN_DECISION`.
+This historical note is superseded by Rule Freeze v1; the project-specific cancellation and redeal semantics are frozen in the canonical Rule Profile.
 
 ---
 
@@ -1331,183 +1331,10 @@ At all times:
 
 ---
 
-# 54. Open Decisions
+# 54. Frozen Bidding Decisions
 
-The following MUST be frozen before production implementation:
+The bidding decisions previously listed here as open are closed by Rule Freeze v1, including first/second-round priority, Ace→Sun dealer-right priority, Kasho closure on purchase, PASS semantics, Ashkal handling, and deterministic first dealer.
 
-1. Exact official Saudi Rule Profile source/adoption.
-2. Exact first-round option set.
-3. Exact first-round Sun priority/override behavior.
-4. Exact second-round option set.
-5. Exact second-round Sun/Hokm priority.
-6. Exact Ashkal eligibility.
-7. Exact Ashkal behavior.
-8. Exact Ashkal timing restrictions.
-9. Exact handling of exposed Ace/special cases if applicable.
-10. Exact pass semantics.
-11. Exact redeal behavior after all-pass.
-12. Any Kawesh/Saneen variant.
-13. Exact timeout behavior.
-14. Exact relation between bidding completion and doubling availability.
+The Domain Engine must implement the frozen Rule Profile rather than infer alternative house rules.
 
----
-
-# 55. Rule Freeze Gate
-
-Before this document is frozen:
-
-- [ ] Rule Profile selected.
-- [ ] First-round actions frozen.
-- [ ] Second-round actions frozen.
-- [ ] Turn order frozen.
-- [ ] Pass semantics frozen.
-- [ ] Ashkal frozen.
-- [ ] Contract representation frozen.
-- [ ] Purchaser semantics frozen.
-- [ ] Exposed-card receiver semantics frozen.
-- [ ] Completion-deal handoff frozen.
-- [ ] Timeout behavior frozen.
-- [ ] Redeal behavior frozen.
-- [ ] Golden fixtures verified.
-- [ ] Property-based tests defined.
-
----
-
-# 56. Implementation Checklist
-
-### Domain
-
-- [ ] `BiddingPhase`
-- [ ] `BiddingAction`
-- [ ] `Contract`
-- [ ] `BiddingState`
-- [ ] `BiddingActionRecord`
-- [ ] `getLegalBiddingActions`
-- [ ] `validateBiddingAction`
-- [ ] `applyBiddingAction`
-- [ ] `resolveBiddingTransition`
-
-### Server
-
-- [ ] authoritative turn
-- [ ] action idempotency
-- [ ] state versioning
-- [ ] timer authority
-- [ ] atomic persistence
-- [ ] event publication
-
-### Client
-
-- [ ] legal action rendering
-- [ ] countdown rendering
-- [ ] contract preview
-- [ ] reconnect handling
-- [ ] localized labels
-
-### Tests
-
-- [ ] first round
-- [ ] second round
-- [ ] Ashkal
-- [ ] timeout
-- [ ] duplicate action
-- [ ] stale state
-- [ ] reconnect
-- [ ] replay
-- [ ] property-based tests
-
----
-
-# 57. Relationship to Other Documents
-
-```text
-01-game-rules.md
-       ↓
-02-card-system.md
-       ↓
-03-dealing.md
-       ↓
-04-bidding.md
-       ↓
-05-playing.md
-       ↓
-06-scoring.md
-       ↓
-07-game-state.md
-       ↓
-08-actions.md
-       ↓
-09-state-transitions.md
-```
-
-Bidding decides:
-
-```text
-what contract was selected
-who purchased
-how the exposed card is assigned
-```
-
-Bidding does NOT decide:
-
-```text
-which card wins a trick
-project score
-round score
-match score
-```
-
----
-
-# 58. Final Engineering Rule
-
-**Bidding is a deterministic state machine, not a collection of UI buttons.**
-
-The UI displays legal choices.
-
-The client submits intent.
-
-The server validates intent.
-
-The Game Engine resolves the transition.
-
-The resulting contract is persisted.
-
-The Dealing Engine completes the hand.
-
-The replay system can reproduce every decision.
-
-No hidden bidding rule should exist outside the Rule Profile and Game Engine.
-
----
-
-## Document Status
-
-**Current status:** Draft for Review — NOT FROZEN
-
-Public sources used for rule investigation include Baloot AI's current Saudi-rule reference and other publicly available Baloot rule descriptions. These sources are treated as research inputs, not as permission to mix incompatible variants. citeturn0search0turn0search22
-
-Final approval should occur only after the complete foundation specification has been reviewed together.
-
-
-## Phase 14.Z.11 Closure — Sun Priority and Purchase Finalization
-
-### Ace → Sun priority
-
-When the exposed card is an Ace, the dealer-right player is the only player authorized to convert the Ace-Hokum path to Sun in the first and second bidding rounds. This is an authoritative server-side bidding rule.
-
-### Purchase finalization
-
-The valid purchase action is committed atomically as the contract-finalization boundary. Once committed:
-
-- the purchaser is authoritative;
-- the contract source and mode are fixed;
-- the purchase window closes;
-- Kasho is waived;
-- final-card completion proceeds.
-
-No client-local UI state may independently close the purchase window.
-
-### Architecture
-
-`PASS` is the only wire pass action. Final-pass semantics remain derived from authoritative bidding state.
+Any future bidding-rule change requires a new Rule Freeze revision.
