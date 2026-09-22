@@ -77,3 +77,11 @@ V-09 has now been independently reconciled against RD-09 and the Saudi Rule Prof
 V-08 remains OPEN: profile numeric values exist, but explicit Owner provenance for the complete raw-value table and its interaction semantics is not yet closed.
 
 Bidding, timeout, incident, and first-dealer audits preserve OPEN items rather than inventing behavior.
+
+
+## Latest project/scoring audits
+
+- V-06b: DOUBLE exact tie is closed; TRIPLE/FOUR scope remains open.
+- Project multiplier/coexistence: open; profile numeric values are not sufficient provenance for Triple/Four behavior.
+- Sun Double window: semantic candidate is documented but profile transcription remains open.
+- Kasho: baseline is closed; full violation/concurrency matrix remains open.
