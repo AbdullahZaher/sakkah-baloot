@@ -1,4 +1,5 @@
-import type { CardId, Seat } from "../cards.js";
+import type { CardId } from "../cards.js";
+import type { Seat } from "../rules/types.js";
 import { CARDS_PER_PLAYER, SEATS } from "../rules/types.js";
 import type { MatchSeed, RoundId } from "../rules/types.js";
 import { nextCounterClockwise } from "../rules/profile.js";
@@ -97,7 +98,7 @@ function dealInitial(
   for (let pass = 0; pass < 2; pass += 1) {
     const count = pass === 0 ? 3 : 2;
     for (let card = 0; card < count; card += 1) {
-      for (const seat of order) hands[seat].push(deck[cursor++]!);
+      for (const seat of order) hands[seat]!.push(deck[cursor++]!);
     }
   }
   return { hands, remainder: deck.slice(cursor) as CardId[] };
@@ -160,7 +161,7 @@ export function completeDeal(
 
   // The exposed card is transferred to the purchaser/receiver first, then the
   // remaining 11 hidden cards are distributed: receiver gets 2, others get 3.
-  hands[exposedCardReceiverSeat].push(state.exposedCardId);
+  hands[exposedCardReceiverSeat]!.push(state.exposedCardId);
   const firstReceiver = nextCounterClockwise(state.dealerSeat);
   const distributionOrder = [firstReceiver, ...Array.from({ length: 3 }, (_, i) => {
     let seat = firstReceiver;
@@ -174,7 +175,7 @@ export function completeDeal(
     hands[exposedCardReceiverSeat].push(state.deck[cursor++]!);
   }
   for (const seat of remainingSeats) {
-    for (let i = 0; i < 3; i += 1) hands[seat].push(state.deck[cursor++]!);
+    for (let i = 0; i < 3; i += 1) hands[seat]!.push(state.deck[cursor++]!);
   }
 
   const completionHands = {
@@ -213,7 +214,7 @@ export function validateDealState(state: DealState): void {
 
   if (state.phase === "BIDDING_READY") {
     for (const seat of SEATS) {
-      if (state.hands[seat].length !== 5) {
+      if (state.hands[seat]!.length !== 5) {
         throw new Error(`Invalid initial hand size for ${seat}`);
       }
     }
