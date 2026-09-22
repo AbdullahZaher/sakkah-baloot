@@ -600,15 +600,15 @@ test("project resolution awards every eligible project owned by the winning team
   assert.deepEqual(resolution.discardedProjectIds, [n1.id,n2.id]);
 });
 
-test("raw conversion complement totals remain canonical for both contracts", () => {
-  const sunPairs = [[0,130],[34,96],[65,65],[66,64],[100,30]];
-  for (const [a,b] of sunPairs) {
-    assert.equal(convertRawToQaid("SUN", a) + convertRawToQaid("SUN", b), 26);
-  }
-  const hokumPairs = [[0,162],[34,128],[81,81],[86,76],[120,42]];
-  for (const [a,b] of hokumPairs) {
-    assert.equal(convertRawToQaid("HOKUM", a) + convertRawToQaid("HOKUM", b), 16);
-  }
+test("raw-to-Qaid conversion remains independently canonical at threshold and rounding edges", () => {
+  assert.deepEqual(
+    [0, 34, 35, 36, 81, 85, 86, 120, 162].map((n) => convertRawToQaid("HOKUM", n)),
+    [0, 3, 3, 4, 8, 8, 9, 12, 16],
+  );
+  assert.deepEqual(
+    [0, 34, 35, 36, 64, 65, 66, 100, 130].map((n) => convertRawToQaid("SUN", n)),
+    [0, 6, 7, 8, 12, 13, 14, 20, 26],
+  );
 });
 
 test("replay is deterministic and duplicate event IDs are idempotent", () => {
