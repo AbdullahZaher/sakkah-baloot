@@ -2,10 +2,10 @@
 
 **Date:** 2026-09-22  
 **Phase:** 14.Z.6 — Action/Event Protocol Closure Preparation  
-**Status:** PROPOSED — NOT FROZEN  
+**Status:** FROZEN — OWNER APPROVED 2026-09-22  
 
 ## Purpose
-This catalog converts current Foundation decisions into one explicit action vocabulary. It is a proposal only and does not silently freeze AD-01 through AD-05.
+This catalog is the frozen player/system action vocabulary. AD-01 through AD-05 are explicitly Owner-approved.
 
 ## 1. Action envelope
 ActionEnvelope: actionId, gameId, authenticated playerId, type, payload, expectedStateVersion, optional clientSequence, optional sentAt.
@@ -62,11 +62,10 @@ Accepted action: deterministic next state, one gameplay stateVersion increment f
 Rejected action: no gameplay mutation and no gameplay stateVersion increment.
 Duplicate accepted actionId: never execute twice; return the original committed result where possible.
 
-## 9. Freeze blockers
-1. AD-01 through AD-05 must be explicitly accepted or revised.
-2. Event catalog must be accepted.
-3. 08-actions.md and 09-state-transitions.md must be reconciled.
-4. Remaining rule/provenance conflicts must be closed.
-5. Rule Freeze Gate must pass.
+## 9. Freeze status
+1. Event catalog is frozen.
+2. `08-actions.md` and `09-state-transitions.md` are reconciled.
+3. Remaining rule/provenance conflicts are closed by the Phase 14.Z.12 Owner Closure Decision.
+4. Rule Freeze v1 is now authorized.
 
 **Production code remains unauthorized.**
