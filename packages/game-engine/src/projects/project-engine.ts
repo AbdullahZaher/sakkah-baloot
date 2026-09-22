@@ -141,6 +141,53 @@ function tiePriority(seat: Seat, dealerSeat: Seat): number {
   return 99;
 }
 
+export function declareProject(
+  candidate: ProjectCandidate,
+  declarationId: string,
+  phase: string,
+  trickNumber: number,
+  playsInTrick: number,
+  existing: readonly ProjectDeclaration[],
+): ProjectDeclaration {
+  if (!isProjectDeclarationWindow(phase, trickNumber, playsInTrick)) {
+    throw new Error("Project declaration window closed");
+  }
+  if (existing.some((d) => d.declarationId === declarationId)) {
+    throw new Error("Duplicate project declaration");
+  }
+  if (existing.filter((d) => d.candidate.teamId === candidate.teamId).length >= 2) {
+    throw new Error("Maximum normal projects per team reached");
+  }
+  validateProjectDeclaration(
+    {
+      declarationId,
+      candidate,
+      lifecycle: "DECLARED",
+      declaredBeforeCard: true,
+      trickNumber: 1,
+    },
+    "NORTH",
+    existing,
+  );
+  return {
+    declarationId,
+    candidate,
+    lifecycle: "DECLARED",
+    declaredBeforeCard: true,
+    trickNumber: 1,
+  };
+}
+
+export function advanceProjectLifecycle(
+  declaration: ProjectDeclaration,
+  next: Exclude<ProjectLifecycle, "DECLARED">,
+): ProjectDeclaration {
+  const order = PROJECT_LIFECYCLE.indexOf(declaration.lifecycle);
+  const target = PROJECT_LIFECYCLE.indexOf(next);
+  if (target <= order) throw new Error("Project lifecycle cannot move backwards");
+  return { ...declaration, lifecycle: next };
+}
+
 export function isProjectDeclarationWindow(
   phase: string,
   trickNumber: number,
