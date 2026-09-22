@@ -211,7 +211,12 @@ export function applyBiddingAction(
       };
     }
     if (state.phase === "SECOND_ROUND" && next.passCount >= SEATS.length) {
-      return { ...next, phase: "CANCELLED" };
+      return {
+        ...next,
+        phase: "CANCELLED",
+        cancellationReason: "ALL_PASS",
+        nextDealerSeat: nextCounterClockwise(dealerSeat),
+      };
     }
     return next;
   }
