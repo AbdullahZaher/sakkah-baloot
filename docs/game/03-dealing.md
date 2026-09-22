@@ -134,7 +134,7 @@ Dealer → next seat according to the canonical counter-clockwise direction → 
 For the four canonical seats:
 
 ```text
-NORTH → EAST → SOUTH → WEST → NORTH
+NORTH → WEST → SOUTH → EAST → NORTH
 ```
 
 The first dealer is deterministically derived from the persisted match seed and persisted as authoritative. Dealer rotation follows the frozen counter-clockwise profile.
