@@ -45,7 +45,7 @@ function ikaPartnerExemption(state: GameState): boolean {
   const playerSeat = state.players[state.currentPlayerId];
   if (!playerSeat) return false;
   const leader = state.currentTrick[0]!;
-  const winner = winnerPlay(state);
+  const winner = getCurrentWinner(state);
   if (!winner) return false;
   if (partnerOfSeat(playerSeat) !== leader.seat) return false;
   if (winner.seat !== leader.seat) return false;
@@ -78,7 +78,7 @@ export function getLegalMoves(state: GameState, playerId: PlayerId): LegalMove[]
   const playerSeat = state.players[playerId]!;
   const leader = state.currentTrick[0];
   const position = state.currentTrick.length;
-  const winner = winnerPlay(state);
+  const winner = getCurrentWinner(state);
 
   if (led === null) {
     let legal = [...hand];
