@@ -6,10 +6,12 @@ export const SAUDI_BASELINE_CCW_V1 = {
   match: {
     targetQaid: 152,
     // OPEN — present as a profile candidate only; Owner has not frozen the both-cross-152 policy.\n    bothCrossPolicy: "HIGHER_FINAL_TOTAL",
-    // OPEN — present as a profile candidate only; Owner has not frozen equal-final-total handling.\n    equalFinalTotalPolicy: "EXTRA_DEAL",
+    // OPEN — present as a profile candidate only; Owner has not frozen equal-final-total handling.\n    // OPEN — equal final totals remain unresolved.
+    equalFinalTotalPolicy: "OPEN",
     doubledTiePolicy: "INITIAL_DOUBLER_LOSES",
   },
   dealing: {
+    firstDealer: "MATCH_SEED_DERIVED_AND_PERSISTED",
     exposedCardOwner: "BUYER",
     buyerHiddenCompletionCards: 2,
     otherHiddenCompletionCards: 3,
@@ -22,6 +24,8 @@ export const SAUDI_BASELINE_CCW_V1 = {
   },
   bidding: {
     rounds: 2,
+    firstRoundAceSunPriority: "DEALER_RIGHT",
+    secondRoundAceSunPriority: "DEALER_RIGHT",
     exposedAce: { thirdRound: false, naturalExposureRedeal: false },
   },
   ashkal: {
@@ -78,7 +82,12 @@ export const SAUDI_BASELINE_CCW_V1 = {
     successThreshold: { SUN: 65, HOKUM: 81, comparison: "GREATER_OR_EQUAL" },
     buyerFailureAllocation: "FULL_CONTRACT_ROUND_VALUE_TO_OPPONENT",
   },
-  conversion: { mode: "CONTRACT_SPECIFIC_TABLE", floatingPoint: false, exactTableRequired: true },
+  conversion: {
+    mode: "CONTRACT_SPECIFIC_TABLE", floatingPoint: false, exactTableRequired: true,
+    HOKUM: { remainder_0_to_5: "DOWN", remainder_6_to_9: "UP", divisor: 10, total: 16 },
+    SUN: { remainder_1_to_4: "DOWN", remainder_5: "PRESERVE", remainder_6_to_9: "UP", divisor: 5, total: 26 },
+    complement: "NOT_APPROVED",
+  },
   kaboot: {
     normal: { HOKUM: 25, SUN: 44 },
     escalation: {
@@ -135,6 +144,7 @@ export const SAUDI_BASELINE_CCW_V1 = {
       validIkaDoesNotBypass: true,
     },
   },
+  timeout: { biddingSeconds: 8, playingSeconds: 30, playingTimeoutAction: "AFK_DISCONNECT_HANDLING", noRandomTimeoutCard: true },
   kasho: {
     bushatRanks: ["7","8","9"], trumpNineAllowed: true,
     explicitDeclaration: true, anyEligiblePlayerMayDeclare: true,
