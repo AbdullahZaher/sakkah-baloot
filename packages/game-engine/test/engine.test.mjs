@@ -26,6 +26,10 @@ import {
   createBiddingState,
   legalBiddingActions,
   applyBiddingAction,
+  qualifiesForKasho,
+  canDeclareKasho,
+  declareKasho,
+  resolveKasho,
 } from "../dist/index.js";
 
 const card = (id) => DECK.find((c) => c.id === id);
@@ -655,5 +659,91 @@ test("second-round Sun is reserved for dealer-right with an Ace", () => {
       "CLUBS-A": { suit: "CLUBS" },
     }, hands),
     /dealer-right Ace priority/,
+  );
+});
+
+
+test("Kasho qualifies on five 7/8/9 cards, is first-bidding only, and is idempotent", () => {
+  const kashoCards = hand("CLUBS-7","DIAMONDS-8","HEARTS-9","SPADES-7","CLUBS-8");
+  assert.equal(qualifiesForKasho(kashoCards), true);
+  assert.equal(canDeclareKasho(kashoCards, "FIRST_BIDDING", false), true);
+  assert.equal(canDeclareKasho(kashoCards, "FIRST_BIDDING", true), false);
+  assert.equal(canDeclareKasho(kashoCards, "SECOND_BIDDING", false), false);
+
+  const declaration = declareKasho("k-1", "NORTH", kashoCards, "FIRST_BIDDING", false);
+  assert.equal(declaration.teamId, "NORTH_SOUTH");
+  assert.equal(declaration.cardIds.length, 5);
+
+  const resolution = resolveKasho(declaration, "NORTH");
+  assert.deepEqual(
+    {
+      status: resolution.status,
+      reason: resolution.reason,
+      scoreAwarded: resolution.scoreAwarded,
+      roundScore: resolution.roundScore,
+      matchScoreUnchanged: resolution.matchScoreUnchanged,
+      nextDealerSeat: resolution.nextDealerSeat,
+    },
+    {
+      status: "CANCELLED",
+      reason: "KASHO",
+      scoreAwarded: false,
+      roundScore: null,
+      matchScoreUnchanged: true,
+      nextDealerSeat: "WEST",
+    },
+  );
+  assert.throws(() => resolveKasho(declaration, "NORTH", ["k-1"]), /Duplicate Kasho/);
+});
+
+test("bidding Kasho is available after PASS, cancels immediately, and rotates dealer right", () => {
+  const dealer = "NORTH";
+  const hands = {
+    NORTH: ["CLUBS-7","DIAMONDS-8","HEARTS-9","SPADES-7","CLUBS-8"],
+    WEST: ["DIAMONDS-7"],
+    SOUTH: ["HEARTS-7"],
+    EAST: ["SPADES-7"],
+  };
+  let state = createBiddingState("r-kasho", dealer);
+  assert.ok(legalBiddingActions(state, dealer, "CLUBS", hands).includes("DECLARE_KASHO"));
+
+  state = applyBiddingAction(
+    state,
+    { type: "PASS", actionId: "k-pass" },
+    dealer,
+    "CLUBS-A",
+    { "CLUBS-A": { suit: "CLUBS" } },
+    hands,
+  );
+  assert.equal(state.phase, "FIRST_ROUND");
+  assert.equal(state.actingSeat, "SOUTH");
+  assert.ok(!legalBiddingActions(state, dealer, "CLUBS", hands).includes("DECLARE_KASHO"));
+
+  const kashoHands = {
+    ...hands,
+    SOUTH: ["CLUBS-7","DIAMONDS-8","HEARTS-9","SPADES-7","CLUBS-8"],
+  };
+  assert.ok(legalBiddingActions(state, dealer, "CLUBS", kashoHands).includes("DECLARE_KASHO"));
+  const cancelled = applyBiddingAction(
+    state,
+    { type: "DECLARE_KASHO", actionId: "k-declare" },
+    dealer,
+    "CLUBS-A",
+    { "CLUBS-A": { suit: "CLUBS" } },
+    kashoHands,
+  );
+  assert.equal(cancelled.phase, "CANCELLED");
+  assert.equal(cancelled.cancellationReason, "KASHO");
+  assert.equal(cancelled.nextDealerSeat, "WEST");
+  assert.deepEqual(
+    applyBiddingAction(
+      cancelled,
+      { type: "DECLARE_KASHO", actionId: "k-declare" },
+      dealer,
+      "CLUBS-A",
+      { "CLUBS-A": { suit: "CLUBS" } },
+      kashoHands,
+    ),
+    cancelled,
   );
 });
