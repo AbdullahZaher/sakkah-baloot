@@ -1576,26 +1576,9 @@ ruleProfileId
 
 ---
 
-# 75. Open Decisions
+# 75. Frozen Domain Action Decisions
 
-Before implementation freeze:
-
-1. Exact lobby action set.
-2. Host permissions.
-3. Exact Bidding action payloads.
-4. Exact Ashkal payload.
-5. Project declaration interaction.
-6. Doubling action windows.
-7. System timeout action shape.
-8. Action result protocol.
-9. Idempotency retention period.
-10. Client sequence policy.
-11. Error code catalog.
-12. Rate limits.
-13. Social action separation.
-14. Protocol schema versioning.
-15. Bot action identity.
-16. Admin/system action authorization.
+The domain action vocabulary and gameplay payload semantics are frozen by `docs/ACTION-CATALOG.md` and Rule Freeze v1. Lobby/social concerns may be handled outside the domain engine. No new gameplay action or alternate payload may be invented during engine implementation.
 
 ---
 
