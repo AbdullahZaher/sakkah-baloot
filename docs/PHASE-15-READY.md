@@ -64,12 +64,11 @@ Implemented in the pure engine:
 - 15.10 Kasho/Bushat declaration and cancellation
 - 15.11 Integrity incident authority/cancellation state machine
 
-Remaining Phase 15 gates:
+Remaining Phase 15 gate:
 
-- server-authoritative bidding timeout transition (8s → PASS)
 - final pure-engine typecheck/build verification after bidding/incident closure
 
-**Latest pure-engine CI:** PASS — `npm run typecheck` + `npm test` on the Phase 15 branch.
+The pure engine now exposes a deterministic server-authoritative bidding timeout transition: once the configured 8-second bidding window has elapsed, the active seat is reduced through the same canonical PASS path used for an explicit PASS.
 
 The regression suite now covers legal-move edge cases, Ika validation/mutation safety, project overlap/tie/ownership resolution, Sun/Hokum Qaid rounding-edge invariants, Kaboot/Reverse Kaboot, escalation transitions, and replay idempotency/determinism, second-round Ace→Sun priority, Kasho cancellation, and integrity incident cancellation.
 
