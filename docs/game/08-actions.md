@@ -1,7 +1,7 @@
 # صكّة بلوت — Actions Specification
 
 **Document:** `docs/game/08-actions.md`  
-**Status:** Draft for Review — NOT FROZEN  
+**Status:** Draft for Review — PROPOSED RECONCILIATION (14.Z.10-R) — NOT FROZEN  
 **Phase:** Foundation / Game Domain  
 **Depends on:** Game Rules, Card System, Dealing, Bidding, Playing, Scoring, Game State  
 **Next:** State Transitions
@@ -444,7 +444,7 @@ CALL_TRUMP
 CALL_ASHKAL
 ```
 
-The exact payloads depend on the final Bidding specification.
+The canonical payloads are frozen by the Bidding specification: `PASS` and `CALL_SUN` have empty payloads, `CALL_TRUMP` carries only `suit`, and `CALL_ASHKAL` has an empty payload.
 
 Recommended unified command:
 
@@ -524,9 +524,7 @@ The contract is derived by the server.
 ```ts
 interface CallAshkalAction {
   readonly type: "CALL_ASHKAL";
-  readonly payload: {
-    readonly suit?: Suit;
-  };
+  readonly payload: {};
 }
 ```
 
@@ -563,14 +561,13 @@ unless the protocol explicitly records rejected attempts separately outside game
 
 Project actions are different from project detection.
 
-Recommended:
+Canonical:
 
 ```text
 DECLARE_PROJECT
-CONFIRM_PROJECT
 ```
 
-depending on the final rules.
+`CONFIRM_PROJECT` is not part of the canonical player protocol unless a later explicit owner decision introduces a separate confirmation rule.
 
 The server may also derive project candidates automatically from hands.
 
@@ -619,13 +616,13 @@ declaration window
 
 # 29. DOUBLING Actions
 
-Recommended:
+Canonical:
 
 ```text
 DOUBLE
 TRIPLE
 QUADRUPLE
-COFFEE
+GAHWA
 ```
 
 The exact names may be localized in UI but should remain stable internally.
@@ -687,13 +684,13 @@ server determines resulting state
 
 ---
 
-# 33. COFFEE
+# 33. GAHWA
 
 ```ts
-type CoffeePayload = {};
+type GahwaPayload = {};
 ```
 
-Coffee must be treated as a special state transition rather than:
+Gahwa must be treated as an immediate match-winning terminal outcome rather than:
 
 ```text
 multiplier = 5
@@ -930,10 +927,9 @@ System-generated actions may include:
 SYSTEM_START_ROUND
 SYSTEM_DEAL
 SYSTEM_TIMEOUT
-SYSTEM_RESOLVE_TRICK
-SYSTEM_SCORE_ROUND
-SYSTEM_END_MATCH
 SYSTEM_FORFEIT
+SYSTEM_CANCEL_HAND
+SYSTEM_INCIDENT_RESOLUTION
 ```
 
 These are not player permissions.
@@ -1105,7 +1101,7 @@ type GameAction =
   | DoubleAction
   | TripleAction
   | QuadrupleAction
-  | CoffeeAction
+  | GahwaAction
   | PlayCardAction;
 ```
 
