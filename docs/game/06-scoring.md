@@ -1953,30 +1953,9 @@ match score
 
 ---
 
-# 77. Open Decisions
+# 77. Frozen Scoring Decisions
 
-The following MUST be finalized before scoring is frozen:
-
-1. Official Rule Profile.
-2. Exact raw project values used in purchaser success comparison.
-3. Exact project comparison hierarchy.
-4. Exact project overlap rules.
-5. Exact project announcement timing.
-6. Exact reveal timing.
-7. Exact invalid-project penalty.
-8. Exact بلوت declaration timing.
-9. Exact بلوت raw/Qaid treatment.
-10. Exact multiplier rules.
-11. Exact Gahwa behavior.
-12. Exact Kaboot values.
-13. Exact Kaboot project behavior.
-14. Exact tie behavior.
-15. Exact tie-after-double behavior.
-16. Exact Sun conversion.
-17. Exact Hokm conversion.
-18. Exact rounding rules.
-19. Exact match target and match-end condition.
-20. Exact behavior when both teams cross the target.
+The historical scoring open decisions are closed by Rule Freeze v1. Contract thresholds, raw values, project ownership/comparison, declaration/reveal lifecycle, Baloot, multipliers, Gahwa, Kaboot/Reverse Kaboot, tie behavior, and contract allocation are implementation authority.
 
 ---
 
