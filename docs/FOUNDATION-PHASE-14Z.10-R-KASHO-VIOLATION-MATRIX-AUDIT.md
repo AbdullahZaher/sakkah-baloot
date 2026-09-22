@@ -1,6 +1,6 @@
 # Phase 14.Z.10-R — Kasho / Bushat Violation Matrix Audit
 
-**Status:** COMPLETE — BASELINE CLOSED / MATRIX OPEN
+**Status:** CLOSED — BASELINE + VIOLATION MATRIX
 **Branch:** phase-14z10r-canonical-reconciliation
 
 ## Closed baseline
@@ -42,3 +42,22 @@ The Owner Decision Register leaves the broader violation/continue-cancel matrix 
 Validate the baseline predicate server-side. Invalid client requests must not receive gameplay penalties merely because the client sent malformed or late data. A committed valid Kasho result follows the already-closed 0–0 cancellation path.
 
 Full violation matrix remains OPEN.
+
+
+## Phase 14.Z.11 closure
+
+Authoritative handling:
+
+| Situation | Canonical result |
+|---|---|
+| Invalid five-card declaration | Reject, no mutation |
+| Declaration after window | Reject, no mutation |
+| Simultaneous valid declarations | Authoritative CCW action order decides |
+| Declaration after purchase commit | Reject, no mutation |
+| Declaration after contract selection | Reject, no post-contract Kasho |
+| Duplicate declaration | Idempotent; no second cancellation |
+| Declaration vs timeout race | Authoritative committed transition wins; stale declaration is rejected |
+| Malformed card list | Reject, no mutation |
+| Ownership changed by authoritative transition | Reject stale request, no gameplay penalty |
+
+A committed valid Kasho still cancels the hand 0–0 and rotates dealer right.
