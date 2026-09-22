@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-22  
 **Branch:** `phase-14z10r-canonical-reconciliation`  
-**Status:** COMPLETE — NEAR FREEZE
+**Status:** COMPLETE — RULE FREEZE v1 AUTHORIZED
 
 ## 1. Closed in this phase
 
@@ -51,21 +51,21 @@ Sources:
 - Saudi baseline rules: https://8k.sa/ar/القوانين-المعتمدة-للبلوت-في-الإتحاد-السعودي-للرياضات-الذهنية/page-936572790
 - Saudi Baloot regulations PDF: https://enjoy.sa/media/j1ofreng/baloot.pdf
 
-## 4. Remaining Freeze blockers
+## 4. Final closures
 
-Only these material documentation decisions remain:
+The four final blockers are now closed by Phase 14.Z.12:
 
 ### B-01 — V-02b complement
-No separate Owner approval exists for a fixed-total complement against 16/26. Do not invent one.
+Closed as a validation invariant; independent per-team conversion remains authoritative.
 
 ### B-02 — Equal final match total
-Both-cross is closed as higher-total-wins, but an exact equal final total is not specified by the authoritative source or Owner Decision.
+Closed as EXTRA_DEAL after an atomic completed round.
 
-### B-03 — Final event ordering and exact payload freeze
-AD-01…AD-05 are approved, but the complete immutable event catalog and exact ordering must receive one final consistency pass before implementation.
+### B-03 — Final event ordering and payload freeze
+Closed. Action/Event catalogs and State Transition specification are frozen.
 
-### B-04 — Any second-round bidding priority beyond Ace→Sun
-Only the explicit Ace→Sun dealer-right rule is closed. No broader priority rule is invented.
+### B-04 — Second-round bidding priority
+Closed conservatively: first valid purchase wins; PASS is irreversible; Ace→Sun remains dealer-right only.
 
 ## 5. Gate result
 
@@ -81,8 +81,8 @@ INCIDENT BASELINE               CLOSED
 KASHO MATRIX                    CLOSED
 RULE → CODE TRACEABILITY        RECONCILED
 
-RULE_FREEZE                     BLOCKED BY 4 NARROW ITEMS
-PRODUCTION ENGINE               NOT AUTHORIZED
+RULE_FREEZE                     AUTHORIZED — v1
+PRODUCTION ENGINE               AUTHORIZED
 ```
 
 The repository is now ready for the final four-item Owner/Protocol closure pass. No production code should be written until that pass succeeds.
