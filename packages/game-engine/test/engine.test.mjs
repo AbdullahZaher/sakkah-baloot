@@ -319,17 +319,17 @@ test("fourth player with partner winning and no lead suit may play any card", ()
     currentPlayerId: "pW",
     hands: {
       pN: hand("CLUBS-A"),
-      pE: hand("DIAMONDS-7"),
-      pS: hand("HEARTS-K"),
-      pW: hand("HEARTS-8","SPADES-A"),
+      pE: hand("HEARTS-8","SPADES-A"),
+      pS: hand("DIAMONDS-7"),
+      pW: hand("CLUBS-K"),
     },
     currentTrick: [
-      { playerId: "pN", seat: "NORTH", card: card("CLUBS-A"), ikaDeclared: false, sequence: 1 },
-      { playerId: "pE", seat: "EAST", card: card("DIAMONDS-7"), ikaDeclared: false, sequence: 2 },
-      { playerId: "pS", seat: "SOUTH", card: card("HEARTS-K"), ikaDeclared: false, sequence: 3 },
+      { playerId: "pN", seat: "NORTH", card: card("CLUBS-7"), ikaDeclared: false, sequence: 1 },
+      { playerId: "pW", seat: "WEST", card: card("CLUBS-K"), ikaDeclared: false, sequence: 2 },
+      { playerId: "pS", seat: "SOUTH", card: card("DIAMONDS-7"), ikaDeclared: false, sequence: 3 },
     ],
   });
-  assert.deepEqual(getLegalMoves(state, "pW").map((m) => m.cardId), ["HEARTS-8","SPADES-A"]);
+  assert.deepEqual(getLegalMoves(state, "pE").map((m) => m.cardId), ["HEARTS-8","SPADES-A"]);
 });
 
 test("fourth player with partner winning trump must follow trump when trump is led", () => {
@@ -444,15 +444,15 @@ test("trick resolution uses canonical counter-clockwise winner handoff", () => {
     currentPlayerId: "pN",
     hands: {
       pN: hand("CLUBS-A"),
-      pE: hand("DIAMONDS-7"),
-      pS: hand("HEARTS-7"),
+      pE: hand("CLUBS-7"),
+      pS: hand("DIAMONDS-7"),
       pW: hand("SPADES-7"),
     },
   });
   const s1 = applyCardPlay(state, "pN", "CLUBS-A");
   const s2 = applyCardPlay(s1, "pW", "SPADES-7");
-  const s3 = applyCardPlay(s2, "pS", "HEARTS-7");
-  const s4 = applyCardPlay(s3, "pE", "DIAMONDS-7");
+  const s3 = applyCardPlay(s2, "pS", "DIAMONDS-7");
+  const s4 = applyCardPlay(s3, "pE", "CLUBS-7");
   assert.equal(s4.completedTricks[0].winnerSeat, "NORTH");
   assert.equal(s4.currentPlayerId, "pN");
 });
