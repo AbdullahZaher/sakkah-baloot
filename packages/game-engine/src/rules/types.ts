@@ -37,9 +37,6 @@ export const PROJECT_LIFECYCLE = [
 ] as const;
 export type ProjectLifecycle = (typeof PROJECT_LIFECYCLE)[number];
 
-export const BIDDING_ACTIONS = ["PASS", "BUY"] as const;
-export type BiddingAction = (typeof BIDDING_ACTIONS)[number];
-
 export type TeamQaidScore = Readonly<Record<TeamId, number>>;
 export type TeamRawScore = Readonly<Record<TeamId, number>>;
 
