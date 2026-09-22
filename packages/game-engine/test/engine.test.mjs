@@ -316,7 +316,7 @@ test("third player with partner winning may play any trump when partner wins wit
 
 test("fourth player with partner winning and no lead suit may play any card", () => {
   const state = legalState({
-    currentPlayerId: "pW",
+    currentPlayerId: "pE",
     hands: {
       pN: hand("CLUBS-A"),
       pE: hand("HEARTS-8","SPADES-A"),
