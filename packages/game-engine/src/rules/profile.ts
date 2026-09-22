@@ -88,6 +88,11 @@ const profile: RuleProfile = {
     hokum: 81,
   },
   projectValues: PROJECT_VALUES,
+  deal: {
+    initialCardsPerPlayer: 5,
+    exposedCardCount: 1,
+    completionCardsPerPlayer: 8,
+  },
   scoring: {
     matchTargetQaid: MATCH_TARGET_QAID,
     sunContractThreshold: 65,
