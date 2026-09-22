@@ -1,7 +1,7 @@
 # صكّة بلوت — State Transitions Specification
 
 **Document:** `docs/game/09-state-transitions.md`  
-**Status:** Draft for Review — NOT FROZEN  
+**Status:** Draft for Review — PROPOSED RECONCILIATION (14.Z.10-R) — NOT FROZEN  
 **Phase:** Foundation / Game Domain  
 **Depends on:** Game Rules, Card System, Dealing, Bidding, Playing, Scoring, Game State, Actions  
 **Purpose:** Define exactly how accepted actions transform authoritative Game State.
@@ -267,13 +267,13 @@ COMPLETE_DEAL
       ↓
 PROJECT_DECLARATION
       ↓
-TRICK_PLAY
+PLAYING
       ↓
-ROUND_SCORING
+SCORING
       ↓
 MATCH_END_CHECK
       ├── match continues → DEALING
-      └── match complete  → GAME_RESULT
+      └── match complete  → MATCH_COMPLETE
 ```
 
 The final Rule Profile controls unresolved variant-specific transitions.
@@ -481,7 +481,7 @@ initialize doubling state if applicable
 
 ---
 
-# 19. PROJECT_DECLARATION → TRICK_PLAY
+# 19. PROJECT_DECLARATION → PLAYING
 
 When the project/declaration window closes according to the Rule Profile.
 
@@ -499,7 +499,7 @@ The engine must not start trick play before all required declaration rules are s
 
 ---
 
-# 20. TRICK_PLAY → TRICK_PLAY
+# 20. PLAYING → PLAYING
 
 Triggered by:
 
@@ -547,7 +547,7 @@ Then:
 if tricks remain:
     winner leads next trick
 else:
-    → ROUND_SCORING
+    → SCORING
 ```
 
 ---
@@ -571,7 +571,7 @@ The engine must never infer ranking from UI/card asset order.
 
 ---
 
-# 23. TRICK_PLAY → TRICK_PLAY
+# 23. PLAYING → PLAYING
 
 If the trick is incomplete:
 
@@ -598,9 +598,9 @@ The transition must be atomic.
 After the eighth trick:
 
 ```text
-TRICK_PLAY
+PLAYING
     ↓
-ROUND_SCORING
+SCORING
 ```
 
 The final trick bonus is applied by the Scoring subsystem.
@@ -609,7 +609,7 @@ The Playing subsystem must not independently calculate final score.
 
 ---
 
-# 25. ROUND_SCORING
+# 25. SCORING
 
 Inputs:
 
@@ -641,7 +641,7 @@ match state
 
 ---
 
-# 26. ROUND_SCORING → MATCH_END_CHECK
+# 26. SCORING → MATCH_END_CHECK
 
 After score application:
 
@@ -657,12 +657,12 @@ The transition layer must not contain duplicate scoring formulas.
 
 ---
 
-# 27. MATCH_END_CHECK → GAME_RESULT
+# 27. MATCH_END_CHECK → MATCH_COMPLETE
 
 If the Rule Profile says the match is complete:
 
 ```text
-GAME_RESULT
+MATCH_COMPLETE
 ```
 
 Effects:
@@ -738,13 +738,13 @@ nextSeat
 
 from the Rule Profile.
 
-Typical baseline:
+Canonical Saudi rule direction:
 
 ```text
-clockwise
+counter-clockwise
 ```
 
-but the transition layer must consume configured direction rather than embedding assumptions.
+The transition layer must consume the canonical Rule Profile direction rather than embedding a conflicting clockwise baseline.
 
 ---
 
@@ -910,7 +910,7 @@ Examples:
 
 ```text
 PLAY_CARD during BIDDING
-CALL_TRUMP during TRICK_PLAY
+CALL_TRUMP during PLAYING
 READY after match started
 DOUBLE before doubling window
 PLAY_CARD when not active player
@@ -1052,6 +1052,9 @@ TURN_CHANGED
 or another explicitly frozen ordering.
 
 The State Transition specification must own this decision.
+
+
+Canonical 14.Z.10-R boundary: events are immutable facts emitted by committed transitions. `PLAYING`, `SCORING`, and `MATCH_COMPLETE` are GamePhase values; `TRICK_RESOLUTION` and `MATCH_END_CHECK` remain internal processing concepts.
 
 ---
 
@@ -1431,12 +1434,12 @@ Never invent a new card, score, or winner to "fix" corruption.
 | BIDDING | CALL_SUN | BIDDING / CONTRACT_SELECTED |
 | BIDDING | CALL_TRUMP | BIDDING / CONTRACT_SELECTED |
 | BIDDING | CALL_ASHKAL | BIDDING / CONTRACT_SELECTED |
-| COMPLETE_DEAL | DECLARE_PROJECT | PROJECT_DECLARATION |
-| TRICK_PLAY | PLAY_CARD | TRICK_PLAY / ROUND_SCORING |
-| ROUND_SCORING | system score | MATCH_END_CHECK |
-| MATCH_END_CHECK | continue | DEALING |
-| MATCH_END_CHECK | finish | GAME_RESULT |
-| GAME_RESULT | PLAY_CARD | REJECT |
+| [internal COMPLETE_DEAL] | DECLARE_PROJECT | PROJECT_DECLARATION |
+| PLAYING | PLAY_CARD | PLAYING / SCORING |
+| SCORING | system score | MATCH_END_CHECK |
+| [internal MATCH_END_CHECK] | continue | ROUND_COMPLETE → ROUND_STARTING |
+| [internal MATCH_END_CHECK] | finish | MATCH_COMPLETE |
+| MATCH_COMPLETE | PLAY_CARD | REJECT |
 
 Exact transitions remain Rule Profile dependent where noted.
 
@@ -1514,7 +1517,7 @@ Input:
 Engine:
 
 ```text
-1. phase = TRICK_PLAY
+1. phase = PLAYING
 2. actor = active player
 3. card exists in hand
 4. card satisfies follow-suit rules
@@ -1589,9 +1592,9 @@ The exact event sequence must be frozen before protocol implementation.
 After final trick:
 
 ```text
-TRICK_PLAY
+PLAYING
     ↓
-ROUND_SCORING
+SCORING
 ```
 
 Scoring calculates the round result.
@@ -1614,7 +1617,7 @@ If match ends:
 
 ```text
 MATCH_COMPLETED
-GAME_RESULT
+MATCH_COMPLETE
 ```
 
 ---
