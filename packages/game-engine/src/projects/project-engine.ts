@@ -158,7 +158,7 @@ export function validateProjectDeclaration(
   if (!declaration.declaredBeforeCard || declaration.trickNumber !== 1) throw new Error("Project declaration window closed");
   for (const other of existing) {
     const overlap = declaration.candidate.cards.some((id) => other.candidate.cards.includes(id));
-    if (overlap && other.candidate.ownerSeat !== declaration.candidate.ownerSeat) {
+    if (overlap) {
       throw new Error("Project card overlap");
     }
   }
