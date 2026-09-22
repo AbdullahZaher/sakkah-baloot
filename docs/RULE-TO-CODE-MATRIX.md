@@ -23,16 +23,16 @@ Legend: ✅ documented · ❌ missing · ⚠️ documented but contested/gapped 
 | 12 | Project ties | ✅ dealer-CCW priority (05/01) | ✅ `tieBreak` | ✅ tied projects | n/a | ⚠️ unfrozen | ✅ tie-break branch | ❌ | ❌ |
 | 13 | Project Pool | ✅ 01 (winner-team pool) | ⚠️ pool rule stated, no dedicated key | ✅ pool state | n/a | ⚠️ unfrozen | ✅ pool formation | ❌ | ❌ |
 | 14 | Baloot | ✅ 01 + RD-08 (absorbed) | ✅ baloot block | ✅ Baloot state | ⚠️ declaration action (unfrozen) | ⚠️ BALOOT_DECLARED (unfrozen) | ✅ Baloot resolution | ❌ | ❌ |
-| 15 | Ika | ✅ game/10 §10–11 + FINAL C-19 (content specified 14.Z.2; trail cleanup pending) | ⚠️ ika block (thin) | ⚠️ `ikaDeclared` on CARD_PLAYED | ⚠️ declaration path undefined | ⚠️ unfrozen | ⚠️ reject-no-mutation branch unproven | ❌ | ❌ |
+| 15 | Ika | ✅ game/10 §10–11 + Phase 14.Z.3 G-2/G-2P | ✅ `ika` predicate + partnerExemption | ⚠️ `ikaDeclared` on CARD_PLAYED | ⚠️ declaration action remains protocol-unfrozen | ⚠️ event catalog unfrozen | ✅ reject-no-mutation rule specified | ❌ | ❌ |
 | 16 | Cutting | ❌ no rule content (open variant per 01-game-rules) | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| 17 | Must Trump | ✅ game/10 §12–13 (MUST_TRUMP matrix specified 14.Z.2; partner+table-trump sub-case P2-open) | ❌ (no profile key) | ⚠️ hand/led state exists | ✅ PLAY_CARD | ⚠️ unfrozen | ⚠️ void branch now specified; edge sub-case open | ❌ | ❌ |
-| 18 | Must Overtrump | ✅ game/10 §14 (MUST_OVERTRUMP specified 14.Z.2; partner-winning table-trump sub-case P2-open) | ❌ (no profile key) | ⚠️ trick state exists | ✅ PLAY_CARD | ⚠️ unfrozen | ⚠️ specified for opponent-winning; partner sub-case open | ❌ | ❌ |
+| 17 | Must Trump | ✅ game/10 §12–14 + Phase 14.Z.3 G-1 | ✅ `trickLegality.nonTrumpLedNoLeadSuit` | ⚠️ hand/led state exists | ✅ PLAY_CARD | ⚠️ unfrozen | ⚠️ rule specified; resolver/test implementation missing | ❌ | ❌ |
+| 18 | Must Overtrump | ✅ game/10 §14 + Phase 14.Z.3 G-1 | ✅ `trickLegality` trump cases | ⚠️ trick state exists | ✅ PLAY_CARD | ⚠️ unfrozen | ⚠️ rule specified; resolver/test implementation missing | ❌ | ❌ |
 | 19 | Contract success | ✅ 01 (≥65/≥81, tie buyer) | ✅ `successThreshold` | ✅ contract raw | n/a (derived) | ⚠️ unfrozen | ✅ success branch | ❌ | ❌ |
 | 20 | Contract failure | ✅ 01 (full value to opponent) | ✅ `buyerFailureAllocation` | ✅ contract raw | n/a (derived) | ⚠️ unfrozen | ✅ failure branch | ❌ | ❌ |
 | 21 | Qaid conversion | ⚠️ mode declared, **exact table MISSING** | ❌ table absent | ✅ raw totals | n/a | ⚠️ unfrozen | ⚠️ conversion unimplementable | ❌ | ❌ |
 | 22 | Kaboot | ⚠️ values OK; ⚠️ escalation formula contradicted (F-01) | ⚠️ escalation table absent | ✅ trick counts | n/a (derived-only) | ⚠️ KABOOT_RESOLVED (unfrozen) | ✅ detection branch | ❌ | ❌ |
 | 23 | Reverse Kaboot | ✅ 01 + RD-09 protocol + profile | ✅ reverse block | ✅ initialHands requirement | n/a (derived-only) | ⚠️ unfrozen | ✅ reverse predicate | ❌ | ❌ |
-| 24 | Kasho | ✅ 01 + profile (baseline) | ✅ kasho block | ✅ hand state | ⚠️ KASHO_DECLARED (unfrozen) | ⚠️ KASHO_DECLARED/HAND_CANCELLED (unfrozen) | ✅ cancel path | ❌ | ❌ |
+| 24 | Kasho | ✅ 01 + profile (baseline) | ✅ kasho block + ROTATE_RIGHT | ✅ hand state | ⚠️ KASHO_DECLARED (unfrozen) | ⚠️ KASHO_DECLARED/HAND_CANCELLED (unfrozen) | ✅ cancel path | ❌ | ❌ |
 | 25 | All Pass | ✅ 01/04 (cancel 0–0 rotate) | ✅ (via kasho cancel fields) | ✅ bidding-failed | ✅ system cancel | ⚠️ HAND_CANCELLED (unfrozen) | ✅ cancel path | ❌ | ❌ |
 | 26 | Gahwa | ✅ 01 terminal + profile | ✅ gahwa block | ✅ escalation state | ⚠️ Gahwa call action (unfrozen) | ⚠️ GAHWA_RESOLVED (unfrozen) | ✅ MATCH_WIN branch | ❌ | ❌ |
 | 27 | Hand termination | ✅ 04 matrix (7 paths) | ⚠️ incident policy absent | ✅ termination state | ⚠️ cancel/continue actions (unfrozen) | ⚠️ unfrozen catalog | ✅ resolver spec | ❌ | ❌ |
@@ -40,4 +40,4 @@ Legend: ✅ documented · ❌ missing · ⚠️ documented but contested/gapped 
 | 29 | Replay | ✅ determinism constraints (01/09) | ✅ immutable profile | ✅ snapshots (07) | ✅ action log (spec) | ⚠️ schema unfrozen (AD-02/03/04) | ✅ replay reducer (spec) | ❌ | ❌ |
 | 30 | Hidden information | ✅ server-authoritative, no leaks (all docs) | n/a | ✅ player projection (07) | ✅ intent-only actions | ⚠️ projection filtering unproven | ✅ projection boundary | ❌ | ❌ |
 
-**Result:** 0/30 rows complete. All code-side cells MISSING; doc-side ⚠️/❌ cells are individually listed as Freeze blockers in `RD-20-RULE-FREEZE-REPORT.md`.
+**Result:** 0/30 rows complete on the code side. Phase 14.Z.3 has closed the documentation-level trick-legality gaps G-1/G-2/G-2P/G-3; Resolver/Test cells remain intentionally MISSING because production implementation is not authorized while Rule Freeze is BLOCKED.
