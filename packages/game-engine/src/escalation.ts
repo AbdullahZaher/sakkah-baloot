@@ -44,6 +44,7 @@ export function escalate(
   requested: Exclude<EscalationLevel, "NORMAL">,
 ): EscalationState {
   if (!canEscalate(state)) throw new Error("Escalation window is closed");
+  if (state.level === "GAHWA") throw new Error("Escalation cannot continue after Gahwa");
 
   const expected = NEXT[state.level];
   if (expected !== requested) {
