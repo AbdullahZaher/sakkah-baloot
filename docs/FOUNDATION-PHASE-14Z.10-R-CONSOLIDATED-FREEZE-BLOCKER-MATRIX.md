@@ -7,20 +7,20 @@
 | ID | Area | Current disposition | Production authorization |
 |---|---|---|---|
 | V-01 | Purchaser success threshold | CLOSED — Sun ≥65 / Hokum ≥81, equality succeeds | Yes, after Rule Freeze |
-| V-02 | Qaid conversion table | OPEN — exact table + complement formula missing | No |
+| V-02 | Qaid conversion | CLOSED-A — exact Owner table; V-02b complement remains OPEN | No until complement disposition |
 | V-03 | Failed-contract allocation | CLOSED semantics — full contract-round value to opponent | Numeric implementation blocked by V-02 |
 | V-04 | Kaboot escalation | CLOSED — flat dedicated table | Yes, after Rule Freeze |
 | V-05 | Baloot inside Hundred | CLOSED — absorbed when same qualifying cards are consumed | Yes, after Rule Freeze |
 | V-06b | Doubled exact tie | CLOSED headline — initial doubler loses | Triple/Four scope open |
 | V-07 | Counting-side terminology | OPEN / avoid generic concept | No |
-| V-08 | Project raw-value table | OPEN provenance/closure | No |
+| V-08 | Project raw-value table | CLOSED — Owner table transcribed | Yes, after Freeze |
 | V-09 | Reverse Kaboot trigger | CLOSED in current project protocol/profile | Yes, after Rule Freeze |
 | V-11 | Successful allocation | CLOSED — each team retains own eligible allocation | Yes, after Rule Freeze |
 | C-01 | Hokum doubling window | Project-specific rule recorded; broader source conflict remains | No global generalization |
 | C-04 | Kasho violation matrix | Baseline closed; full violation decision matrix open | No |
 | C-05 | Ashkal seat mapping | CLOSED — Dealer + Dealer-left in both rounds | Yes, after Freeze |
-| C-06 | Project coexistence/comparison | PARTIAL / OPEN edge cases | No |
-| C-07 | Project ×3/×4 multiplication | Research-supported, not fully Freeze-closed | No |
+| C-06 | Project coexistence/comparison | CLOSED for canonical project set/priority | Yes, after Freeze |
+| C-07 | Project ×3/×4 multiplication | CLOSED — no project multiplication at Triple/Four | Yes, after Freeze |
 | C-18 | Kasho dealer rotation | CLOSED — ROTATE_RIGHT | Yes, after Freeze |
 | RD-03 | Hokum doubling window | Current project rule transcribed | Needs final Freeze gate |
 | RD-05 | Project declaration close | Partially specified; exact close semantics need final transcription | No |
@@ -28,13 +28,13 @@
 | RD-08 | Baloot timing | Current timing transcribed; final canonical doc consistency required | No |
 | RD-09 | Redeal/cancellation | Baseline documented; full incident decision matrix still open | No |
 | RD-10 | Ashkal | Core mapping documented | Needs final Freeze gate |
-| First dealer | Selection mechanism | OPEN | No |
-| Timeouts | Bidding/play behavior | OPEN | No |
-| Sun double | Open/close window | OPEN / not fully transcribed | No |
-| Both teams cross 152 | Match-end policy | OPEN | No |
-| Equal final total | Tie at match end | OPEN | No |
-| Incident policy | Continue/cancel authority | OPEN in opposing-side protocol | No |
-| Action/event payloads | AD-01…AD-05 | PROPOSED, not owner-frozen | No |
+| First dealer | Deterministic match-seed derivation + persistence | CLOSED | Yes, after Freeze |
+| Timeouts | 8s bidding PASS; 30s playing AFK/disconnect handling | CLOSED | Yes, after Freeze |
+| Sun double | Open/close window | CLOSED — window + eligibility transcribed | Yes, after Freeze |
+| Both teams cross 152 | Match-end policy | CLOSED — higher final total wins | Yes, after Freeze |
+| Equal final total | Tie at match end | OPEN — no authoritative source/Owner closure | No |
+| Incident policy | Recoverable opposing-side decision; unrecoverable auto-cancel | CLOSED | Yes, after Freeze |
+| Action/event payloads | AD-01…AD-05 | CLOSED / owner-approved | Yes, after final event-order gate |
 | Event ordering | Protocol freeze | OPEN | No |
 | Production engine | Implementation | Explicitly blocked by Rule Freeze | No |
 
@@ -69,6 +69,12 @@
 
 **Important:** this matrix is a working audit artifact. It does not itself close any Owner Decision.
 
+
+## Phase 14.Z.11 closure
+
+Major blockers closed in this pass: V-02-A, V-08, C-06, C-07, Sun Double, both-cross-152, first dealer, timeouts, incidents, Kasho matrix, and AD-01…AD-05.
+
+Remaining Freeze blockers are intentionally narrow: V-02b complement disposition, equal-final-total behavior, exact final event ordering/payload freeze, and any remaining project/bidding edge not explicitly covered by the closed matrix.
 
 ## Latest audit closure
 
