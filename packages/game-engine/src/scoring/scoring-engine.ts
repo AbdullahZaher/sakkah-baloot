@@ -165,7 +165,6 @@ export function evaluateMatchEnd(
   const b = score.EAST_WEST >= target;
   if (!a && !b) return { status: "ONGOING", score };
   if (a && b && score.NORTH_SOUTH === score.EAST_WEST) return { status: "EXTRA_DEAL", score };
-  if (score.NORTH_SOUTH === score.EAST_WEST) return { status: "EXTRA_DEAL", score };
   return {
     status: "FINISHED",
     score,
