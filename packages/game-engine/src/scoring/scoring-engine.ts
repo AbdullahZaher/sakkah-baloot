@@ -1,7 +1,7 @@
 import type { Card } from "../cards.js";
 import { cardRawValue } from "../cards.js";
 import type { Contract, EscalationLevel, TeamId, Seat } from "../rules/types.js";
-import { contractThreshold, SAUDI_RULE_PROFILE_V1, teamOfSeat } from "../rules/profile.js";
+import { contractThreshold, SAUDI_RULE_PROFILE_V1, teamOfSeat, nextCounterClockwise } from "../rules/profile.js";
 import { escalationCardMultiplier, projectMultiplier } from "../escalation.js";
 import type { CompletedTrick } from "../playing/types.js";
 import type { MatchEndResult, MatchScore, RoundScoreBreakdown, RoundScoreInput } from "./scoring-types.js";
@@ -53,6 +53,21 @@ function contractRoundQaid(contract: Contract): number {
   return contract === "SUN" ? 26 : 16;
 }
 
+function teamTrickCounts(tricks: readonly CompletedTrick[]): Record<TeamId, number> {
+  const counts = zeroTeamMap();
+  for (const trick of tricks) counts[teamOfSeat(trick.winnerSeat)] += 1;
+  return counts;
+}
+
+export function isReverseKabootEligible(input: Pick<RoundScoreInput, "contract" | "purchaserSeat" | "dealerSeat" | "buyerOriginallyHeldAce">, tricks: readonly CompletedTrick[]): boolean {
+  if (input.contract !== "SUN") return false;
+  if (input.purchaserSeat !== nextCounterClockwise(input.dealerSeat)) return false;
+  if (!input.buyerOriginallyHeldAce) return false;
+  const counts = teamTrickCounts(tricks);
+  return counts[teamOfSeat(input.purchaserSeat)] === 0;
+}
+
+
 export function scoreRound(input: RoundScoreInput): RoundScoreBreakdown {
   const card = calculateCardRaw(input.tricks, input.contract, input.trumpSuit);
   const purchaserTeam = teamOfSeat(input.purchaserSeat);
@@ -65,7 +80,8 @@ export function scoreRound(input: RoundScoreInput): RoundScoreBreakdown {
   };
   const purchaserSucceeded = contractRaw[purchaserTeam] >= contractThreshold(input.contract);
   const kaboot = kabootTeam(input.tricks);
-  const reverseKaboot = input.reverseKaboot === true;
+  const reverseKaboot = isReverseKabootEligible(input, input.tricks);
+  if (input.reverseKaboot === true && !reverseKaboot) throw new Error("Invalid Reverse Kaboot predicate");
   if (input.gahwa) {
     return {
       cardRaw: card.cardRaw, projectRaw, balootRaw, contractRaw,
