@@ -283,24 +283,17 @@ type KabootAwardTable = {
 };
 ```
 
-Frozen today:
+Frozen by Owner Decision V-04:
 
 ```text
-Normal Hokum = 25
-Normal Sun   = 44
-Reverse Sun  = 88
+Hokum: Normal = 25, Double = 25, Triple = 25, Four = 25
+Sun:   Normal = 44, Double = 44
+Reverse Sun = 88
 ```
 
-Open:
+These are dedicated Rule Profile table values. They must not be inferred by multiplying the ordinary contract multiplier.
 
-```text
-Double Hokum
-Double Sun
-Triple Hokum
-Four Hokum
-```
-
-These values must not be inferred mathematically.
+Historical alternatives such as Hokum 50/75/100 and Sun Double 88 are source variants only and are superseded for this project by V-04.
 
 ## 15. Reverse Kaboot Is Independent
 
@@ -465,8 +458,8 @@ The Rule Owner has explicitly approved the flat Saudi-baseline Kaboot table.
 
 | Contract | Normal | Double | Triple | Four |
 |---|---:|---:|---:|---:|
-| Hokum | 25 | **50** | **75** | **100** |
-| Sun | 44 | **88** | N/A | N/A |
+| Hokum | 25 | **25** | **25** | **25** |
+| Sun | 44 | **44** | N/A | N/A |
 
 Reverse Kaboot remains a separate special result:
 
@@ -479,7 +472,7 @@ Reverse Kaboot remains a separate special result:
 Kaboot values are resolved through the dedicated Kaboot Rule Profile table:
 
 ```ts
-kabootAward = ruleProfile.kaboot[contract][escalationLevel];
+kabootAward = ruleProfile.kaboot.escalation[contract][escalationLevel];
 ```
 
 Do **not** calculate Kaboot through the generic contract multiplier at runtime. The dedicated flat table is canonical.
