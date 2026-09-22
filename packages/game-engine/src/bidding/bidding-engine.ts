@@ -10,10 +10,13 @@ import {
 import type { DealState } from "../dealing/deal-engine.js";
 import { completeDeal } from "../dealing/deal-engine.js";
 
+export const BIDDING_TIMEOUT_MS = 8_000;
+
 export type BiddingPhase = "FIRST_ROUND" | "SECOND_ROUND" | "CONTRACT_SELECTED" | "CANCELLED";
 
 export type BiddingAction =
   | { readonly type: "PASS"; readonly actionId: string }
+  | { readonly type: "DECLARE_KASHO"; readonly actionId: string }
   | { readonly type: "BUY_HOKUM_EXPOSED"; readonly actionId: string }
   | { readonly type: "BUY_SUN"; readonly actionId: string }
   | { readonly type: "BUY_ASHKAL"; readonly actionId: string }
@@ -49,6 +52,8 @@ export interface BiddingState {
   readonly selectedContract: SelectedContract | null;
   readonly history: readonly BiddingActionRecord[];
   readonly processedActionIds: readonly string[];
+  readonly cancellationReason: "NONE" | "KASHO" | "ALL_PASS";
+  readonly nextDealerSeat: Seat | null;
 }
 
 export function createBiddingState(
@@ -65,6 +70,8 @@ export function createBiddingState(
     selectedContract: null,
     history: [],
     processedActionIds: [],
+    cancellationReason: "NONE",
+    nextDealerSeat: null,
   };
 }
 
@@ -138,6 +145,9 @@ export function legalBiddingActions(
 ): readonly BiddingAction["type"][] {
   if (state.phase !== "FIRST_ROUND" && state.phase !== "SECOND_ROUND") return [];
   const actions: BiddingAction["type"][] = ["PASS"];
+  const actingHand = hands[state.actingSeat] ?? [];
+  const kashoCount = actingHand.filter((id) => /-(7|8|9)$/.test(id)).length;
+  if (state.phase === "FIRST_ROUND" && kashoCount >= 5) actions.push("DECLARE_KASHO");
   if (state.phase === "FIRST_ROUND") {
     if (exposedSuit !== null) actions.push("BUY_HOKUM_EXPOSED");
     actions.push("BUY_SUN");
@@ -161,13 +171,36 @@ export function applyBiddingAction(
   cards: Readonly<Record<CardId, { readonly suit: Suit }>>,
   hands: BiddingHands = { NORTH: [], EAST: [], SOUTH: [], WEST: [] },
 ): BiddingState {
+  if (hasProcessed(state, action.actionId)) return state;
   if (state.phase !== "FIRST_ROUND" && state.phase !== "SECOND_ROUND") {
     throw new Error("Bidding is not active");
   }
-  if (hasProcessed(state, action.actionId)) return state;
 
   const exposedSuit = exposedCardId === null ? null : cards[exposedCardId]?.suit ?? null;
   if (state.actingSeat === undefined) throw new Error("Missing acting seat");
+
+  if (action.type === "DECLARE_KASHO") {
+    if (state.phase !== "FIRST_ROUND") throw new Error("Kasho is only available during first bidding");
+    const actingHand = hands[state.actingSeat] ?? [];
+    const kashoCount = actingHand.filter((id) => /-(7|8|9)$/.test(id)).length;
+    if (kashoCount < 5) throw new Error("Kasho requires five cards of ranks 7/8/9");
+    return {
+      ...state,
+      phase: "CANCELLED",
+      stateVersion: state.stateVersion + 1,
+      history: [{
+        actionId: action.actionId,
+        turnNumber: state.turnNumber,
+        seat: state.actingSeat,
+        phase: "FIRST_ROUND",
+        action: action.type,
+        stateVersion: state.stateVersion + 1,
+      }, ...state.history].reverse(),
+      processedActionIds: [...state.processedActionIds, action.actionId],
+      cancellationReason: "KASHO",
+      nextDealerSeat: nextCounterClockwise(dealerSeat),
+    };
+  }
 
   if (action.type === "PASS") {
     const next = nextTurn(state, dealerSeat, action);
@@ -180,7 +213,12 @@ export function applyBiddingAction(
       };
     }
     if (state.phase === "SECOND_ROUND" && next.passCount >= SEATS.length) {
-      return { ...next, phase: "CANCELLED" };
+      return {
+        ...next,
+        phase: "CANCELLED",
+        cancellationReason: "ALL_PASS",
+        nextDealerSeat: nextCounterClockwise(dealerSeat),
+      };
     }
     return next;
   }
@@ -254,6 +292,27 @@ export function applyBiddingAction(
   }
 
   throw new Error("Invalid second-round action");
+}
+
+export function applyBiddingTimeout(
+  state: BiddingState,
+  dealerSeat: Seat,
+  elapsedMs: number,
+  timeoutActionId: string,
+): BiddingState {
+  if (elapsedMs < BIDDING_TIMEOUT_MS) {
+    throw new Error("Bidding timeout has not elapsed");
+  }
+  if (state.phase !== "FIRST_ROUND" && state.phase !== "SECOND_ROUND") {
+    return state;
+  }
+  return applyBiddingAction(
+    state,
+    { type: "PASS", actionId: timeoutActionId },
+    dealerSeat,
+    null,
+    {},
+  );
 }
 
 export function finalizeBiddingDeal(
