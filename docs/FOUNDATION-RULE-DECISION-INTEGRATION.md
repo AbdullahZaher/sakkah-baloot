@@ -114,3 +114,25 @@ Exact seat mapping must be canonicalized against RD-02.
 - Remaining AD-01..AD-05 architecture decisions.
 
 Rule Freeze is not authorized until these are resolved or explicitly parameterized.
+
+
+---
+
+## Phase 14.Z.3 Integration Addendum
+
+### CLOSED — Trick legality edge gaps
+
+- G-1: position/card-origin matrix for partner/opponent winning with trump on table.
+- G-2: exact Ika predicate.
+- G-2P: exact third-player Ika partner exemption predicate.
+- G-3: required verification matrix coverage.
+
+### CLOSED — Related terminology/policy items
+
+- V-07: generic countingSide removed.
+- Kasho dealer transition: ROTATE_RIGHT.
+- V-04 canonical Kaboot table remains flat Saudi baseline and has been reconciled in the active RD-09 protocol.
+
+### Freeze status
+
+These closures do not authorize implementation. Remaining Freeze blockers are independent items listed in the current REMAINING-ISSUES.md and architecture decision track.
