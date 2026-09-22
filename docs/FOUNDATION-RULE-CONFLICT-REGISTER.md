@@ -1,0 +1,178 @@
+# صكّة بلوت — Rule Conflict & Evidence Register
+
+**Phase:** 14.x  
+**Date:** 2026-09-22  
+**Status:** ACTIVE
+
+## C-01 — Doubling window
+
+Saudi source describes doubling in Hokum as open from the beginning of play through the end. Other references describe a narrower practical window.
+
+**Status:** OPEN  
+**Action:** Define the exact engine boundary for PLAY_START.
+
+## C-02 — Baloot inside Hundred
+
+Saudi wording and Pagat differ in how Baloot contained in Hundred is treated.
+
+**Status:** OPEN — MATERIAL  
+**Action:** Rules Owner must select the canonical interpretation.
+
+## C-03 — Kaboot with doubling
+
+Sources differ in whether the displayed Kaboot value is already the final doubled value or should be multiplied by the doubling level.
+
+**Status: CLOSED BY OWNER DECISION (Phase 14.Z.1, V-04 = A).**
+**Current owner decision:** Flat Saudi Baseline via dedicated table — Hokum 25/25/25/25, Sun 44/44; reverse 88 independent, never doubles; Gahwa overrides.
+**Canonical interpretation:** `kabootAward = ruleProfile.kaboot.escalation[contract][level]` (table lookup, never runtime multiplication).
+**Superseded interpretation:** multiplied table (Hokum 50/75/100, Sun doubled 88) per RD-09 protocol §21; Pagat 50/88 + 75/100 variant — preserved as historical/source evidence only.
+**Action:** Resolved through worked scoring examples and the selected Saudi profile. Profile table added (`02-RULE-PROFILE-SA.md` `kaboot.escalation`).
+
+### C-16 — V-06b doubled-tie transcription (new, Phase 14.Z.1)
+
+Headline decided (C — Initial Doubler Loses); exact tie/score/level semantics pending transcription into canonical docs + profile field added (`match.doubledTiePolicy`). **Status: OPEN — TRANSCRIPTION.**
+
+### C-17 — V-11 allocation sentence transcription (new, Phase 14.Z.1)
+
+Decision CONFIRMED with canonical text recorded in `FOUNDATION-RULE-OWNER-DECISIONS-FINAL.md`; appearance in `01-CANONICAL-RULES-CURRENT.md` scoring section pending. **Status: OPEN — TRANSCRIPTION.**
+
+### C-18 — Kasho dealer transition re-opened (Phase 14.Z.1)
+
+KEEP_CURRENT exists nowhere as a rule (audit stale-target only); all rule docs state ROTATE_RIGHT, but unanimity is not an Owner decision and reaffirmation was explicitly required. **Status: OPEN — OWNER DECISION REQUIRED (REAFFIRM ROTATE_RIGHT or SELECT alternative).**
+
+### C-19 — Ika partner exemption (new, Phase 14.Z.1)
+
+Exemption rule captured canonically in `FOUNDATION-RULE-OWNER-DECISIONS-FINAL.md` (Hokum-only, leader/non-trump/highest-remaining, optional, reject-no-mutation, partner-may-play-any-card-only-when-exempt). **Status: CLOSED (decision); engine transcription pending implementation phase.**
+
+## C-04 — Kasho variants
+
+Saudi source defines core Bushat and violation cases. Other sources document additional local variants.
+
+**Status:** Core Saudi baseline supported; optional variants excluded unless explicitly selected.
+
+## C-05 — Ashkal eligibility
+
+Research gives dealer-relative eligibility and second-round Wala restrictions. Exact seat mapping must be reconciled with the project’s counter-clockwise model.
+
+**Status:** OPEN UNTIL MAPPED
+
+## C-06 — Project coexistence
+
+Sources agree on declaration/reveal phases but leave edge cases around multiple projects and shared cards.
+
+**Status:** OPEN
+
+## C-07 — Project multiplication
+
+Saudi research supports Double multiplication while Triple/Four do not continue multiplying projects.
+
+**Status:** RESEARCH-SUPPORTED; requires canonical worked examples.
+
+## C-08 — Sun arithmetic
+
+120 base card values + 10 last-trick bonus = 130 total raw Sun points.
+
+**Status:** RESOLVED**
+
+## C-09 — Exposed-card conservation
+
+Buyer receives exposed + 2 hidden; others receive 3 hidden.
+
+**Status:** RESOLVED BY RULES OWNER**
+
+## C-10 — Direction
+
+Rules Owner selected global counter-clockwise direction.
+
+**Status:** RESOLVED BY RULES OWNER**
+
+## Evidence sources
+
+Primary Saudi rules publication:
+https://8k.sa/ar/القوانين-المعتمدة-للبلوت-في-الاتحاد-السعودي-للرياضات-الذهنية/page-936572790
+
+Saudi competition PDF:
+https://enjoy.sa/media/j1ofreng/baloot.pdf
+
+Comparative reference:
+https://www.pagat.com/jass/baloot.html
+
+Secondary reference:
+https://balootai.com/rules
+
+## Evidence policy
+
+External sources do not silently change project rules.
+
+Required chain:
+
+`Source Evidence -> Conflict -> Rules Owner Decision -> Canonical Rule -> Rule Profile -> Tests`
+
+Only then may a disputed rule become Freeze-ready.
+
+---
+
+## Phase 14.y Verification Appendix (2026-09-22)
+
+Historical entries C-01…C-10 above are preserved unaltered. This appendix records worked-example verification outcomes only. Nothing is marked RESOLVED unless the documentation explicitly supports resolution.
+
+### C-01 — Doubling window: still OPEN (confirmed via EX-13/14/15/16)
+
+Examples execute only with window/timing assumptions flagged OPEN. No mathematical inconsistency found — decision gap, not calculation error. **Status: OPEN (unchanged).**
+
+### C-02 — Baloot inside Hundred: still OPEN, quantified (EX-10)
+
+Identical cards yield 22 (both count) vs 20 (absorbed); Δ = 2 Qaid. Neither interpretation selected. **Status: OPEN — MATERIAL (unchanged).**
+
+### C-03 — Kaboot with doubling: still OPEN (EX-11/12/25)
+
+Profile defines project and Baloot multipliers but no Kaboot multiplier key. Hokum Kaboot 25 at DOUBLE (25 vs 50 vs other) uncomputable. **Status: OPEN FOR EXACT FORMULA (unchanged).**
+
+### C-04 — Kasho variants: baseline exercised, matrix still open (EX-22)
+
+Bushat-cancel/no-score/advance path executes; violation continue-vs-Kasho choice matrix unresolved. **Status: unchanged (core baseline; full matrix open).**
+
+### C-05 — Ashkal eligibility: still OPEN UNTIL MAPPED (EX-21)
+
+Distribution mechanics verify given A2 + partner-receiver rule; caller seat illustrative only; seat matrix unresolved. **Status: OPEN UNTIL MAPPED (unchanged).**
+
+### C-06 — Project coexistence: still OPEN (EX-18/25)
+
+Baseline ordering applied where decisive; subtypes, ties, overlap, dealer-priority unresolved. **Status: OPEN (unchanged).**
+
+### C-07 — Project multiplication: consistency confirmed, acceptance still required
+
+Profile table (×2 at DOUBLE, capped thereafter) is internally consistent with the research and executes cleanly in EX-14/15. Canonical acceptance of the research remains pending. **Status: RESEARCH-SUPPORTED (unchanged).**
+
+### C-08 — Sun arithmetic: confirmed closed (EX-01/02/12/24)
+
+120 + 10 = 130 re-verified through four independent worked totals; 140 appears nowhere. **Status: RESOLVED (unchanged; transcription via DF-01/DF-02 pending EC-01).**
+
+### C-09 — Exposed-card conservation: confirmed closed (EX-20)
+
+20 + 1 + 11 = 32; buyer 5+1+2 = 8; others 5+3 = 8 — exact. **Status: RESOLVED BY RULES OWNER (unchanged).**
+
+### C-10 — Direction: applied globally (all examples)
+
+CCW order N→W→S→E used throughout (e.g. dealer NORTH → first bidder WEST). **Status: RESOLVED BY RULES OWNER (unchanged).**
+
+### C-11 — Purchaser success threshold: OPEN (new, V-01)
+
+No numeric threshold exists in the Foundation. Exact halves (EX-23 81/81, EX-24 65/65) are indeterminate. **Status: OPEN — OWNER DECISION REQUIRED.**
+
+### C-12 — Qaid conversion rounding: OPEN (new, V-02)
+
+Fractions unavoidable (e.g. 62 → 6.2, 81 → 8.1 Hokum). No rounding rule frozen. **Status: OPEN — OWNER DECISION REQUIRED.**
+
+### C-13 — Failed-contract allocation values: OPEN (new, V-03)
+
+Pattern without values; EX-17 branches (forfeit vs retain project) both fit. **Status: OPEN — OWNER DECISION REQUIRED.**
+
+### C-14 — Tie-break policies: OPEN (new, V-06)
+
+Purchaser-wins-tie, initial-doubler-loses, and both-cross-152 rules all suggested but unadopted. **Status: OPEN — OWNER DECISION REQUIRED.**
+
+### C-15 — Normal-success allocation statement: CONFIRMATION REQUESTED (new, V-11)
+
+Each-side-keeps-own-share is implied but never written. Requires one explicit Owner sentence. **Status: OPEN — DOCUMENTATION CONFIRMATION.**
+
