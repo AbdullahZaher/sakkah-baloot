@@ -82,3 +82,30 @@ Research is evidence, not authority.
 **Rule Freeze: BLOCKED until the remaining Owner Decision dependencies are explicitly closed.**
 
 **Production engine implementation: NOT AUTHORIZED.**
+
+
+## Phase 14.Z.11 completion update
+
+### Newly closed
+- V-02-A exact Qaid conversion table.
+- V-08 complete project Raw table.
+- Project comparison/coexistence baseline.
+- Project multiplication: DOUBLE only; no Triple/Four project multiplication.
+- Both-teams-cross-152: higher final total wins.
+- Sun Double window and eligibility.
+- First dealer: deterministic match-seed derivation + persistence.
+- Bidding timeout: 8s → PASS.
+- Playing timeout: 30s → AFK/disconnect handling, no random card.
+- Incident authority/recovery baseline.
+- Full Kasho violation matrix.
+- AD-01 through AD-05 architecture approval.
+- First/second-round Ace→Sun dealer-right priority.
+- Purchase-finalization boundary.
+
+### Still explicitly open
+1. V-02b fixed-total complement formula — no separate Owner approval.
+2. Equal final match total — no authoritative resolution yet.
+3. Final immutable event ordering and exact payload freeze.
+4. Any second-round bidding priority not covered by the explicit Ace→Sun rule.
+
+These are the only material Freeze dependencies currently retained by this ledger.
