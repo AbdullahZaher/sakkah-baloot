@@ -735,7 +735,7 @@ TRIPLE
    ↓
 QUADRUPLE
    ↓
-COFFEE
+GAHWA
 ```
 
 ولكن ليس كل انتقال مسموحًا في كل نوع عقد.
