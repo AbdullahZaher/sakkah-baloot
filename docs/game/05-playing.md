@@ -1221,7 +1221,7 @@ Any project-specific play exception must be explicitly specified.
 
 # 53. Doubling Interaction
 
-Doubling/triple/four/coffee rules may affect scoring.
+Doubling/triple/four/Gahwa rules may affect scoring.
 
 They should not alter basic:
 
