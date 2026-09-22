@@ -30,6 +30,8 @@ import {
   canDeclareKasho,
   declareKasho,
   resolveKasho,
+  createIntegrityIncident,
+  resolveIntegrityIncident,
 } from "../dist/index.js";
 
 const card = (id) => DECK.find((c) => c.id === id);
@@ -746,4 +748,51 @@ test("bidding Kasho is available after PASS, cancels immediately, and rotates de
     ),
     cancelled,
   );
+});
+
+
+test("integrity incidents follow the frozen authority matrix and cancel at 0-0", () => {
+  const exposure = createIntegrityIncident("inc-1", "ACCIDENTAL_EXPOSURE", "NORTH_SOUTH");
+  assert.equal(exposure.authority, "AFFECTED_OPPOSING_TEAM");
+  assert.equal(exposure.phase, "DECISION_REQUIRED");
+  const continued = resolveIntegrityIncident(exposure, "CONTINUE", "NORTH");
+  assert.equal(continued.outcome, "CONTINUED");
+  assert.equal(continued.nextDealerSeat, null);
+
+  const wrongCount = createIntegrityIncident("inc-2", "WRONG_CARD_COUNT", "EAST_WEST");
+  const cancelled = resolveIntegrityIncident(wrongCount, "CANCEL", "NORTH");
+  assert.equal(cancelled.outcome, "HAND_CANCELLED");
+  assert.deepEqual(cancelled.score, { NORTH_SOUTH: 0, EAST_WEST: 0 });
+  assert.equal(cancelled.matchScoreUnchanged, true);
+  assert.equal(cancelled.nextDealerSeat, "WEST");
+
+  const impossible = createIntegrityIncident("inc-3", "DUPLICATE_OR_IMPOSSIBLE_DECK");
+  assert.equal(impossible.authority, "SERVER");
+  assert.equal(impossible.autoCancel, true);
+  const autoCancelled = resolveIntegrityIncident(impossible, null, "WEST");
+  assert.equal(autoCancelled.outcome, "HAND_CANCELLED");
+  assert.equal(autoCancelled.nextDealerSeat, "SOUTH");
+  assert.throws(() => resolveIntegrityIncident(impossible, "CANCEL", "WEST"), /Auto-cancel/);
+});
+
+test("invalid client requests remain ordinary rejections, not integrity incidents", () => {
+  const state = createBiddingState("r-invalid", "NORTH");
+  const hands = {
+    NORTH: ["CLUBS-7"],
+    WEST: ["DIAMONDS-7"],
+    SOUTH: ["HEARTS-7"],
+    EAST: ["SPADES-7"],
+  };
+  assert.throws(
+    () => applyBiddingAction(
+      state,
+      { type: "DECLARE_KASHO", actionId: "not-eligible" },
+      "NORTH",
+      "CLUBS-A",
+      { "CLUBS-A": { suit: "CLUBS" } },
+      hands,
+    ),
+    /Kasho requires five/,
+  );
+  assert.equal(state.phase, "FIRST_ROUND");
 });
