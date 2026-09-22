@@ -9,3 +9,4 @@ export * from "./projects/project-engine.js";
 export * from "./playing/types.js";
 export * from "./playing/legal-moves.js";
 export * from "./projects/baloot.js";
+export * from "./playing/trick-engine.js";
