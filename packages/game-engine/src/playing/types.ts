@@ -1,6 +1,13 @@
 import type { CardId, PlayerId, Seat, Contract, HokumPlayMode } from "../rules/types.js";
 import type { Card, Suit } from "../cards.js";
 
+export interface CompletedTrick {
+  readonly trickNumber: number;
+  readonly leaderSeat: Seat;
+  readonly plays: readonly TrickPlay[];
+  readonly winnerSeat: Seat;
+}
+
 export interface TrickPlay {
   readonly playerId: PlayerId;
   readonly seat: Seat;
@@ -20,6 +27,7 @@ export interface LegalMoveState {
   readonly dealerSeat: Seat;
   readonly trickNumber: number;
   readonly currentTrick: readonly TrickPlay[];
+  readonly completedTricks: readonly CompletedTrick[];
 }
 
 export type MoveConstraint = "FOLLOW_SUIT" | "IKA_FREE_PLAY" | "MUST_TRUMP" | "MUST_OVERTRUMP" | "ANY_CARD";
