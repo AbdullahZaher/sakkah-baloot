@@ -16,6 +16,10 @@ import {
   scoreRound,
   teamOfSeat,
   nextCounterClockwise,
+  createEscalationState,
+  canEscalate,
+  escalate,
+  closeEscalation,
 } from "../dist/index.js";
 
 const card = (id) => DECK.find((c) => c.id === id);
@@ -455,4 +459,108 @@ test("trick resolution uses canonical counter-clockwise winner handoff", () => {
   const s4 = applyCardPlay(s3, "pE", "CLUBS-7");
   assert.equal(s4.completedTricks[0].winnerSeat, "NORTH");
   assert.equal(s4.currentPlayerId, "pN");
+});
+
+
+function canonicalSunTricks(winnerSeat = "NORTH") {
+  const tricks = [];
+  const seats = ["NORTH","WEST","SOUTH","EAST"];
+  const groups = [
+    ["CLUBS-A","CLUBS-10","CLUBS-K","CLUBS-Q"],
+    ["CLUBS-J","CLUBS-9","CLUBS-8","CLUBS-7"],
+    ["DIAMONDS-A","DIAMONDS-10","DIAMONDS-K","DIAMONDS-Q"],
+    ["DIAMONDS-J","DIAMONDS-9","DIAMONDS-8","DIAMONDS-7"],
+    ["HEARTS-A","HEARTS-10","HEARTS-K","HEARTS-Q"],
+    ["HEARTS-J","HEARTS-9","HEARTS-8","HEARTS-7"],
+    ["SPADES-A","SPADES-10","SPADES-K","SPADES-Q"],
+    ["SPADES-J","SPADES-9","SPADES-8","SPADES-7"],
+  ];
+  for (let i = 0; i < groups.length; i++) {
+    tricks.push({
+      trickNumber: i + 1,
+      leaderSeat: "NORTH",
+      plays: groups[i].map((id, j) => ({
+        playerId: "p" + j,
+        seat: seats[j],
+        card: card(id),
+        ikaDeclared: false,
+        sequence: j + 1,
+      })),
+      winnerSeat,
+    });
+  }
+  return tricks;
+}
+
+test("Kaboot uses the dedicated flat Hokum value at every ordinary level", () => {
+  for (const escalation of ["NORMAL","DOUBLE","TRIPLE","FOUR"]) {
+    const score = scoreRound({
+      contract: "HOKUM",
+      trumpSuit: "CLUBS",
+      purchaserSeat: "NORTH",
+      dealerSeat: "EAST",
+      buyerOriginallyHeldAce: true,
+      escalation,
+      tricks: canonicalSunTricks("NORTH"),
+      projectRaw: { NORTH_SOUTH: 0, EAST_WEST: 0 },
+      projectQaid: { NORTH_SOUTH: 0, EAST_WEST: 0 },
+      balootRaw: { NORTH_SOUTH: 0, EAST_WEST: 0 },
+      balootQaid: { NORTH_SOUTH: 0, EAST_WEST: 0 },
+    });
+    assert.equal(score.kabootTeamId, "NORTH_SOUTH");
+    assert.equal(score.finalQaid.NORTH_SOUTH, 25);
+    assert.equal(score.finalQaid.EAST_WEST, 0);
+  }
+});
+
+test("Reverse Kaboot is 88 and is independent of ordinary escalation", () => {
+  for (const escalation of ["NORMAL","DOUBLE"]) {
+    const score = scoreRound({
+      contract: "SUN",
+      trumpSuit: null,
+      purchaserSeat: "WEST",
+      dealerSeat: "NORTH",
+      buyerOriginallyHeldAce: true,
+      escalation,
+      tricks: canonicalSunTricks("NORTH"),
+      projectRaw: { NORTH_SOUTH: 0, EAST_WEST: 0 },
+      projectQaid: { NORTH_SOUTH: 0, EAST_WEST: 0 },
+      balootRaw: { NORTH_SOUTH: 0, EAST_WEST: 0 },
+      balootQaid: { NORTH_SOUTH: 0, EAST_WEST: 0 },
+    });
+    assert.equal(score.reverseKaboot, true);
+    assert.equal(score.finalQaid.NORTH_SOUTH, 88);
+    assert.equal(score.finalQaid.EAST_WEST, 0);
+  }
+});
+
+test("escalation follows the frozen NORMAL → DOUBLE → TRIPLE → FOUR → GAHWA chain", () => {
+  let state = createEscalationState("HOKUM", "HOKUM_AFTER_COMPLETION_DEAL");
+  assert.equal(canEscalate(state), true);
+  state = escalate(state, "NORTH", "DOUBLE");
+  assert.equal(state.level, "DOUBLE");
+  assert.equal(state.initialDoublerSeat, "NORTH");
+  state = escalate(state, "SOUTH", "TRIPLE");
+  assert.equal(state.level, "TRIPLE");
+  state = escalate(state, "NORTH", "FOUR");
+  assert.equal(state.level, "FOUR");
+  state = escalate(state, "SOUTH", "GAHWA");
+  assert.equal(state.level, "GAHWA");
+  assert.equal(canEscalate(state), false);
+  assert.throws(() => escalate(state, "NORTH", "DOUBLE"), /Escalation/);
+});
+
+test("Sun escalation rejects TRIPLE and FOUR", () => {
+  let state = createEscalationState("SUN", "SUN_CONTRACT_FINALIZED");
+  state = escalate(state, "NORTH", "DOUBLE");
+  assert.equal(state.level, "DOUBLE");
+  assert.throws(() => escalate(state, "NORTH", "TRIPLE"), /Sun escalation/);
+});
+
+test("closing escalation freezes the final locked play mode", () => {
+  const state = createEscalationState("HOKUM", "HOKUM_AFTER_COMPLETION_DEAL", "OPEN");
+  const closed = closeEscalation(state, "LOCKED");
+  assert.equal(closed.window, "CLOSED");
+  assert.equal(closed.lockedPlayMode, "LOCKED");
+  assert.equal(canEscalate(closed), false);
 });
