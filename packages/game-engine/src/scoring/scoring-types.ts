@@ -5,6 +5,8 @@ export interface RoundScoreInput {
   readonly contract: Contract;
   readonly trumpSuit: import("../cards.js").Suit | null;
   readonly purchaserSeat: Seat;
+  readonly dealerSeat: Seat;
+  readonly buyerOriginallyHeldAce: boolean;
   readonly escalation: EscalationLevel;
   readonly tricks: readonly CompletedTrick[];
   readonly projectRaw: Readonly<Record<TeamId, number>>;
