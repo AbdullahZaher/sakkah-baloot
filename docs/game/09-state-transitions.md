@@ -744,7 +744,7 @@ Canonical Saudi rule direction:
 counter-clockwise
 ```
 
-The transition layer must consume the canonical Rule Profile direction rather than embedding a conflicting clockwise baseline.
+The transition layer must consume the canonical Rule Profile direction rather than embedding a conflicting opposite-direction baseline.
 
 ---
 
