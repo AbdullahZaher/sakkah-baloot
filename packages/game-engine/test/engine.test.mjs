@@ -150,6 +150,10 @@ test("match equal crossing target produces EXTRA_DEAL", () => {
     status: "EXTRA_DEAL",
     score: {NORTH_SOUTH: 152,EAST_WEST: 152},
   });
+  assert.deepEqual(evaluateMatchEnd({NORTH_SOUTH: 120,EAST_WEST: 120}), {
+    status: "ONGOING",
+    score: {NORTH_SOUTH: 120,EAST_WEST: 120},
+  });
   assert.deepEqual(evaluateMatchEnd({NORTH_SOUTH: 153,EAST_WEST: 160}), {
     status: "FINISHED",
     score: {NORTH_SOUTH: 153,EAST_WEST: 160},
