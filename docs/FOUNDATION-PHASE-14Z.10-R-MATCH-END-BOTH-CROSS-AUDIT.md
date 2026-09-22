@@ -1,6 +1,6 @@
 # Phase 14.Z.10-R — Match-End / Both-Cross Audit
 
-**Status:** COMPLETE — OPEN  
+**Status:** CLOSED FOR BOTH-CROSS — EQUAL-TOTAL REMAINS OPEN  
 **Branch:** `phase-14z10r-canonical-reconciliation`
 
 ## Current canonical facts
@@ -40,3 +40,16 @@ No answer is invented in this audit.
 "First team to reach 152" is not sufficient to resolve this because a single round can move both teams across the target and the round is scored as an atomic result.
 
 **Disposition: OPEN.**
+
+
+## Phase 14.Z.11 closure
+
+Both-cross behavior is now closed:
+
+- evaluate only after the completed round is scored;
+- if both teams are at/above 152, the higher final total wins;
+- do not terminate the round mid-trick or mid-scoring.
+
+This matches the Saudi baseline rule that when both teams exceed 152, the team with the higher total wins. citeturn4search0
+
+Equal final totals remain a distinct OPEN edge because the cited baseline does not specify the tie resolution and no Owner Decision has yet closed it.
