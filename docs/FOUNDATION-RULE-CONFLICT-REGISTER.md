@@ -238,3 +238,21 @@ The final test specification now includes the partner/trump/Ika/Locked combinati
 These closures are Owner Decisions recorded on 2026-09-22. Web research remains evidence, not authority. The canonical chain is:
 
 Source Evidence -> Conflict -> Rules Owner Decision -> Canonical Rule -> Rule Profile -> Tests
+
+
+### Current-status overrides — Phase 14.Z.3
+
+| Conflict | Current status |
+|---|---|
+| C-03 Kaboot × doubling | CLOSED — V-04=A; flat dedicated table |
+| C-05 Ashkal eligibility | CLOSED — RD-10 Saudi baseline; Dealer + Dealer-left in both rounds |
+| C-16 V-06b | OPEN — Triple/Four scope still requires explicit owner transcription |
+| C-17 V-11 | CLOSED — transcribed into canonical rules |
+| C-18 Kasho dealer transition | CLOSED — ROTATE_RIGHT |
+| C-19 Ika partner exemption | CLOSED |
+| C-20 G-1 partner/trump legality | CLOSED |
+| C-21 G-2 Ika predicate | CLOSED |
+| C-22 G-2P Ika partner exemption predicate | CLOSED |
+| C-23 G-3 test coverage | CLOSED as specification requirement |
+
+Historical Phase 14.y entries C-11–C-15 remain preserved as audit history; current owner decisions supersede their stale OPEN statuses where applicable.
