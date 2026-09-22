@@ -23,6 +23,9 @@ import {
   declareProject,
   resolveProjects,
   replay,
+  createBiddingState,
+  legalBiddingActions,
+  applyBiddingAction,
 } from "../dist/index.js";
 
 const card = (id) => DECK.find((c) => c.id === id);
@@ -623,4 +626,34 @@ test("replay is deterministic and duplicate event IDs are idempotent", () => {
   const once = replay(initial, [event]);
   const twice = replay(initial, [event,event]);
   assert.deepEqual(twice, once);
+});
+
+
+test("second-round Sun is reserved for dealer-right with an Ace", () => {
+  const dealer = "NORTH";
+  const hands = {
+    NORTH: ["CLUBS-7"],
+    WEST: ["DIAMONDS-A"],
+    SOUTH: ["HEARTS-7"],
+    EAST: ["SPADES-A"],
+  };
+  let state = createBiddingState("r-bid", dealer);
+  for (let i = 0; i < 4; i += 1) {
+    state = applyBiddingAction(state, { type: "PASS", actionId: "p1-" + i }, dealer, "CLUBS-A", {
+      "CLUBS-A": { suit: "CLUBS" },
+    }, hands);
+  }
+  assert.equal(state.phase, "SECOND_ROUND");
+  assert.equal(state.actingSeat, "WEST");
+  assert.ok(legalBiddingActions(state, dealer, "CLUBS", hands).includes("BUY_SUN"));
+  const noAce = { ...hands, WEST: ["DIAMONDS-7"] };
+  assert.ok(!legalBiddingActions(state, dealer, "CLUBS", noAce).includes("BUY_SUN"));
+  const eastState = { ...state, actingSeat: "EAST" };
+  assert.ok(!legalBiddingActions(eastState, dealer, "CLUBS", hands).includes("BUY_SUN"));
+  assert.throws(
+    () => applyBiddingAction(eastState, { type: "BUY_SUN", actionId: "sun-east" }, dealer, "CLUBS-A", {
+      "CLUBS-A": { suit: "CLUBS" },
+    }, hands),
+    /dealer-right Ace priority/,
+  );
 });
