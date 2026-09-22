@@ -26,6 +26,8 @@ import {
   createBiddingState,
   legalBiddingActions,
   applyBiddingAction,
+  applyBiddingTimeout,
+  BIDDING_TIMEOUT_MS,
   qualifiesForKasho,
   canDeclareKasho,
   declareKasho,
@@ -664,6 +666,27 @@ test("second-round Sun is reserved for dealer-right with an Ace", () => {
   );
 });
 
+
+test("bidding timeout becomes an authoritative PASS after 8 seconds", () => {
+  const dealer = "NORTH";
+  const hands = {
+    NORTH: ["CLUBS-7"],
+    WEST: ["DIAMONDS-7"],
+    SOUTH: ["HEARTS-7"],
+    EAST: ["SPADES-7"],
+  };
+  const state = createBiddingState("r-timeout", dealer);
+  assert.throws(
+    () => applyBiddingTimeout(state, dealer, BIDDING_TIMEOUT_MS - 1, "timeout-early"),
+    /timeout has not elapsed/,
+  );
+  const next = applyBiddingTimeout(state, dealer, BIDDING_TIMEOUT_MS, "timeout-1");
+  assert.equal(next.actingSeat, "SOUTH");
+  assert.equal(next.passCount, 1);
+  assert.equal(next.history[0].action, "PASS");
+  assert.equal(next.history[0].actionId, "timeout-1");
+  assert.equal(applyBiddingTimeout(next, dealer, BIDDING_TIMEOUT_MS, "timeout-1").stateVersion, next.stateVersion);
+});
 
 test("Kasho qualifies on five 7/8/9 cards, is first-bidding only, and is idempotent", () => {
   const kashoCards = hand("CLUBS-7","DIAMONDS-8","HEARTS-9","SPADES-7","CLUBS-8");
