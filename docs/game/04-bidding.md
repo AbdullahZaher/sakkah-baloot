@@ -1488,3 +1488,26 @@ No hidden bidding rule should exist outside the Rule Profile and Game Engine.
 Public sources used for rule investigation include Baloot AI's current Saudi-rule reference and other publicly available Baloot rule descriptions. These sources are treated as research inputs, not as permission to mix incompatible variants. citeturn0search0turn0search22
 
 Final approval should occur only after the complete foundation specification has been reviewed together.
+
+
+## Phase 14.Z.11 Closure — Sun Priority and Purchase Finalization
+
+### Ace → Sun priority
+
+When the exposed card is an Ace, the dealer-right player is the only player authorized to convert the Ace-Hokum path to Sun in the first and second bidding rounds. This is an authoritative server-side bidding rule.
+
+### Purchase finalization
+
+The valid purchase action is committed atomically as the contract-finalization boundary. Once committed:
+
+- the purchaser is authoritative;
+- the contract source and mode are fixed;
+- the purchase window closes;
+- Kasho is waived;
+- final-card completion proceeds.
+
+No client-local UI state may independently close the purchase window.
+
+### Architecture
+
+`PASS` is the only wire pass action. Final-pass semantics remain derived from authoritative bidding state.
