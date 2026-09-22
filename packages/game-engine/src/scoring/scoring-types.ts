@@ -1,4 +1,4 @@
-import type { CardId, Contract, EscalationLevel, TeamId, Seat } from "../rules/types.js";
+import type { Contract, EscalationLevel, TeamId, Seat } from "../rules/types.js";
 import type { CompletedTrick } from "../playing/types.js";
 
 export interface RoundScoreInput {
