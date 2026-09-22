@@ -707,7 +707,7 @@ This prevents hidden-hand information from automatically becoming public scoring
 
 The Rule Profile must define exactly when projects are announced.
 
-A common rule set uses the beginning of the first trick for declaration, with later reveal/comparison behavior. citeturn0search0turn0search10
+The frozen v1 declaration window is Trick #1, before the declaring player commits their first card. After that player's card is committed, their normal project declaration window is closed.
 
 The engine must treat timing as state, not UI behavior.
 
@@ -733,7 +733,7 @@ The server owns project visibility.
 
 If both teams have projects, the engine must determine which team's project has priority according to the Rule Profile.
 
-Research baseline ordering (non-canonical; final Rule Profile must decide):
+Frozen v1 comparison precedence is explicit:
 
 ```text
 أربعمية
@@ -745,7 +745,7 @@ Research baseline ordering (non-canonical; final Rule Profile must decide):
 
 with additional distinctions between types of مية.
 
-The final comparison algorithm MUST be explicit.
+The comparison algorithm is canonical: compare project class precedence, then the frozen subtype/high-card rules; exact ties resolve by dealer-relative counter-clockwise priority.
 
 Current public references document project precedence and tie-breaking rules. citeturn0search0
 
@@ -765,7 +765,7 @@ The comparison can depend on:
 
 Do not use array order or database order.
 
-The Rule Profile must define exact tie-breakers.
+Exact ties use dealer-relative counter-clockwise seat priority; array/database ordering MUST NOT affect the result.
 
 ---
 
@@ -814,7 +814,7 @@ A project may be excluded because:
 
 # 30. Project Non-Overlap
 
-The final Rule Profile must define whether overlapping combinations can both count.
+Frozen v1 rule: qualifying projects must not overlap in consumed cards. Overlapping declarations are rejected.
 
 The safe architecture is:
 
@@ -891,7 +891,7 @@ Current references explicitly describe project multiplication while keeping بل
 
 The Rule Profile must define exactly which multiplier states allow أربعمية.
 
-Research evidence describes Sun Four-Hundred examples, but the complete multiplier eligibility matrix remains **OPEN** and is not production-authoritative.
+Frozen v1 Rule Profile: Sun Four-Hundred is valued at 200 Raw / 40 Qaid; project Qaid uses the canonical multiplier table NORMAL×1, DOUBLE×2, TRIPLE×1, FOUR×1.
 
 The implementation must use configuration rather than hard-coded assumptions.
 
@@ -1970,7 +1970,7 @@ Before implementation:
 - [ ] Project Qaid values frozen.
 - [ ] Project raw values frozen.
 - [ ] Project priority frozen.
-- [ ] Project overlap frozen.
+- [x] Project overlap frozen.
 - [ ] Project declaration/reveal frozen.
 - [ ] بلوت timing frozen.
 - [ ] Doubling frozen.
