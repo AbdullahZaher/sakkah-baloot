@@ -3,7 +3,7 @@
 **Document:** `docs/RULE-TO-CODE-MATRIX.md`
 **Date:** 2026-09-22
 **Chain:** Rule → RuleProfile → State → Action → Event → Transition → Resolver → Test.
-**Code-side reality:** no production engine/tests are authorized before Rule Freeze. Resolver/Test cells are intentionally pending implementation. This matrix now distinguishes documentation freeze completeness from post-freeze implementation completeness.
+**Code-side reality:** Rule Freeze v1 is now authorized. Resolver/Test cells remain pending implementation and are the next engineering gate.
 
 Legend: ✅ documented · ❌ missing · ⚠️ documented but contested/gapped (see notes).
 
@@ -40,4 +40,4 @@ Legend: ✅ documented · ❌ missing · ⚠️ documented but contested/gapped 
 | 29 | Replay | ✅ determinism constraints (01/09) | ✅ immutable profile + AD-02/03/04 | ✅ snapshots (07) | ✅ action log (spec) | ⚠️ schema unfrozen (AD-02/03/04) | ✅ replay reducer (spec) | ❌ | ❌ |
 | 30 | Hidden information | ✅ server-authoritative, no leaks (all docs) | n/a | ✅ player projection (07) | ✅ intent-only actions | ⚠️ projection filtering unproven | ✅ projection boundary | ❌ | ❌ |
 
-**Documentation result:** architecture/rule traceability is materially reconciled. Resolver/Test cells remain intentionally pending because production implementation is not authorized before Rule Freeze. Remaining documentation Freeze blockers are explicitly tracked as V-02b complement disposition, equal-final-total behavior, and final event ordering/payload freeze; any additional second-round bidding edge must remain bounded by the canonical state machine.
+**Documentation result:** architecture/rule traceability is materially reconciled. Resolver/Test cells remain intentionally pending because production implementation is not authorized before Rule Freeze. Documentation Freeze blockers: NONE. V-02b, equal-final-total, event ordering/payloads, and second-round purchase priority are closed by Phase 14.Z.12.
