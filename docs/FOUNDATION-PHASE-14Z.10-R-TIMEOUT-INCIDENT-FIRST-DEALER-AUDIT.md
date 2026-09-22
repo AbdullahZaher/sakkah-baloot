@@ -1,6 +1,6 @@
 # Phase 14.Z.10-R — Timeout / Incident / First-Dealer Audit
 
-**Status:** COMPLETE — OPEN ITEMS PRESERVED  
+**Status:** CLOSED FOR PROJECT POLICY — INCIDENT RECOVERY DETAIL TRANSCRIBED  
 **Branch:** `phase-14z10r-canonical-reconciliation`
 
 ## First dealer
@@ -73,3 +73,22 @@ The exact continue/cancel authority and recoverability matrix remain OPEN.
 - Incident authority/recovery matrix: **OPEN**
 
 No policy was invented.
+
+
+## Phase 14.Z.11 closure
+
+### First dealer
+First dealer is derived deterministically from the persisted match seed and persisted as authoritative match state.
+
+### Timeouts
+- Bidding: 8 seconds → PASS.
+- Playing: 30 seconds → AFK/disconnect handling.
+- No random or lowest-card timeout selection.
+- Server clock is authoritative.
+
+### Incidents
+Recoverable incident → affected opposing team chooses CONTINUE/CANCEL.
+Unrecoverable integrity violation → server auto-cancels.
+Cancellation remains 0–0 with no normal scoring and dealer ROTATE_RIGHT.
+
+Rejected pre-commit client requests are not gameplay incidents and receive no gameplay penalty.
