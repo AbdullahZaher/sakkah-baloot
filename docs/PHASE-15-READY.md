@@ -1,7 +1,7 @@
 # صكّة بلوت — Phase 15 Readiness Certificate
 
 **Date:** 2026-09-22  
-**Branch:** `phase-14z10r-canonical-reconciliation`  
+**Branch:** `phase-15b-cancellation-kasho`  
 **Status:** PHASE 15 IN IMPLEMENTATION — PURE DOMAIN ENGINE
 
 ## 1. Repository Integrity Audit
@@ -26,17 +26,9 @@ Production implementation is authorized, but the first milestone remains strictl
 
 No React Native, Expo, Supabase, PostgreSQL, Redis, WebSocket, or UI dependencies are permitted in the engine.
 
-## 3. Main-Branch Divergence
+## 3. Main-Branch Synchronization
 
-Current branch comparison against `main`:
-
-- Ahead: 232 commits
-- Behind: 1 commit
-- Merge base: `2773c69b375377e46f584c3f6ad6e1ccbd925d27`
-
-The one commit currently ahead on `main` is `fd1533b904ea83effb1e6268ddccf75e10ba961e` (`docs: authorize Rule Freeze v1`). Its content is an older/stale version of the Rule Freeze certificate and references superseded filenames.
-
-**Decision:** do not blindly rebase or merge this commit into the canonical branch. The current branch contains the newer reconciled certificate and cleaned documentation set. Main synchronization can be handled deliberately after the Phase 15 implementation boundary is established.
+Phase 15 continuation starts from the already merged `main` baseline after PR #1. This branch is based on current `main`, so the stale Rule Freeze divergence from the previous reconciliation branch is no longer part of the continuation baseline.
 
 ## 4. Phase 15 Implementation Order
 
@@ -63,25 +55,24 @@ Implemented in the pure engine:
 - 15.1 Rule Profile / constants
 - 15.2 Card + deck model
 - 15.3 Deal state machine
-- 15.4 Bidding + Ashkal completion
+- 15.4 Bidding + Ashkal completion + second-round Ace→Sun priority
 - 15.5 Escalation state
 - 15.6 Project declaration/resolution + Baloot declaration
 - 15.7 Legal move generation
 - 15.8 Trick resolution / authoritative card play
 - 15.9 Raw-first scoring + Qaid conversion + match-end evaluation
+- 15.10 Kasho/Bushat declaration and cancellation
+- 15.11 Integrity incident authority/cancellation state machine
 
 Remaining Phase 15 gates:
 
-- authoritative bidding edge semantics still requiring explicit state inputs: second-round Ace→Sun priority, PASS_FINAL/Kasho integration, and timeout policy
-- authoritative incident/cancellation state machine
-- final pure-engine typecheck/build verification after the complete bidding/incident closure
+- server-authoritative bidding timeout transition (8s → PASS)
+- final pure-engine typecheck/build verification after bidding/incident closure
 
 **Latest pure-engine CI:** PASS — `npm run typecheck` + `npm test` on the Phase 15 branch.
 
-The regression suite now covers legal-move edge cases, Ika validation/mutation safety, project overlap/tie/ownership resolution, Sun/Hokum Qaid rounding-edge invariants, Kaboot/Reverse Kaboot, escalation transitions, and replay idempotency/determinism.
+The regression suite now covers legal-move edge cases, Ika validation/mutation safety, project overlap/tie/ownership resolution, Sun/Hokum Qaid rounding-edge invariants, Kaboot/Reverse Kaboot, escalation transitions, and replay idempotency/determinism, second-round Ace→Sun priority, Kasho cancellation, and integrity incident cancellation.
 
 **PHASE 15: IMPLEMENTATION ACTIVE.**
-
-Any newly discovered rule ambiguity is not to be solved by implementation guesswork. It must be recorded as an owner decision and, if it changes a frozen rule, requires a new Rule Freeze revision.
 
 Any newly discovered rule ambiguity is not to be solved by implementation guesswork. It must be recorded as an owner decision and, if it changes a frozen rule, requires a new Rule Freeze revision.
