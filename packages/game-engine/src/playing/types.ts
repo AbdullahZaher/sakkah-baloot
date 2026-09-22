@@ -17,7 +17,7 @@ export interface TrickPlay {
 }
 
 export interface LegalMoveState {
-  readonly phase: "PLAYING";
+  readonly phase: "PLAYING" | "ROUND_COMPLETE";
   readonly currentPlayerId: PlayerId;
   readonly players: Readonly<Record<PlayerId, Seat>>;
   readonly hands: Readonly<Record<PlayerId, readonly Card[]>>;
