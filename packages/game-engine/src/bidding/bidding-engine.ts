@@ -37,6 +37,8 @@ export interface BiddingActionRecord {
   readonly stateVersion: number;
 }
 
+export type BiddingHands = Readonly<Record<Seat, readonly CardId[]>>;
+
 export interface BiddingState {
   readonly roundId: RoundId;
   readonly phase: BiddingPhase;
@@ -132,13 +134,18 @@ export function legalBiddingActions(
   state: BiddingState,
   dealerSeat: Seat,
   exposedSuit: Suit | null,
+  hands: BiddingHands,
 ): readonly BiddingAction["type"][] {
   if (state.phase !== "FIRST_ROUND" && state.phase !== "SECOND_ROUND") return [];
-  const actions: BiddingAction["type"][] = ["PASS", "BUY_SUN"];
+  const actions: BiddingAction["type"][] = ["PASS"];
   if (state.phase === "FIRST_ROUND") {
     if (exposedSuit !== null) actions.push("BUY_HOKUM_EXPOSED");
+    actions.push("BUY_SUN");
     if (firstRoundAshkalEligible(state.actingSeat, dealerSeat)) actions.push("BUY_ASHKAL");
   } else {
+    const actingHand = hands[state.actingSeat] ?? [];
+    const hasAce = actingHand.some((id) => id.endsWith("-A"));
+    if (state.actingSeat === nextCounterClockwise(dealerSeat) && hasAce) actions.push("BUY_SUN");
     for (const suit of ["CLUBS", "DIAMONDS", "HEARTS", "SPADES"] as const) {
       if (suit !== exposedSuit) actions.push("BUY_HOKUM");
     }
@@ -152,6 +159,7 @@ export function applyBiddingAction(
   dealerSeat: Seat,
   exposedCardId: CardId | null,
   cards: Readonly<Record<CardId, { readonly suit: Suit }>>,
+  hands: BiddingHands = { NORTH: [], EAST: [], SOUTH: [], WEST: [] },
 ): BiddingState {
   if (state.phase !== "FIRST_ROUND" && state.phase !== "SECOND_ROUND") {
     throw new Error("Bidding is not active");
@@ -231,6 +239,10 @@ export function applyBiddingAction(
   }
 
   if (action.type === "BUY_SUN") {
+    const hasAce = (hands[state.actingSeat] ?? []).some((id) => id.endsWith("-A"));
+    if (state.actingSeat !== nextCounterClockwise(dealerSeat) || !hasAce) {
+      throw new Error("Second-round Sun requires the dealer-right Ace priority");
+    }
     return selectContract(state, action, {
       contract: "SUN",
       purchaserSeat: state.actingSeat,
