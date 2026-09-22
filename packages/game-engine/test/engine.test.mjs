@@ -224,3 +224,38 @@ test("overtrump is mandatory when opponent trump is beatable", () => {
   });
   assert.deepEqual(getLegalMoves(state, "pS").map((m) => m.cardId), ["HEARTS-J"]);
 });
+
+
+test("valid Ika partner exemption allows any card for the third player", () => {
+  const state = legalState({
+    currentPlayerId: "pS",
+    hands: {
+      pN: hand("CLUBS-A"),
+      pE: hand("DIAMONDS-7"),
+      pS: hand("HEARTS-J","SPADES-7"),
+      pW: hand("CLUBS-7"),
+    },
+    currentTrick: [
+      { playerId: "pN", seat: "NORTH", card: card("CLUBS-A"), ikaDeclared: true, sequence: 1 },
+      { playerId: "pE", seat: "EAST", card: card("DIAMONDS-7"), ikaDeclared: false, sequence: 2 },
+    ],
+  });
+  assert.deepEqual(getLegalMoves(state, "pS").map((m) => m.cardId), ["HEARTS-J","SPADES-7"]);
+});
+
+test("Ace without valid Ika does not grant partner exemption", () => {
+  const state = legalState({
+    currentPlayerId: "pS",
+    hands: {
+      pN: hand("CLUBS-A"),
+      pE: hand("DIAMONDS-7"),
+      pS: hand("HEARTS-J","SPADES-7"),
+      pW: hand("CLUBS-7"),
+    },
+    currentTrick: [
+      { playerId: "pN", seat: "NORTH", card: card("CLUBS-A"), ikaDeclared: false, sequence: 1 },
+      { playerId: "pE", seat: "EAST", card: card("DIAMONDS-7"), ikaDeclared: false, sequence: 2 },
+    ],
+  });
+  assert.deepEqual(getLegalMoves(state, "pS").map((m) => m.cardId), ["HEARTS-J"]);
+});
