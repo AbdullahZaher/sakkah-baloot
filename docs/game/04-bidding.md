@@ -349,7 +349,7 @@ Recommended baseline:
 
 ```ts
 type SecondRoundAction =
-  | { type: "PASS_FINAL" }
+  | { type: "PASS" }
   | { type: "BUY_SUN" }
   | { type: "BUY_HOKM"; suit: Suit };
 ```
@@ -421,7 +421,7 @@ Therefore, first-round `PASS` can advance the turn while preserving eligibility 
 If the Rule Profile defines a final second-round pass:
 
 ```ts
-PASS_FINAL
+PASS (final-pass semantics are derived from authoritative bidding state; not a separate wire action)
 ```
 
 it means:
