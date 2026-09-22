@@ -1,8 +1,9 @@
 import type { Card, CardId } from "../cards.js";
 import { compareCards } from "../cards.js";
+import { nextCounterClockwise } from "../rules/profile.js";
 import type { PlayerId, Seat } from "../rules/types.js";
 import type { CompletedTrick, GameState, TrickPlay } from "./types.js";
-import { getCurrentWinner, getLeadSuit } from "./legal-moves.js";
+
 import { getLegalMoves } from "./legal-moves.js";
 
 function removeCard(hand: readonly Card[], cardId: CardId): readonly Card[] {
@@ -70,20 +71,8 @@ export function applyCardPlay(
   const plays = [...state.currentTrick, play];
 
   if (plays.length < 4) {
-    const seats = state.players;
-    let nextPlayer: PlayerId | null = null;
-    let cursor = play.seat;
-    for (const [candidateId, seat] of Object.entries(seats)) {
-      if (seat === undefined) continue;
-      // The player immediately counter-clockwise from the current seat is the next actor.
-      // Seat ordering is resolved through the Rule Profile, not object insertion order.
-      void candidateId;
-    }
-    const nextSeatMap: Record<Seat, Seat> = {
-      NORTH: "WEST", WEST: "SOUTH", SOUTH: "EAST", EAST: "NORTH",
-    };
-    const nextSeat = nextSeatMap[cursor];
-    nextPlayer = Object.entries(seats).find(([, seat]) => seat === nextSeat)?.[0] ?? null;
+    const nextSeat = nextCounterClockwise(play.seat);
+    const nextPlayer = Object.entries(state.players).find(([, seat]) => seat === nextSeat)?.[0];
     if (!nextPlayer) throw new Error("Unable to resolve next player");
     return { ...state, hands: nextHands, currentTrick: plays, currentPlayerId: nextPlayer };
   }
@@ -98,7 +87,7 @@ export function applyCardPlay(
       currentTrick: [],
       completedTricks,
       phase: "ROUND_COMPLETE",
-      currentPlayerId: playerId,
+      currentPlayerId: Object.entries(state.players).find(([, seat]) => seat === completed.winnerSeat)?.[0] ?? playerId,
     };
   }
 
