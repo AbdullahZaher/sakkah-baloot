@@ -6,14 +6,14 @@
 
 ## P0 — must resolve first (contradiction)
 
-* **F-01 Kaboot × doubling:** adopt exactly one V-04 answer (flat A vs table-mechanism E vs multiplied-values B), reconcile RD-09 §14-vs-§21 open/closed, transcribe the winning table into `02-RULE-PROFILE-SA.md` (`kaboot.escalation`), supersede the losers on record.
+* **F-01 Kaboot × doubling: CLOSED.** V-04 = A, Saudi Baseline / flat dedicated table. Hokum 25/25/25/25; Sun 44/44; Reverse 88 independent; Gahwa overrides. RD-09 and Rule Profile reconciled.
 
 ## P1 — missing artifacts / undefined content / provenance
 
 1. Exact conversion table (+ define "complement calculation").
 2. V-06b doubled-tie transcription into `01`+`02`.
 3. V-11 ordinary-allocation sentence into canonical scoring docs.
-4. V-07 counting-side definition (or term removal).
+4. V-07 counting-side definition: CLOSED — term removed; use precise allocation/ownership terminology.
 5. Incident policy block in profile (dealer + score on cancel).
 6. First-dealer mechanism + profile field.
 7. Timeout policy (bidding + playing).
@@ -21,9 +21,9 @@
 9. Frozen action catalog (closes AD-01 input side).
 10. Frozen event catalog (needs AD-02/03/04).
 11. Cutting/Dag rule content or explicit exclusion with provenance.
-12. Must-Overtrump rule content.
-13. Must-Trump definition (close OD-PL-02).
-14. Ika: record decision trail; add partner-exemption rule or strike the gate criterion.
+12. Must-Overtrump rule content: CLOSED as core content; partner-winning/table-trump edge cases canonicalized in game/10.
+13. Must-Trump definition: CLOSED as core content; partner-winning/table-trump edge cases canonicalized in game/10.
+14. Ika: CLOSED for rule content and partner exemption; implementation/test evidence remains post-Freeze work.
 15. Provenance records: project ×3/×4, locked mode, exposed Ace, max-2-projects, incident path.
 16. Bidding option sets + Sun-priority rules.
 17. Full Kasho/violation matrix (RD-09 14 items) + project coexistence/tie/declaration-failure edges.
