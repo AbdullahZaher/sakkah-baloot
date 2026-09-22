@@ -1,7 +1,7 @@
 # صكّة بلوت — Dealing System Specification
 
 **Document:** `docs/game/03-dealing.md`  
-**Status:** Draft for Review — NOT FROZEN  
+**Status:** FROZEN — IMPLEMENTATION AUTHORIZED  
 **Phase:** Foundation / Game Domain  
 **Depends on:** `01-game-rules.md`, `02-card-system.md`  
 **Next dependent documents:** Bidding, Playing, Game State, Actions, State Transitions
@@ -137,7 +137,7 @@ For the four canonical seats:
 NORTH → EAST → SOUTH → WEST → NORTH
 ```
 
-However, the exact first receiver and dealer convention must be frozen by the final Rule Profile.
+The first dealer is deterministically derived from the persisted match seed and persisted as authoritative. Dealer rotation follows the frozen counter-clockwise profile.
 
 Do not hard-code a culturally assumed convention if the selected ruleset specifies another one.
 
@@ -185,7 +185,7 @@ The engine should never determine dealer rotation from:
 
 # 8. First Dealer
 
-The first dealer of a new match is a Rule Profile decision. The mechanism remains OPEN until an explicit Owner Decision closes it.
+The first dealer of a new match is deterministically derived from the persisted match seed. The derived seat is persisted and reused by reconnect/replay.
 
 Possible mechanisms may include:
 
@@ -194,9 +194,9 @@ Possible mechanisms may include:
 - previous match carry-over
 - another defined rule
 
-This document intentionally does not freeze the first-dealer mechanism.
+Rule Freeze v1 closes the first-dealer mechanism.
 
-It MUST be resolved before production Rule Freeze.
+It is frozen for production implementation by Rule Freeze v1.
 
 ---
 
@@ -292,7 +292,7 @@ The key requirement is that the complete authoritative deal can be reconstructed
 
 # 13. Initial Deal
 
-The current baseline Rule Profile draft uses:
+The frozen Rule Profile uses:
 
 ```text
 3 cards per player
@@ -314,7 +314,7 @@ Then one card is exposed for the bidding process according to the Baloot rules.
 
 The remaining cards stay in the authoritative deck.
 
-The exact exposed-card position and the precise timing relative to the 3+2 distribution must be frozen in the final dealing rules.
+The frozen dealing sequence is: 3 cards + 2 cards to each player, then one exposed card; after purchase, the buyer receives the exposed card plus 2 hidden cards and every other player receives 3 hidden cards. Ashkal gives the exposed card to the eligible partner, while the caller receives 3 hidden cards.
 
 ---
 
@@ -441,7 +441,7 @@ This creates an important rule-design point:
 
 The exact position/timing of the exposed card and the initial/completion distribution must be specified consistently so the full 32-card accounting closes correctly.
 
-The current `01-game-rules.md` baseline intentionally leaves this sequence open for final Rule Profile reconciliation.
+The canonical sequence is closed by Rule Freeze v1 and the exposed-card amendment/Ashkal protocols.
 
 **Do not implement the arithmetic as an independent rule.**
 
@@ -1184,42 +1184,15 @@ Always.
 
 ---
 
-# 51. Open Rule Decisions
+# 51. Frozen Dealing Decisions
 
-The following must be finalized before this document is frozen:
-
-1. Exact dealer rotation convention.
-2. First dealer selection.
-3. Exact dealing direction.
-4. Exact 3+2 timing.
-5. Exact exposed-card timing.
-6. Exact relation between exposed card and the bidding round.
-7. Exact completion-deal order.
-8. What happens if no contract is selected.
-9. Redeal rules.
-10. Cut/dag rules if included.
-11. Any special dealing variants.
-12. Exact Rule Profile for Saudi Baloot.
-
-Agents MUST NOT invent these rules.
+The historical open dealing decisions are closed by Rule Freeze v1. Initial hand size, exposed-card timing, completion hand size, dealer convention, counter-clockwise direction, first-dealer derivation, cancellation/redeal behavior, visibility, and authoritative reconstruction are frozen implementation requirements.
 
 ---
 
 # 52. Rule Freeze Gate
 
-Before implementation is considered authoritative, confirm:
-
-- [ ] 32-card accounting closes for every valid path.
-- [ ] Initial hand size is frozen.
-- [ ] Exposed-card timing is frozen.
-- [ ] Completion hand size is frozen.
-- [ ] Dealer convention is frozen.
-- [ ] Dealing direction is frozen.
-- [ ] First dealer is frozen.
-- [ ] Redeal conditions are frozen.
-- [ ] Shuffle authority is frozen.
-- [ ] Replay representation is frozen.
-- [ ] Visibility rules are frozen.
+Rule Freeze v1 has passed. The checklist below is an implementation traceability checklist rather than a precondition to begin.
 
 ---
 
@@ -1299,6 +1272,6 @@ No UI behavior may become a hidden source of gameplay authority.
 
 ## Document Status
 
-**Current status:** Draft for Review — NOT FROZEN
+**Current status:** FROZEN — IMPLEMENTATION AUTHORIZED
 
 Final approval should occur only after the complete foundation specification has been reviewed together.
