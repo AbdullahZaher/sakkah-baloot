@@ -108,7 +108,7 @@ test("legal move generation follows led suit", () => {
       pW: hand("SPADES-7"),
     },
     currentTrick: [{
-      playerId: "pN", seat: "NORTH", card: card("CLUBS-A"), ikaDeclared: false, sequence: 1,
+      playerId: "pN", seat: "NORTH", card: card("DIAMONDS-K"), ikaDeclared: false, sequence: 1,
     }],
   });
   assert.deepEqual(getLegalMoves(state, "pE").map((m) => m.cardId), ["DIAMONDS-7","DIAMONDS-A"]);
@@ -189,7 +189,7 @@ test("Sun scoring conserves 130 raw points and converts to 26 Qaid", () => {
       ikaDeclared: false,
       sequence: j + 1,
     }));
-    tricks.push({ trickNumber: i + 1, leaderSeat: "NORTH", plays, winnerSeat: "NORTH" });
+    tricks.push({ trickNumber: i + 1, leaderSeat: "NORTH", plays, winnerSeat: i < 4 ? "NORTH" : "EAST" });
   }
   const score = scoreRound({
     contract: "SUN",
