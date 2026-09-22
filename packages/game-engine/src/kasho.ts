@@ -63,9 +63,6 @@ export function resolveKasho(
   dealerSeat: Seat,
   processedDeclarationIds: readonly string[] = [],
 ): KashoResolution {
-  if (processedDeclarationIds.includes(declaration.declarationId)) {
-    throw new Error("Duplicate Kasho declaration");
-  }
   const nextDealerSeat = ({
     NORTH: "WEST",
     WEST: "SOUTH",
