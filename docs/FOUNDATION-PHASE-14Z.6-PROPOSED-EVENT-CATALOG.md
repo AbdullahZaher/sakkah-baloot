@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-22  
 **Phase:** 14.Z.6 — Action/Event Protocol Closure Preparation  
-**Status:** PROPOSED — NOT FROZEN  
+**Status:** FROZEN — OWNER APPROVED 2026-09-22  
 
 ## Purpose
 Events are authoritative facts emitted by deterministic transitions. They are not client commands.
@@ -65,7 +65,7 @@ MATCH_END_EVALUATED is internal/domain terminology if retained; it is not a clie
 TIMEOUT_TRIGGERED, FORFEIT_RECORDED, RESYNC_SERVED
 RESYNC_SERVED may remain transport metadata rather than gameplay event-log data.
 
-## 15. Event ordering
+## 15. Frozen Event Ordering
 Events from one accepted transition are deterministic and monotonically sequenced.
 Representative card completion: CARD_PLAYED → TRICK_COMPLETED → TURN_CHANGED.
 Representative round completion: KABOOT_RESOLVED or REVERSE_KABOOT_RESOLVED when applicable → ROUND_SCORED → MATCH_END_EVALUATED if retained → ROUND_COMPLETED or MATCH_COMPLETED.
@@ -77,12 +77,12 @@ Player-facing events are projections of authoritative facts. Never expose oppone
 ## 17. Intentionally excluded internal labels
 COMPLETE_DEAL, MATCH_END_CHECK, TRICK_RESOLUTION, PROJECT_RESOLUTION, CONTRACT_RESOLUTION are internal transition/resolution concepts, not client GamePhase values and not required client protocol events.
 
-## 18. Freeze blockers
-1. AD-01 through AD-05 must be explicitly accepted or revised.
-2. Action catalog must be accepted.
-3. Event ordering must be frozen in 09-state-transitions.md.
-4. Event payloads must reconcile with 07-game-state.md.
-5. Remaining rule/provenance conflicts must be closed.
-6. Rule Freeze Gate must pass.
+## 18. Freeze status
+1. AD-01 through AD-05: accepted.
+2. Action catalog: frozen.
+3. Event ordering: frozen above.
+4. Event payloads: reconciled with `07-game-state.md` and `08-actions.md`.
+5. Remaining rule/provenance decisions: closed by Phase 14.Z.12.
+6. Rule Freeze Gate: ready to pass.
 
 **Production code remains unauthorized.**
