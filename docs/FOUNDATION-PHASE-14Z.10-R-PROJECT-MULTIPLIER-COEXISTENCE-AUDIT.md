@@ -1,6 +1,6 @@
 # Phase 14.Z.10-R — Project Multiplier & Coexistence Audit
 
-**Status:** COMPLETE — OPEN
+**Status:** CLOSED — OWNER + SAUDI BASELINE RECONCILIATION
 **Branch:** phase-14z10r-canonical-reconciliation
 
 ## Findings
@@ -37,3 +37,27 @@ Project multiplier = OPEN.
 Project coexistence/comparison edge cases = OPEN.
 
 No generic runtime multiplier behavior beyond explicitly closed decisions is authorized.
+
+
+## Phase 14.Z.11 closure
+
+The project multiplier ambiguity is closed:
+
+- NORMAL = ×1
+- DOUBLE = ×2
+- TRIPLE = ×1
+- FOUR = ×1
+- BALOOT = ×1
+
+Raw values are immutable. Only Project Qaid is multiplier-sensitive.
+
+The Saudi baseline rules explicitly state that projects are not multiplied at Triple/Four. This resolves the previous research-supported/open state. citeturn4search0
+
+Project comparison/coexistence is now canonical at the architecture level:
+- up to two independently valid non-overlapping projects per team;
+- one-card/one-project consumption;
+- sequential Hundred outranks same-value non-sequential Hundred;
+- Four Hundred is highest in Sun;
+- exact same-value ties use dealer-relative counter-clockwise priority;
+- Baloot is independent unless absorbed by Hundred.
+
