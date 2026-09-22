@@ -402,7 +402,7 @@ The final Rule Profile controls exact project detection and comparison.
 
 # 12. Project Identifier
 
-Recommended:
+Reference architecture (non-canonical):
 
 ```ts
 type ProjectType =
@@ -490,7 +490,7 @@ Example:
 7♣ 8♣ 9♣ 10♣
 ```
 
-Common Qaid values:
+Research reference Qaid values (non-canonical):
 
 | Contract | Qaid |
 |---|---:|
@@ -505,7 +505,7 @@ Common Qaid values:
 
 The project `HUNDRED` requires a qualifying combination.
 
-Common qualifying combinations include:
+Research reference qualifying combinations (non-canonical):
 
 ### Sun
 
@@ -659,7 +659,7 @@ score
 
 # 22. Project Candidate
 
-Recommended:
+Reference architecture (non-canonical):
 
 ```ts
 interface ProjectCandidate {
@@ -733,7 +733,7 @@ The server owns project visibility.
 
 If both teams have projects, the engine must determine which team's project has priority according to the Rule Profile.
 
-Baseline ordering commonly places:
+Research baseline ordering (non-canonical; final Rule Profile must decide):
 
 ```text
 أربعمية
@@ -925,7 +925,7 @@ This is a project-ownership/scoring rule; it does not change the independent Bal
 
 # 36. Doubling State
 
-Recommended:
+Reference architecture (non-canonical):
 
 ```ts
 type MultiplierLevel =
@@ -1442,7 +1442,7 @@ Bidding/Playing should not mutate score directly.
 
 # 58. Doubling History
 
-Recommended:
+Reference architecture (non-canonical):
 
 ```ts
 interface DoublingAction {
@@ -1471,7 +1471,7 @@ This supports:
 
 Not every scoring component necessarily multiplies.
 
-Recommended:
+Reference architecture (non-canonical):
 
 ```ts
 interface ScoreComponentRule {
