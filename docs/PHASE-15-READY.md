@@ -78,7 +78,7 @@ Remaining Phase 15 gates:
 
 **Latest pure-engine CI:** PASS — `npm run typecheck` + `npm test` on the Phase 15 branch.
 
-The regression suite now covers legal-move edge cases, Ika validation/mutation safety, project overlap/tie/ownership resolution, Sun/Hokum Qaid complement invariants, Kaboot/Reverse Kaboot, escalation transitions, and replay idempotency/determinism.
+The regression suite now covers legal-move edge cases, Ika validation/mutation safety, project overlap/tie/ownership resolution, Sun/Hokum Qaid rounding-edge invariants, Kaboot/Reverse Kaboot, escalation transitions, and replay idempotency/determinism.
 
 **PHASE 15: IMPLEMENTATION ACTIVE.**
 
