@@ -869,14 +869,9 @@ Baseline:
 
 # 33. Project Multipliers
 
-Baseline multiplication model:
+**RESEARCH / DRAFT MODEL — NOT FROZEN.**
 
-```text
-لا دبل = ×1
-دبل    = ×2
-ثري    = ×3
-فور    = ×4
-```
+The profile currently contains numeric multiplier hooks, but project multiplication at TRIPLE/FOUR remains an open Owner Decision.
 
 Projects are generally multiplier-sensitive.
 
@@ -896,14 +891,7 @@ Current references explicitly describe project multiplication while keeping بل
 
 The Rule Profile must define exactly which multiplier states allow أربعمية.
 
-A current published rules reference describes أربعمية as:
-
-```text
-Sun ×1 = 40
-Sun ×2 = 80
-```
-
-and does not assign normal Hokm values. citeturn0search0
+Research evidence describes Sun Four-Hundred examples, but the complete multiplier eligibility matrix remains **OPEN** and is not production-authoritative.
 
 The implementation must use configuration rather than hard-coded assumptions.
 
@@ -911,21 +899,7 @@ The implementation must use configuration rather than hard-coded assumptions.
 
 # 35. Baloot Under Multipliers
 
-Baseline:
-
-```text
-بلوت = 2
-```
-
-regardless of:
-
-```text
-دبل
-ثري
-فور
-```
-
-This must be represented explicitly:
+**CLOSED CANONICAL RULE:** Baloot = 2 Qaid and is not multiplied. This rule is independent of the still-open ordinary project multiplier behavior.
 
 ```ts
 multiplierEligible = false
@@ -1012,17 +986,7 @@ Did the purchaser succeed?
 
 This is based on the final raw/qualified result defined by the Rule Profile.
 
-Recommended:
-
-```ts
-resolvePurchaserOutcome(
-  contract,
-  rawScore,
-  projectResult,
-  doublingState,
-  ruleProfile
-)
-```
+Reference architecture only — NOT a frozen implementation contract. The exact purchaser-resolution API remains subject to Rule Freeze.
 
 ---
 
@@ -1122,16 +1086,7 @@ other team = 0 tricks
 
 The Rule Profile may award special Qaid values.
 
-A current public reference describes:
-
-```text
-Hokm Kaboot = 25
-Sun Kaboot = 44
-```
-
-and notes that the value itself is not multiplied while projects follow their own multiplier rules. citeturn0search0
-
-These values remain Draft until Rule Freeze.
+**OWNER-CLOSED KABOOT VALUES:** Hokum = 25, Sun = 44 at every ordinary escalation level defined by the dedicated Kaboot table; Reverse = 88; Gahwa overrides. These values are not runtime-multiplied. Project treatment remains governed by its separate open/closed rules.
 
 ---
 
@@ -1157,13 +1112,7 @@ A current public Saudi-rule reference describes the ordinary tie as favoring the
 
 This must be configured rather than assumed.
 
-Recommended:
-
-```ts
-tiePolicy: "PURCHASER_WINS"
-```
-
-if that is the adopted Rule Profile.
+The ordinary raw-tie policy is **not Owner-frozen in this document**. Do not promote the research-derived purchaser-wins interpretation into canonical engine behavior until an explicit Owner Decision closes it.
 
 ---
 
@@ -1224,13 +1173,7 @@ as a universal conversion.
 
 # 46. Sun Conversion
 
-A commonly used simplified Qaid representation for Sun is:
-
-```text
-raw points ÷ 5
-```
-
-with the relevant rounding/threshold rules.
+**RESEARCH / REFERENCE ONLY:** raw ÷ 5 is not the canonical conversion formula. The exact contract-specific conversion table remains OPEN.
 
 However, purchaser success and project-adjusted outcomes must be resolved before the final Qaid is assigned.
 
@@ -1240,13 +1183,7 @@ Current scorekeeping references describe Sun as being divided by 5 for the norma
 
 # 47. Hokm Conversion
 
-A commonly used Qaid representation for Hokm is:
-
-```text
-raw points ÷ 10
-```
-
-with final-round and purchaser rules affecting the actual recorded result.
+**RESEARCH / REFERENCE ONLY:** raw ÷ 10 is not the canonical conversion formula. The exact contract-specific conversion table remains OPEN.
 
 Current scorekeeping references describe Hokm as being divided by 10. citeturn0search2
 
@@ -1605,14 +1542,7 @@ The match target must be configuration, not a magic number.
 
 # 62. Match End
 
-Recommended:
-
-```ts
-evaluateMatchEnd(
-  matchScore,
-  ruleProfile
-)
-```
+Reference architecture only — NOT a frozen API. Match-end behavior remains open for both-cross/equal-final edge cases.
 
 Possible result:
 
