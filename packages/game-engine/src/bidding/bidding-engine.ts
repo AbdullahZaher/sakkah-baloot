@@ -1,4 +1,5 @@
-import type { CardId, Seat, Suit } from "../cards.js";
+import type { CardId, Suit } from "../cards.js";
+import type { Seat } from "../rules/types.js";
 import { SEATS } from "../rules/types.js";
 import type { Contract, RoundId } from "../rules/types.js";
 import {
