@@ -2,8 +2,7 @@ import type { Card, CardId, Rank, Suit } from "../cards.js";
 import { RANKS } from "../cards.js";
 import type { Contract, ProjectLifecycle, ProjectType, Seat, TeamId } from "../rules/types.js";
 import { PROJECT_LIFECYCLE } from "../rules/types.js";
-import { projectValuesFor } from "../rules/profile.js";
-import { teamOfSeat, nextCounterClockwise } from "../rules/profile.js";
+import { SAUDI_RULE_PROFILE_V1, teamOfSeat, nextCounterClockwise } from "../rules/profile.js";
 
 export interface ProjectCandidate {
   readonly id: string;
@@ -49,7 +48,7 @@ function candidate(
   contract: Contract,
   subtype: string,
 ): ProjectCandidate {
-  const values = projectValuesFor(contract)[type];
+  const values = SAUDI_RULE_PROFILE_V1.projectValues[contract][type === "FOUR_HUNDRED" ? "fourHundred" : type === "SERA" ? "sera" : type === "FIFTY" ? "fifty" : "hundred"];
   return {
     id: `${type}:${ownerSeat}:${key(cards)}`,
     type,
