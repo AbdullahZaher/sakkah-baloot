@@ -26,7 +26,7 @@ export function calculateCardRaw(
   const finalTrick = tricks[7]!;
   raw[teamOfSeat(finalTrick.winnerSeat)] += 10;
   const total = raw.NORTH_SOUTH + raw.EAST_WEST;
-  const expected = contract === "SUN" ? 140 : 162;
+  const expected = contract === "SUN" ? 130 : 162;
   if (total !== expected) throw new Error(`Invalid card raw total: expected ${expected}, got ${total}`);
   return { cardRaw: raw, lastTrickWinner: teamOfSeat(finalTrick.winnerSeat) };
 }
