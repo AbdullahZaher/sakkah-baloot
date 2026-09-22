@@ -352,3 +352,69 @@ Accepted decisions:
 - AD-05: three-layer Contract representation; Ashkal normalizes to Sun + `mode: "ASHKAL"`.
 
 These decisions are now architecture-frozen and may be used by the Rule Freeze traceability matrix.
+
+
+## Phase 14.Z.12 — Final Owner Closure
+
+**Status:** CLOSED — Owner instruction: "اكمل اغلاق باقي الخطوات" on 2026-09-22.
+
+### B-01 — V-02b Complement
+
+Closed as a derived invariant only, not as an independent allocation algorithm.
+
+After successful contract resolution, each team's own eligible allocation is converted independently using V-02-A. The resulting two Qaid values must conserve the fixed contract total:
+
+- Sun total = 26 Qaid.
+- Hokum total = 16 Qaid.
+
+Therefore the opposing-side value may be derived as a validation invariant:
+opponentQaid = contractTotalQaid - ownQaid
+
+but the resolver must use the independently converted allocation as the authoritative value. This prevents complement arithmetic from silently changing allocation semantics.
+
+### B-02 — Equal Final Match Total
+
+Closed as: EXTRA_DEAL.
+
+If both teams finish a completed round on exactly the same final match total while both satisfy the match-end target, the match does not terminate. A new complete round is dealt after the canonical dealer rotation.
+
+This is a project-specific tie resolution and is distinct from the already-closed rule that a higher final total wins when both teams cross 152.
+
+### B-03 — Final Event Ordering
+
+Closed.
+
+The frozen event catalog is authoritative for event type/order. Events are emitted only from committed transitions and receive monotonically increasing stream sequence numbers.
+
+For card completion:
+CARD_PLAYED → TRICK_COMPLETED → TURN_CHANGED
+
+For round completion:
+KABOOT_RESOLVED / REVERSE_KABOOT_RESOLVED → ROUND_SCORED → MATCH_END_EVALUATED → ROUND_COMPLETED | MATCH_COMPLETED
+
+For contract completion:
+CONTRACT_SELECTED → FINAL_CARDS_DEALT
+
+For incident cancellation:
+INTEGRITY_INCIDENT_DETECTED → INTEGRITY_INCIDENT_DECISION_REQUIRED → INTEGRITY_INCIDENT_CANCELLED → HAND_CANCELLED → DEALER_ROTATED
+
+MATCH_END_EVALUATED is internal/domain terminology and is not a client GamePhase.
+
+### B-04 — Second-Round Bidding Priority
+
+Closed conservatively:
+
+1. The bidding order is authoritative counter-clockwise.
+2. The first valid purchase action in the active bidding window selects the contract.
+3. A PASS cannot be reversed.
+4. The explicit Ace→Sun rule remains: dealer-right is the only eligible player to convert the exposed Ace path to Sun.
+5. No client may supply a priority override or derived purchaser.
+6. Once a valid purchase commits, the purchase window closes and Kasho is waived.
+
+No broader undocumented priority is invented.
+
+### Final Owner Closure Statement
+
+All remaining Phase 14.Z.11 Freeze blockers are now closed. The Saudi Rule Profile v1, Action Catalog, Event Catalog, State Transition Specification, Rule-to-Code Matrix, Conflict Register, and Decision Closure Ledger must be treated as the canonical documentation set for implementation.
+
+Rule Freeze v1 is authorized. Production implementation may begin.
