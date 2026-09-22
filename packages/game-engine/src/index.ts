@@ -15,3 +15,4 @@ export * from "./scoring/scoring-engine.js";
 export * from "./validation/invariants.js";
 export * from "./replay/replay.js";
 export * from "./kasho.js";
+export * from "./incidents.js";
