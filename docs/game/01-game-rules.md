@@ -9,7 +9,7 @@
 
 **Purpose:** تحويل قواعد البلوت إلى مواصفة قابلة للتنفيذ والاختبار دون ترك الحالات المهمة لتفسير الـUI أو الـAgent.
 
-> **Important:** هذا المستند هو Domain Specification وليس كودًا. أي قاعدة غير محسومة هنا يجب أن تبقى `OPEN_DECISION` وألا يخترعها أي Agent أثناء التنفيذ.
+ > **Important:** هذا المستند هو Domain Specification وليس كودًا. القواعد المجمدة في Rule Freeze v1 هي سلطة التنفيذ. لا يجوز اختراع قواعد أو متغيرات خارج Rule Profile.
 
 ---
 
@@ -1403,156 +1403,13 @@ OPEN_DECISION
 
 ---
 
-# 51. Known Rule Variants / Open Decisions
+# 51. Frozen Rule Variants / Historical Open Decisions
 
-هذه العناصر **لا تزال مفتوحة** في النسخة 0.1.0:
+كانت هذه الوثيقة تحتوي سابقًا على قائمة Open Decisions. تم إغلاقها ضمن Rule Freeze v1. أي تغيير لاحق يتطلب Rule Freeze revision جديدًا.
 
-- الصيغة النهائية للشراء في جميع حالات الإكة.
-- تفاصيل الأشكل حسب المقعد والورقة المكشوفة.
-- تفاصيل بعض حالات الدق والقطع.
-- التكويش وإعادة اليد.
-- ترتيب بعض المشاريع عند التعارض.
-- تفاصيل إعلان وكشف المشاريع.
-- البلوت وتوقيته وحالات سقوطه.
-- الدبل والثري والفور والقهوة.
-- مضاعفة المشاريع في مستويات التصعيد.
-- الكبوت والكبوت المقلوب.
-- بعض حالات التعادل.
-- بعض حالات الانتقال بين الحكم والصن.
-- أي اختلاف خاص بنسخة صكّة عن القاعدة المرجعية.
+التنفيذ يعتمد على:
+- `docs/02-RULE-PROFILE-SA.md`
+- `docs/RD-20-RULE-FREEZE-v1.md`
+- `docs/game/01-game-rules.md` through `docs/game/10-legal-move-specification.md`
 
-هذه ليست ثغرات في الوثيقة؛ تركها مفتوحة عمدًا أفضل من إدخال قاعدة خاطئة إلى الـEngine.
-
----
-
-# 52. Rule Freeze Gate
-
-قبل بدء `packages/game-engine` يجب اعتماد:
-
-```text
-[ ] Player count
-[ ] Teams
-[ ] Deck
-[ ] Card ranking
-[ ] Card values
-[ ] Dealing
-[ ] Dealer rotation
-[ ] Bidding
-[ ] Sun
-[ ] Hokm
-[ ] Ashkal
-[ ] Follow suit
-[ ] Cutting
-[ ] Raising
-[ ] Projects
-[ ] Baloot
-[ ] Doubling
-[ ] Scoring
-[ ] Winning threshold
-[ ] Tie handling
-[ ] Redeal
-[ ] Forfeit
-[ ] Timeout behavior
-```
-
----
-
-# 53. Engineering Rule
-
-لا يسمح بكتابة Game Engine production قبل اجتياز Rule Freeze Gate.
-
-قبل ذلك يسمح فقط بـ:
-
-- prototypes
-- rule simulations
-- tests
-- documentation
-- UI exploration
-
-ولا يسمح بتثبيت قواعد غير معتمدة داخل production code.
-
----
-
-# 54. Rule Change Protocol
-
-بعد اعتماد القواعد:
-
-أي تغيير يتطلب:
-
-```text
-Rule Change
-    ↓
-Documentation
-    ↓
-Rule Profile decision
-    ↓
-Engine change
-    ↓
-Regression tests
-    ↓
-Simulation
-    ↓
-Replay compatibility review
-    ↓
-Server/client compatibility review
-```
-
----
-
-# 55. Source Notes
-
-هذه النسخة صيغت مع مراجعة مصادر قواعد منشورة حديثة، بما في ذلك مرجع يورد بنودًا من القواعد المعتمدة للاتحاد السعودي للرياضات الذهنية، ومراجع رقمية حديثة تفصل القواعد والاختلافات.
-
-من أمثلة النقاط التي تحتاج تثبيتًا قبل Freeze:
-
-- حد الفوز 152.
-- ترتيب الحكم والصن.
-- عتبات نجاح/فشل المشتري.
-- تفاصيل الدبل والتصعيد.
-- بعض اختلافات الأشكل والإكة والمشاريع.
-
-لا تعتبر أي قاعدة متعارضة بين المصادر "محسومة" في صكّة حتى يحدد Product/Rules Owner الـRule Profile النهائي.
-
----
-
-# 56. Final Rule Contract
-
-بعد الاعتماد، يجب أن يكون بالإمكان تحويل هذه الوثيقة إلى:
-
-```text
-Game Rules
-    ↓
-Pure TypeScript Functions
-    ↓
-Deterministic Game Engine
-    ↓
-Unit Tests
-    ↓
-Simulation Tests
-    ↓
-Bot
-    ↓
-Server
-    ↓
-Replay
-```
-
-إذا كانت قاعدة لا يمكن تحويلها إلى اختبار واضح، فهذه إشارة إلى أن القاعدة نفسها غير محددة بما يكفي.
-
----
-
-# 57. Status
-
-**Current status: DRAFT — NOT FROZEN**
-
-This document is intentionally not the final source of truth yet.
-
-The next documents should refine the unresolved rules into executable specifications:
-
-1. `02-card-system.md`
-2. `03-dealing.md`
-3. `04-bidding.md`
-4. `05-playing.md`
-5. `06-scoring.md`
-
-Only after those documents are complete should the complete Rule Freeze Gate be executed.
+لا توجد قرارات قواعد مفتوحة مصرح للـAgent بافتراضها داخل Domain Engine.
