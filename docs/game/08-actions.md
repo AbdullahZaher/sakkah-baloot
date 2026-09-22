@@ -567,7 +567,7 @@ Canonical:
 DECLARE_PROJECT
 ```
 
-`CONFIRM_PROJECT` is not part of the canonical player protocol unless a later explicit owner decision introduces a separate confirmation rule.
+A separate project-confirmation action is not part of the canonical player protocol unless a later explicit owner decision introduces it.
 
 The server may also derive project candidates automatically from hands.
 
