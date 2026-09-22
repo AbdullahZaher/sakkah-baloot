@@ -138,7 +138,7 @@ SOUTH
 WEST
 ```
 
-The playing order is clockwise according to the selected Rule Profile.
+The playing order is counter-clockwise according to the selected Rule Profile.
 
 Recommended helper:
 
