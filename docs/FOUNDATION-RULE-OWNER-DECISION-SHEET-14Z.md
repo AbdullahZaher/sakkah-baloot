@@ -469,3 +469,61 @@ Notes:
 ```
 
 **Final status: PHASE 14.Z — AWAITING RULES OWNER DECISIONS.** No implementation, no engine changes, no protocol changes, no Freeze. The next step occurs only after the Rules Owner fills this sheet.
+
+---
+
+## Phase 14.Z.3 Owner Decision Addendum — 2026-09-22
+
+The following decisions are now explicit Rules Owner decisions. The historical decision sheet above remains preserved.
+
+### G-1
+**CLOSED — Position/Card-Origin Matrix.**
+
+Partner-winning trump:
+- Third player → ANY_TRUMP; no forced overtrump.
+- Fourth player → ANY_TRUMP; no forced overtrump.
+
+Opponent-winning trump:
+- Higher trump available → MUST_OVERTRUMP.
+- No higher trump + player has trump → ANY_TRUMP.
+- No trump → ANY_NON_TRUMP_CARD.
+
+Non-trump lead with no lead suit:
+- Third + opponent winning on non-trump + trump → MUST_TRUMP.
+- Third + opponent winning on trump + higher trump → MUST_OVERTRUMP.
+- Third + opponent winning on trump + no higher trump + trump → ANY_TRUMP.
+- Fourth + partner winning → ANY_CARD.
+- Fourth + opponent winning follows current-winning-card trump obligations.
+
+### G-2
+**CLOSED — Ika Predicate.**
+
+Ika requires HOKUM + LEADER + NON_TRUMP + HIGHEST_REMAINING_CARD_OF_SUIT.
+
+Declaration is optional. Invalid declaration rejects the complete PLAY_CARD with zero state mutation.
+
+### G-2P
+**CLOSED — Ika Partner Exemption.**
+
+All conditions:
+HOKUM + THIRD + NO_LEAD_SUIT + PARTNER_OPENED_TRICK + PARTNER_CURRENT_WINNER + (PARTNER_LEAD_IS_ACE OR PARTNER_DECLARED_VALID_IKA).
+
+Result: ANY_CARD, including trump.
+
+### G-3
+**CLOSED AS SPECIFICATION REQUIREMENT.**
+
+The legal-move test matrix must include all G-1/G-2/G-2P combinations and Locked-Hokum interaction.
+
+### V-07
+**CLOSED — C.**
+
+Remove generic countingSide; use precise allocation/ownership terms.
+
+### Kasho dealer transition
+**CLOSED — ROTATE_RIGHT.**
+
+Use the shared relative-seat utility.
+
+### Freeze
+These decisions do not authorize production implementation. Rule Freeze remains BLOCKED until the remaining independent blockers are resolved.
