@@ -8,6 +8,7 @@ export const MATCH_TARGET_QAID = 152 as const;
 export type PlayerId = string;
 export type MatchId = string;
 export type RoundId = string;
+export type MatchSeed = string;
 
 export const SEATS = ["NORTH", "EAST", "SOUTH", "WEST"] as const;
 export type Seat = (typeof SEATS)[number];
@@ -82,6 +83,12 @@ export interface ScoringProfile {
   readonly reverseKabootQaid: 88;
 }
 
+export interface DealProfile {
+  readonly initialCardsPerPlayer: 5;
+  readonly exposedCardCount: 1;
+  readonly completionCardsPerPlayer: 8;
+}
+
 export interface TimingProfile {
   readonly biddingTimeoutMs: 8_000;
   readonly playingTimeoutMs: 30_000;
@@ -104,5 +111,6 @@ export interface RuleProfile {
   readonly contractThresholds: ContractThresholds;
   readonly projectValues: Readonly<Record<Contract, ProjectValues>>;
   readonly scoring: ScoringProfile;
+  readonly deal: DealProfile;
   readonly timing: TimingProfile;
 }
