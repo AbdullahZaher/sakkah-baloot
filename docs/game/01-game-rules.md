@@ -140,9 +140,11 @@ Clubs
 المباراة الكاملة تتكون من توزيعات/أيدي متتابعة حتى يتحقق شرط الفوز.
 
 ```text
-GAME_CREATED
+WAITING_FOR_PLAYERS
     ↓
 SEATING
+    ↓
+ROUND_STARTING
     ↓
 DEALING
     ↓
@@ -150,19 +152,19 @@ BIDDING
     ↓
 CONTRACT_SELECTED
     ↓
-COMPLETE_DEAL
-    ↓
 PROJECT_DECLARATION
     ↓
-TRICK_PLAY
+PLAYING
     ↓
-ROUND_SCORING
+SCORING
     ↓
-MATCH_END_CHECK
+ROUND_COMPLETE
+    ↓
+MATCH_END_CHECK (internal)
     │
-    ├── Continue → DEALING
+    ├── Continue → ROUND_STARTING
     │
-    └── End → GAME_RESULT
+    └── End → MATCH_COMPLETE
 ```
 
 المصطلح داخل النظام:
@@ -268,7 +270,7 @@ Q
 المجموع:
 
 ```text
-130
+120
 ```
 
 ثم تضاف:
@@ -280,7 +282,7 @@ Q
 لإجمالي:
 
 ```text
-140
+130
 ```
 
 **NOTE:** يجب تثبيت كيفية تحويل هذه الأبناط إلى نقاط القيد في ملف `06-scoring.md` وفق Rule Profile النهائي. لا يجوز للـUI تنفيذ التحويل بنفسه.
@@ -302,13 +304,23 @@ Q
 | 8 | 0 |
 | 7 | 0 |
 
-مجموع الورق:
+مجموع الورق قبل الأرض:
+
+```text
+152
+```
+
+ثم تضاف أرض آخر أكلة:
+
+```text
++10
+```
+
+لإجمالي:
 
 ```text
 162
 ```
-
-مع الأرض داخلة في المجموع.
 
 ---
 
