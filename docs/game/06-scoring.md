@@ -1076,6 +1076,12 @@ normalConvert(opponentRaw)
 
 without checking the purchaser-failure rule.
 
+### Canonical successful-round allocation
+
+On a successful contract, each team retains its own eligible card/project/Baloot allocation, converted per the contract-specific conversion table.
+
+This allocation rule is distinct from purchaser-failure handling above: success does not transfer the opponent's eligible allocation to the purchaser or vice versa.
+
 ---
 
 # 41. Kaboot
@@ -1160,6 +1166,10 @@ initialDoublerTeamId?: TeamId;
 ```
 
 Do not infer it from the last multiplier caller.
+
+**Canonical transcription:** At DOUBLE, an exact raw tie is awarded against the initial doubler team. The initial doubler is identified by `initialDoublerTeamId`, not the last escalator.
+
+The owner decision explicitly closes the headline rule. Extension of the exact-tie rule to TRIPLE/FOUR remains a transcription/open-detail item until explicitly stated; do not invent distinct behavior.
 
 ---
 
