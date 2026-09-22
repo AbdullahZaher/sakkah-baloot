@@ -369,46 +369,38 @@ The rejection MUST produce zero state mutation.
 
 # 11. Ika Partner Exemption
 
+The Ika Partner Exemption is a specific third-player condition. It MUST NOT be generalized to every situation where a partner is winning and the player lacks the lead suit.
 
-The Ika exemption applies only to the specific partner situation defined by the canonical rules.
-
-
-It MUST NOT be generalized to every situation where:
-
+The exemption applies only when all predicates are true:
 
 ```text
-partner is winning
+CONTRACT = HOKUM
 +
-player lacks lead suit
+TRICK_POSITION = THIRD
++
+PLAYER_HAS_NO_LEAD_SUIT
++
+PARTNER_OPENED_THE_TRICK
++
+CURRENT_WINNER = PARTNER
++
+(
+  PARTNER_LEAD_CARD_IS_ACE
+  OR
+  PARTNER_DECLARED_VALID_IKA
+)
 ```
 
-
-When the valid Ika exemption applies:
-
+When the exemption applies:
 
 ```text
-IKA_EXEMPTION = TRUE
+IKA_PARTNER_EXEMPTION = TRUE
+→ ANY_CARD
 ```
 
+The third player may play any remaining card, including trump.
 
-the exempt partner may play any card, including trump.
-
-
-Therefore:
-
-
-```text
-VALID IKA EXEMPTION
-        ↓
-ANY CARD
-```
-
-
-No Must-Trump or Must-Overtrump restriction is applied to the exempt player.
-
-
----
-
+The engine MUST evaluate authoritative trick history and MUST NOT infer the exemption merely because the partner is winning.
 
 # 12. Hokum — No Lead Suit — No Trump on Table
 
@@ -569,64 +561,53 @@ The player is not forced to trump merely because the partner is currently winnin
 
 # 14. Trump on the Table
 
+When at least one trump has already been played, legality depends on the trick position and the origin of the current winning trump. The engine MUST inspect the winning card and originating player.
 
-When at least one trump card has already been played in the trick, the engine MUST determine whether the player can legally overtrump.
+## 14.1 Third Player — Trump Led
 
-
----
-
-
-## 14.1 Opponent Is Winning
-
-
-If:
-
-
+Partner's trump winning:
 ```text
-CURRENT_WINNER = OPPONENT
-+
-HAS_HIGHER_TRUMP
+THIRD + CURRENT_WINNER = PARTNER + WINNING_TRUMP_PLAYED_BY_PARTNER
+→ ANY_TRUMP
 ```
+No forced overtrump applies against the partner.
 
+Opponent's trump winning:
+- higher trump available → MUST_OVERTRUMP;
+- no higher trump but player has trump → ANY_TRUMP;
+- no trump → ANY_NON_TRUMP_CARD.
 
-the player MUST play a trump card capable of beating the current winning trump.
+## 14.2 Fourth Player — Trump Led
 
-
+Partner's trump winning:
 ```text
-MUST_OVERTRUMP
+FOURTH + CURRENT_WINNER = PARTNER + WINNING_TRUMP_PLAYED_BY_PARTNER
+→ ANY_TRUMP
 ```
+No forced overtrump applies against the partner.
 
+Opponent's trump winning:
+- higher trump available → MUST_OVERTRUMP;
+- no higher trump but player has trump → ANY_TRUMP;
+- no trump → ANY_NON_TRUMP_CARD.
 
-Lower trump cards are not legal when a higher trump is available.
+## 14.3 Non-Trump Lead — Third Player
 
+If the third player cannot follow the non-trump lead:
 
----
+- opponent winning on non-trump + trump available → MUST_TRUMP;
+- opponent winning on trump + higher trump available → MUST_OVERTRUMP;
+- opponent winning on trump + no higher trump + trump available → ANY_TRUMP;
+- partner winning → Ika Partner Exemption if valid, otherwise MUST_TRUMP when trump exists.
 
+## 14.4 Non-Trump Lead — Fourth Player
 
-## 14.2 No Higher Trump Available
+If the fourth player cannot follow the non-trump lead:
 
-
-If the player has trump but none can beat the current winning trump:
-
-
-```text
-HAS_TRUMP
-+
-NO_HIGHER_TRUMP
-```
-
-
-the player is not subject to an additional Must-Overtrump requirement.
-
-
-The legal card set proceeds according to the remaining applicable trick rules.
-
-
-The implementation MUST NOT invent a universal rule requiring the player to play a lower trump solely because trump is already on the table.
-
-
----
-
+- partner winning → ANY_CARD;
+- opponent winning on non-trump + trump available → MUST_TRUMP;
+- opponent winning on trump + higher trump available → MUST_OVERTRUMP;
+- opponent winning on trump + no higher trump + trump available → ANY_TRUMP.
 
 # 15. Trump-Led Trick
 
@@ -1213,30 +1194,24 @@ Qaid → getLegalMoves()
 
 # 28. Canonical Decision Matrix
 
-
-The following behaviors are canonical:
-
-
-| Situation                                                                         | Legal behavior                     |
-| --------------------------------------------------------------------------------- | ---------------------------------- |
-| Has lead suit                                                                     | MUST FOLLOW SUIT                   |
-| Sun + no lead suit                                                                | ANY CARD                           |
-| Hokum + valid Ika exemption                                                       | ANY CARD                           |
-| Hokum + no lead suit + opponent winning + no trump on table + has trump           | MUST TRUMP                         |
-| Hokum + no lead suit + opponent winning + trump on table + higher trump available | MUST OVERTRUMP                     |
-| Hokum + no lead suit + opponent winning + no higher trump                         | No additional overtrump obligation |
-| Hokum + third player + partner winning + no lead suit + has trump                 | MUST TRUMP                         |
-| Hokum + third player + valid Ika exemption                                        | ANY CARD                           |
-| Hokum + fourth player + partner winning + no lead suit                            | ANY CARD                           |
-| Trump led + has trump                                                             | MUST FOLLOW TRUMP                  |
-| Trump led + no trump                                                              | ANY NON-TRUMP CARD                 |
-| Locked Hokum + leader + non-trump exists                                          | CANNOT LEAD TRUMP                  |
-| Locked Hokum + leader + all cards are trump                                       | MAY LEAD TRUMP                     |
-| Locked Hokum + non-leader                                                         | NO EFFECT                          |
-
-
----
-
+| Situation | Legal behavior |
+|---|---|
+| Has lead suit | MUST FOLLOW SUIT |
+| Sun + no lead suit | ANY CARD |
+| Valid Ika Partner Exemption | ANY CARD |
+| Third + partner-winning non-trump lead + no lead suit + no exemption + trump | MUST TRUMP |
+| Third + partner-winning non-trump lead + no lead suit + no trump | ANY CARD |
+| Third + partner-winning trump-led trick | ANY TRUMP |
+| Fourth + partner-winning trump-led trick | ANY TRUMP |
+| Opponent-winning non-trump + no lead suit + trump | MUST TRUMP |
+| Opponent-winning trump + higher trump available | MUST OVERTRUMP |
+| Opponent-winning trump + no higher trump + trump available | ANY TRUMP |
+| Opponent-winning trump + no trump | ANY NON-TRUMP CARD |
+| Trump led + has trump | MUST FOLLOW TRUMP |
+| Trump led + no trump | ANY NON-TRUMP CARD |
+| Locked Hokum + leader + non-trump exists | CANNOT LEAD TRUMP |
+| Locked Hokum + leader + all cards are trump | MAY LEAD TRUMP |
+| Locked Hokum + non-leader | NO EFFECT |
 
 # 29. Explicit Non-Rules
 
@@ -1278,34 +1253,32 @@ These simplifications are not valid substitutes for the canonical matrix.
 
 # 30. Remaining Edge-Case Verification
 
+The final engine test suite MUST cover:
 
-The following cases MUST be covered by the final engine test suite:
-
-
-1. Third player + partner winning + no lead suit + trump available.
-2. Third player + partner winning + valid Ika.
-3. Third player + opponent winning + no trump on table.
-4. Third player + opponent winning + trump on table + higher trump.
-5. Third player + opponent winning + trump on table + no higher trump.
-6. Fourth player + partner winning + no lead suit.
-7. Fourth player + opponent winning + no lead suit.
-8. Trump-led trick + player has trump.
-9. Trump-led trick + player has no trump.
-10. Locked Hokum + leader + non-trump available.
-11. Locked Hokum + leader + all-trump hand.
-12. Locked Hokum + non-leader.
-13. Ika declared correctly.
-14. Ika declared incorrectly.
-15. Ika exemption allowing trump.
-16. Attempted illegal card while following suit.
-17. Attempted illegal lower card while Must-Overtrump applies.
-18. Duplicate PLAY_CARD request.
-19. Stale client legal-move projection.
-20. Reconnect followed by PLAY_CARD.
-
-
----
-
+1. Third + partner winning + non-trump lead + no lead suit + trump + no Ika exemption.
+2. Third + partner winning + partner lead Ace + no lead suit → Ika exemption.
+3. Third + partner winning + valid Ika + no lead suit → Ika exemption.
+4. Third + partner winning + non-Ace/non-Ika lead + no lead suit → MUST_TRUMP when trump exists.
+5. Third + partner-winning trump-led trick → ANY_TRUMP.
+6. Third + opponent-winning trump-led + higher trump → MUST_OVERTRUMP.
+7. Third + opponent-winning trump-led + no higher trump + trump → ANY_TRUMP.
+8. Third + opponent-winning non-trump-led + trump → MUST_TRUMP.
+9. Third + opponent-winning non-trump-led + current winner trump + higher trump → MUST_OVERTRUMP.
+10. Third + opponent-winning non-trump-led + current winner trump + no higher trump + trump → ANY_TRUMP.
+11. Fourth + partner-winning trump-led trick → ANY_TRUMP.
+12. Fourth + opponent-winning trump-led + higher trump → MUST_OVERTRUMP.
+13. Fourth + opponent-winning trump-led + no higher trump + trump → ANY_TRUMP.
+14. Fourth + partner winning + non-trump lead + no lead suit → ANY_CARD.
+15. Fourth + opponent winning + non-trump lead + trump → MUST_TRUMP.
+16. Fourth + opponent winning + current winner trump + higher trump → MUST_OVERTRUMP.
+17. Fourth + opponent winning + current winner trump + no higher trump + trump → ANY_TRUMP.
+18. Locked Hokum + leader + valid Ika → Ika remains non-trump and cannot bypass Locked.
+19. Invalid Ika declaration → reject PLAY_CARD with zero mutation.
+20. Ika declaration on non-highest remaining card → reject PLAY_CARD with zero mutation.
+21. Duplicate PLAY_CARD request.
+22. Stale client legal-move projection.
+23. Reconnect followed by PLAY_CARD.
+24. Deterministic legal-move result for identical authoritative state/player.
 
 # 31. Evidence and Provenance
 
