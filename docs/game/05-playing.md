@@ -1756,7 +1756,7 @@ A replay that fails validation must not be treated as authoritative.
 The following MUST be finalized:
 
 1. Exact first trick leader.
-2. Exact clockwise/seat convention.
+2. Exact counter-clockwise/seat convention.
 3. Any special follow-suit exceptions.
 4. Exact void/Trump rules.
 5. Any project-related play exceptions.
