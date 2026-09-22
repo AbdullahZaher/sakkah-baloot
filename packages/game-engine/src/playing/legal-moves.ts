@@ -49,8 +49,7 @@ function ikaPartnerExemption(state: GameState): boolean {
   if (!winner) return false;
   if (partnerOfSeat(playerSeat) !== leader.seat) return false;
   if (winner.seat !== leader.seat) return false;
-  if (state.currentTrick[0]!.ikaDeclared || state.currentTrick[0]!.card.rank === "A") return true;
-  return false;
+  return state.currentTrick[0]!.ikaDeclared && state.currentTrick[0]!.card.rank === "A";
 }
 
 function isOpponentWinner(state: GameState, winner: TrickPlay): boolean {
