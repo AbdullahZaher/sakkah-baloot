@@ -933,6 +933,20 @@ multiplierEligible = false
 
 rather than relying on a special-case subtraction after multiplication.
 
+### Baloot contained in Hundred
+
+The canonical Rule Profile treats Baloot as **absorbed by HUNDRED** when the same qualifying cards are already consumed by that HUNDRED project.
+
+Therefore, do not award the same K+Q trump pair twice as:
+
+```text
+HUNDRED + separate BALOOT
+```
+
+The project pipeline must preserve the one-card/one-project and overlap rules while applying the canonical absorption rule. Baloot remains independently declared and independently tracked when it is not absorbed by HUNDRED.
+
+This is a project-ownership/scoring rule; it does not change the independent Baloot declaration lifecycle.
+
 ---
 
 # 36. Doubling State
