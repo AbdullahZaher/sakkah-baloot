@@ -2,7 +2,7 @@
 
 **Phase:** 14.x  
 **Date:** 2026-09-22  
-**Status:** DRAFT — NOT FROZEN
+**Status:** CANONICAL WORKING INVENTORY — RULE_FREEZE BLOCKED
 
 > Explicit Rules Owner decisions are distinguished from research-supported rules.
 
@@ -108,17 +108,48 @@ Research indicates projects multiply with Double, but do not continue multiplyin
 - Does not multiply with doubling.
 - Special project interactions remain under canonical verification.
 
-## 12. Kaboot
+## 12. Trick Legality — G-1 / G-2 / G-2P
+
+### Ika
+Hokum only. The trick leader may optionally declare Ika when leading a non-trump card that is the highest remaining card of its suit. Invalid Ika rejects the entire PLAY_CARD with zero state mutation.
+
+### Ika Partner Exemption
+The exemption applies only to the third player when:
+- the player lacks the lead suit;
+- the partner opened the trick;
+- the partner is the current winner; and
+- the partner's lead card is an Ace or the partner declared valid Ika.
+
+The exempt player may play any card, including trump.
+
+### Partner-winning trump
+For third or fourth player, when the partner's trump is the current winning trump, there is no forced overtrump against the partner; any trump is legal.
+
+### Opponent-winning trump
+If an opponent's trump is winning and a higher trump is available, MUST_OVERTRUMP applies. If no higher trump exists but the player has trump, any trump is legal.
+
+For a non-trump lead with no lead suit:
+- third + opponent winning on non-trump + trump available → MUST_TRUMP;
+- third + opponent winning on trump + higher trump → MUST_OVERTRUMP;
+- third + opponent winning on trump + no higher trump + trump → any trump;
+- fourth + partner winning → ANY_CARD;
+- fourth + opponent winning follows the same current-winner-card trump obligations.
+
+Locked Hokum affects leading only; valid Ika does not bypass the Locked lead restriction.
+
+## 13. Kaboot
 
 Derived outcome; no claim action.
 
-Baseline:
-- Hokum = 25.
-- Sun = 44.
+Dedicated Rule Profile table:
+- Hokum: Normal 25, Double 50, Triple 75, Four 100.
+- Sun: Normal 44, Double 88.
+- Reverse Kaboot: Sun only, 88, independent special outcome, never doubles.
+- Gahwa overrides Kaboot.
 
-Special reversed-Kaboot case is separate and remains under canonical verification.
+The table is explicit and must not be reconstructed from the generic contract multiplier at runtime.
 
-## 13. Scoring architecture
+## 14. Scoring architecture
 
 `Raw Card Points`
 -> `Last-Trick Handling`
@@ -130,7 +161,7 @@ Special reversed-Kaboot case is separate and remains under canonical verificatio
 -> `Doubling Resolution`
 -> `Match Qaid Update`
 
-## 14. Sun arithmetic correction
+## 15. Sun arithmetic correction
 
 Sun base card values = 120.
 
@@ -140,13 +171,13 @@ Total raw Sun points including the bonus = **130**.
 
 Do not count 130 as a base and add another +10.
 
-## 15. Match
+## 16. Match
 
 Target = 152 Qaid.
 
 Gahwa is a separate terminal outcome.
 
-## 16. Kasho / redeal
+## 17. Kasho / redeal
 
 Research-supported:
 - Five initial cards all from 9/8/7 qualify for the documented Bushat condition.
@@ -156,7 +187,7 @@ Research-supported:
 
 Full matrix remains open.
 
-## 17. Ashkal
+## 18. Ashkal
 
 Research-supported:
 - Caller = buyer.
@@ -167,7 +198,7 @@ Research-supported:
 
 Exact seat matrix remains open until canonicalized against counter-clockwise direction.
 
-## 18. Hidden information and determinism
+## 19. Hidden information and determinism
 
 - Server never sends hidden cards to clients.
 - Core engine is deterministic/replayable from initial state/seed, ordered actions and Rule Profile.
