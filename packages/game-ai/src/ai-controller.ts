@@ -1,16 +1,14 @@
 import type { AIRoundObservation, AIAction } from "./index.js";
 import { chooseBaselineAction, type BaselinePolicyConfig } from "./baseline-policy.js";
 import { chooseISMCTSCard, type ISMCTSConfig } from "./is-mcts.js";
-import { solveEndgame, type EndgameSolverConfig } from "./endgame-solver.js";
 import { createBeliefState } from "./belief-state.js";
 
-export type AIControllerMode = "BASELINE" | "IS_MCTS" | "ENDGAME_FIRST";
+export type AIControllerMode = "BASELINE" | "IS_MCTS";
 
 export interface AIControllerConfig {
   readonly mode: AIControllerMode;
   readonly baseline?: BaselinePolicyConfig;
   readonly mcts?: ISMCTSConfig;
-  readonly endgame?: EndgameSolverConfig;
   readonly seed: string;
 }
 
@@ -46,35 +44,6 @@ export function decideAIAction(
       config.seed,
       { sampleCount: config.mcts?.iterations ?? 32 },
     );
-
-    if (config.mode === "ENDGAME_FIRST" && config.endgame) {
-      const exact = solveEndgame(
-        {
-          phase: "PLAYING",
-          currentPlayerId: observation.playing.game.currentPlayerId,
-          players: observation.playing.game.players,
-          hands: {
-            [observation.playerId]: observation.playing.game.ownHand,
-          },
-          contract: observation.playing.contract,
-          trumpSuit: observation.playing.trumpSuit,
-          hokumPlayMode: observation.playing.game.hokumPlayMode,
-          dealerSeat: observation.playing.game.dealerSeat,
-          trickNumber: observation.playing.game.trickNumber,
-          currentTrick: observation.playing.game.currentTrick,
-          completedTricks: observation.playing.game.completedTricks,
-        },
-        observation.playerId,
-        config.endgame,
-      );
-
-      if (exact) {
-        return {
-          action: { type: "PLAY_CARD", cardId: exact.cardId },
-          mode: config.mode,
-        };
-      }
-    }
 
     const mcts = chooseISMCTSCard(
       observation,
