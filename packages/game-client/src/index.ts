@@ -161,7 +161,8 @@ export function createLocalBiddingSession(): LocalBiddingSession {
       bidding = applyBiddingAction(bidding, action, dealerSeat, deal.exposedCardId, cardMap(), deal.hands as BiddingHands);
       if (bidding.phase === "CONTRACT_SELECTED") {
         deal = completeDeal(deal, bidding.selectedContract!.exposedCardReceiverSeat);
-        game = buildGameState(deal, bidding);\n        roundScore = null;
+        game = buildGameState(deal, bidding);
+        roundScore = null;
       }
       return getSnapshot();
     },
