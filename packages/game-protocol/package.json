@@ -6,9 +6,13 @@
   "dependencies": {
     "@sakkah-baloot/game-engine": "workspace:*"
   },
+  "devDependencies": {
+    "tsx": "^4.20.3"
+  },
   "main": "src/index.ts",
   "types": "src/index.ts",
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test test/*.test.mjs"
   }
 }
