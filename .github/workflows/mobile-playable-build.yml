@@ -11,6 +11,7 @@ on:
       - "packages/ui/**"
       - "package.json"
       - "pnpm-workspace.yaml"
+      - ".github/workflows/mobile-playable-build.yml"
   pull_request:
     paths:
       - "apps/mobile/**"
@@ -21,6 +22,7 @@ on:
       - "packages/ui/**"
       - "package.json"
       - "pnpm-workspace.yaml"
+      - ".github/workflows/mobile-playable-build.yml"
 
 jobs:
   typecheck:
