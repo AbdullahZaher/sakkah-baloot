@@ -97,12 +97,13 @@ export function simulateMatch(
   policy: CardPolicy = firstLegalCard,
   maxRounds = 200,
   policies?: Readonly<Record<PlayerId, CardPolicy>>,
+  aiPlayers?: readonly AISimulationPlayer[],
 ): MatchSimulationResult {
   let score: MatchScore = { NORTH_SOUTH: 0, EAST_WEST: 0 };
   let dealerSeat = getFirstDealer(seed);
   let end: MatchEndResult = { status: "ONGOING", score };
   let illegalActions = 0;
-  const aiPolicySet = policies || undefined;
+  const aiPolicySet = aiPlayers?.length ? createAISimulationPolicySet(aiPlayers) : null;
   const roundDigests: string[] = [];
 
   for (let roundNumber = 1; roundNumber <= maxRounds; roundNumber += 1) {
@@ -140,7 +141,18 @@ export function simulateMatch(
       const legalCardIds = getLegalMoves(game, playerId).map((move) => move.cardId);
       if (legalCardIds.length === 0) throw new Error("Simulation reached a state with no legal moves");
 
-      const activePolicy = policies?.[playerId] ?? policy;
+      const activePolicy = policies?.[playerId] ?? aiPolicySet?.policies[playerId] ?? policy;
+      aiPolicySet?.update({
+        matchId: seed,
+        roundNumber,
+        dealerSeat,
+        deal,
+        bidding,
+        game,
+        projects,
+        baloot,
+        score,
+      });
       const selected = activePolicy({
         state: game,
         playerId,
@@ -285,6 +297,7 @@ export function simulateMatchBatch(config: SimulationConfig): MatchBatchResult {
       config.policy ?? firstLegalCard,
       maxRounds,
       config.policies,
+      config.aiPlayers,
     );
     if (result.end.status === "FINISHED") {
       completed += 1;
