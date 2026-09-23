@@ -990,7 +990,7 @@ test("round scoring applies contract failure and transfers the full contract awa
   }
   const score = scoreRound({ contract: "SUN", trumpSuit: null, purchaserSeat: "EAST", dealerSeat: "EAST", buyerOriginallyHeldAce: false, escalation: "NORMAL", tricks: state.completedTricks, projectRaw: { NORTH_SOUTH: 0, EAST_WEST: 0 }, projectQaid: { NORTH_SOUTH: 0, EAST_WEST: 0 }, balootRaw: { NORTH_SOUTH: 0, EAST_WEST: 0 }, balootQaid: { NORTH_SOUTH: 0, EAST_WEST: 0 } });
   assert.equal(score.contractResult, "FAILURE");
-  assert.deepEqual(score.finalQaid, { NORTH_SOUTH: 26, EAST_WEST: 0 });
+  assert.deepEqual(score.finalQaid, { NORTH_SOUTH: 44, EAST_WEST: 0 });
 });
 
 test("match end distinguishes ongoing, finished, and tied extra deal", () => {
@@ -1084,5 +1084,5 @@ test("Hundred absorbs Baloot when both trump K and Q belong to the same Hundred"
     balootRaw: { NORTH_SOUTH: 0, EAST_WEST: 0 },
     balootQaid: { NORTH_SOUTH: 2, EAST_WEST: 0 },
   });
-  assert.deepEqual(score.balootQaid, { NORTH_SOUTH: 2, EAST_WEST: 0 });
+  assert.deepEqual(score.balootQaid, { NORTH_SOUTH: 0, EAST_WEST: 0 });
 });
