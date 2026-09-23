@@ -15,6 +15,7 @@ import {
 import type {
   BiddingAction,
   BiddingHands,
+  Card,
   BiddingState,
   DealState,
   GameState,
@@ -175,7 +176,7 @@ export function applyAuthoritativeBid(
     event.action,
     dealerSeat,
     deal.exposedCardId,
-    Object.fromEntries(DECK.map((card) => [card.id, card])),
+    Object.fromEntries(DECK.map((card) => [card.id, card])) as Readonly<Record<CardId, Card>>,
     deal.hands as BiddingHands,
   );
   return { state, event };
@@ -192,7 +193,7 @@ export function applyAuthoritativeProject(
   existing: readonly ProjectDeclaration[],
   event: ProjectEvent,
 ): AuthoritativeProjectResult {
-  if (!isProjectDeclarationWindow(game)) {
+  if (!isProjectDeclarationWindow(game.phase, game.trickNumber, game.currentTrick.length)) {
     throw new Error("Project declaration window is closed");
   }
   if (game.players[event.playerId] !== candidate.ownerSeat) {
