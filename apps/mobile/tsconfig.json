@@ -4,7 +4,8 @@
     "jsx": "react-jsx",
     "module": "ES2022",
     "moduleResolution": "Bundler",
-    "noEmit": true
+    "noEmit": true,
+    "paths": { "@sakkah-baloot/game-ai": ["../../packages/game-ai/src/index.ts"] }
   },
   "include": ["**/*.ts", "**/*.tsx"]
 }

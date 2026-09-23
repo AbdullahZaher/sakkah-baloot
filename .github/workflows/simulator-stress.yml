@@ -24,5 +24,7 @@ jobs:
       - run: corepack enable
       - run: pnpm install --no-frozen-lockfile
       - run: pnpm --filter @sakkah-baloot/game-engine build
+      - run: pnpm --filter @sakkah-baloot/game-engine build
+      - run: pnpm --filter @sakkah-baloot/game-ai build
       - run: pnpm --filter @sakkah-baloot/game-simulator build
-      - run: SIMULATION_GAMES=${{ matrix.games }} node packages/game-simulator/scripts/stress-simulation.mjs
+      - run: SIMULATION_GAMES=${{ matrix.games }} pnpm --filter @sakkah-baloot/game-simulator exec tsx scripts/stress-simulation.mjs
