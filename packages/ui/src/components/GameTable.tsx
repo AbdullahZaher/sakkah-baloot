@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import type { BiddingAction, Card, CardId, GameState, Seat, Suit } from "@sakkah-baloot/game-engine";
+import type { BiddingAction, Card, CardId, GameState, MatchEndResult, MatchScore, RoundScoreBreakdown, Seat, Suit } from "@sakkah-baloot/game-engine";
 
 type BiddingActionType = BiddingAction["type"];
 
@@ -14,7 +14,7 @@ interface GameTableProps {
   readonly game?: GameState | null;
   readonly playerSeat?: Seat;
   readonly onBiddingAction?: (action: BiddingActionType, suit?: Suit) => void;
-  readonly onCardPlay?: (cardId: CardId) => void;
+  readonly onCardPlay?: (cardId: CardId) => void;\n  readonly roundScore?: RoundScoreBreakdown | null;\n  readonly matchScore?: MatchScore;\n  readonly matchEnd?: MatchEndResult;
 }
 
 export function GameTable({ dealerSeat, actingSeat, phase, exposedCard, hand, legalActions, legalCardIds = [], game = null, playerSeat = "SOUTH", onBiddingAction, onCardPlay }: GameTableProps) {
@@ -22,7 +22,7 @@ export function GameTable({ dealerSeat, actingSeat, phase, exposedCard, hand, le
   const actions = playerIsActing ? legalActions : [];
   const hokumSuits = actions.includes("BUY_HOKUM") ? availableHokumSuits(exposedCard?.suit ?? null) : [];
   const cardMap = new Map(hand.map((card) => [card.id, card]));
-  const trickCards = game?.currentTrick ?? [];
+  const trickCards = game?.currentTrick ?? [];\n  const isRoundComplete = game?.phase === "ROUND_COMPLETE";
 
   return (
     <View style={styles.screen}>
@@ -34,7 +34,7 @@ export function GameTable({ dealerSeat, actingSeat, phase, exposedCard, hand, le
           <Text style={styles.logo}>صكّة</Text>
           <Text style={styles.phase}>{game ? `الطقطقة ${game.trickNumber}` : formatPhase(phase)}</Text>
           {!game ? <><Text style={styles.meta}>Dealer: {dealerSeat}</Text><View style={styles.exposed}><Text style={styles.exposedLabel}>المكشوفة</Text><CardView card={exposedCard} compact /></View></> : null}
-          {game ? <TrickView plays={trickCards} /> : null}
+          {game && !isRoundComplete ? <TrickView plays={trickCards} /> : null}\n          {isRoundComplete && roundScore ? <RoundResult score={roundScore} matchScore={matchScore ?? { NORTH_SOUTH: 0, EAST_WEST: 0 }} matchEnd={matchEnd ?? { status: "ONGOING", score: matchScore ?? { NORTH_SOUTH: 0, EAST_WEST: 0 } }} /> : null}
         </View>
         <View style={styles.south}>
           <SeatView label="SOUTH" active={game ? game.currentPlayerId === "SOUTH" : playerIsActing} />
@@ -51,6 +51,23 @@ export function GameTable({ dealerSeat, actingSeat, phase, exposedCard, hand, le
           ) : null}
         </View>
       </View>
+    </View>
+  );
+}
+
+function RoundResult({ score, matchScore, matchEnd }: { score: RoundScoreBreakdown; matchScore: MatchScore; matchEnd: MatchEndResult }) {
+  return (
+    <View style={styles.result}>
+      <Text style={styles.resultTitle}>نتيجة الجولة</Text>
+      <Text style={styles.resultLine}>الكروت: {score.cardRaw.NORTH_SOUTH} — {score.cardRaw.EAST_WEST}</Text>
+      <Text style={styles.resultLine}>المشاريع: {score.projectQaid.NORTH_SOUTH} — {score.projectQaid.EAST_WEST}</Text>
+      <Text style={styles.resultLine}>بلوت: {score.balootQaid.NORTH_SOUTH} — {score.balootQaid.EAST_WEST}</Text>
+      <Text style={styles.resultLine}>النتيجة: {score.finalQaid.NORTH_SOUTH} — {score.finalQaid.EAST_WEST}</Text>
+      {score.kabootTeamId ? <Text style={styles.badge}>كابوت: {score.kabootTeamId === "NORTH_SOUTH" ? "شمال + جنوب" : "شرق + غرب"}</Text> : null}
+      {score.reverseKaboot ? <Text style={styles.badge}>ريبيرس كابوت</Text> : null}
+      <Text style={styles.matchLine}>المباراة: {matchScore.NORTH_SOUTH} — {matchScore.EAST_WEST}</Text>
+      {matchEnd.status === "FINISHED" ? <Text style={styles.matchLine}>انتهت المباراة</Text> : null}
+      {matchEnd.status === "EXTRA_DEAL" ? <Text style={styles.matchLine}>تعادل فوق الهدف — توزيع إضافي</Text> : null}
     </View>
   );
 }
