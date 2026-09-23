@@ -21,7 +21,9 @@ export function GameTableScreen() {
         playerSeat={preview.playerSeat}
         onBiddingAction={(action, suit) => setPreview(session.dispatchBiddingAction(action, suit))}
         onCardPlay={(cardId) => setPreview(session.dispatchCardPlay(cardId))}
-        roundScore={preview.roundScore}\n        matchScore={preview.matchScore}\n        matchEnd={preview.matchEnd}
+        roundScore={preview.roundScore}
+        matchScore={preview.matchScore}
+        matchEnd={preview.matchEnd}
       />
     </View>
   );
