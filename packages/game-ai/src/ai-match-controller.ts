@@ -40,9 +40,7 @@ export function chooseAuthoritativeAIAction(
   });
 
   if (observation.phase === "BIDDING") {
-    const decision = chooseBaselineAction(observation, {
-      difficulty: config.difficulty,
-    });
+    const decision = chooseBaselineAction(observation, config.difficulty === undefined ? {} : { difficulty: config.difficulty });
     return { observation, action: decision.action, reason: "BID" };
   }
 
@@ -101,9 +99,7 @@ export function chooseAuthoritativeAIAction(
     return { observation, action, reason: "CARD" };
   }
 
-  const decision = chooseBaselineAction(observation, {
-    difficulty: config.difficulty,
-  });
+  const decision = chooseBaselineAction(observation, config.difficulty === undefined ? {} : { difficulty: config.difficulty });
 
   if (decision.action.type !== "PLAY_CARD") {
     throw new Error("Baseline controller returned a non-card action during PLAYING");
