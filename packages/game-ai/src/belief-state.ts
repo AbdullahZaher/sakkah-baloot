@@ -83,8 +83,10 @@ export function sampleBeliefWorlds(
   }
 
   if (worlds.length === 0) {
-    throw new Error("Unable to sample a hidden world consistent with belief constraints");
+    const fallbackWorld = sampleHiddenWorld(input, rng);
+    worlds.push({ world: fallbackWorld, weight: 1 });
   }
+
 
   const totalWeight = worlds.reduce((sum, sample) => sum + sample.weight, 0);
   if (totalWeight <= 0) throw new Error("Belief world weights are not positive");

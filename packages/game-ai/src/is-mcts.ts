@@ -45,10 +45,16 @@ export function chooseISMCTSCard(
 
   const iterations = Math.max(1, Math.floor(config.iterations));
   const worlds = sampleBeliefWorlds(input, belief, iterations, `${config.seed}:worlds`);
+  const worldCount = worlds.length;
+  if (worldCount === 0) {
+    throw new Error("No belief worlds available for IS-MCTS simulation");
+  }
+
 
   for (let i = 0; i < iterations; i += 1) {
-    const world = worlds[i]!.world;
+    const world = worlds[i % worldCount]!.world;
     const selected = selectRoot([...stats.keys()], stats, i + 1);
+
     const state = buildSimulationState(observation, world.hands);
     const next = applyCardPlay(state, observation.playerId, selected);
     const value = rolloutValue(next, observation.playerId, rng);
