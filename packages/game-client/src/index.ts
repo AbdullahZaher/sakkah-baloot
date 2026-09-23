@@ -210,7 +210,7 @@ export function createLocalPreview(): LocalPreview {
 }
 
 export function createLocalBiddingSession(): LocalBiddingSession {
-  const playerSeat: Seat = "WEST";
+  const playerSeat: Seat = "SOUTH";
   const matchId = "ui-preview-match";
   let match: MatchState = createMatchState(
     matchId,
