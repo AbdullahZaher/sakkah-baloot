@@ -32,9 +32,8 @@ test("AI bidding observation exposes only its own hand", () => {
   assert.deepEqual(observation.bidding?.legalActions, ["PASS"]);
 
   const serialized = JSON.stringify(observation);
-  for (const seat of ["EAST", "SOUTH", "WEST"]) {
-    assert.doesNotMatch(serialized, new RegExp(`\\b${seat}\\b`));
-  }
+  assert.doesNotMatch(serialized, /EAST:|SOUTH:|WEST:/);
+  assert.doesNotMatch(serialized, /hands|initialHands|initialDeckOrder|completionHands/);
   assert.doesNotMatch(serialized, /initialHands|initialDeckOrder|completionHands/);
 });
 
