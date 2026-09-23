@@ -53,7 +53,7 @@ function playingObservation({
 
 test("baseline card policy never selects outside authoritative legal cards", () => {
   const observation = playingObservation({
-    hand: ["HEARTS-J", "HEARTS-9", "CLUBS-A", "DIAMONDS-10"].map(card),
+    hand: ["HEARTS-J", "HEARTS-9", "CLUBS-A", "DIAMONDS-10"],
     legalCardIds: ["CLUBS-A", "DIAMONDS-10"],
   });
 
@@ -63,7 +63,7 @@ test("baseline card policy never selects outside authoritative legal cards", () 
 
 test("baseline policy prefers minimum sufficient winner over unnecessary stronger trump", () => {
   const observation = playingObservation({
-    hand: ["HEARTS-J", "HEARTS-9", "CLUBS-7", "CLUBS-A"].map(card),
+    hand: ["HEARTS-J", "HEARTS-9", "CLUBS-7", "CLUBS-A"],
     legalCardIds: ["HEARTS-J", "HEARTS-9", "CLUBS-A"],
     currentTrick: [
       { seat: "NORTH", card: card("CLUBS-K") },
@@ -78,7 +78,7 @@ test("baseline policy prefers minimum sufficient winner over unnecessary stronge
 
 test("baseline policy does not waste trump when partner already wins", () => {
   const observation = playingObservation({
-    hand: ["HEARTS-J", "CLUBS-7", "DIAMONDS-10"].map(card),
+    hand: ["HEARTS-J", "CLUBS-7", "DIAMONDS-10"],
     legalCardIds: ["HEARTS-J", "CLUBS-7", "DIAMONDS-10"],
     currentTrick: [
       { seat: "NORTH", card: card("CLUBS-A") },
