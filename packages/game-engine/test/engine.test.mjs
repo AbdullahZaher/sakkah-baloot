@@ -39,6 +39,11 @@ import {
   resolveKasho,
   createIntegrityIncident,
   resolveIntegrityIncident,
+  createMatchState,
+  completeMatchRound,
+  startNextRound,
+  isMatchFinished,
+  winningTeam,
 } from "../dist/index.js";
 
 const card = (id) => DECK.find((c) => c.id === id);
@@ -1085,4 +1090,58 @@ test("Hundred absorbs Baloot when both trump K and Q belong to the same Hundred"
     balootQaid: { NORTH_SOUTH: 2, EAST_WEST: 0 },
   });
   assert.deepEqual(score.balootQaid, { NORTH_SOUTH: 0, EAST_WEST: 0 });
+});
+
+
+test("match state owns round completion, score accumulation, and dealer rotation", () => {
+  const match = createMatchState("match-17", "NORTH");
+  const roundScore = {
+    cardRaw: { NORTH_SOUTH: 110, EAST_WEST: 20 },
+    projectRaw: { NORTH_SOUTH: 0, EAST_WEST: 0 },
+    balootRaw: { NORTH_SOUTH: 0, EAST_WEST: 0 },
+    contractRaw: { NORTH_SOUTH: 0, EAST_WEST: 0 },
+    contractResult: "SUCCESS",
+    convertedQaid: { NORTH_SOUTH: 26, EAST_WEST: 0 },
+    projectQaid: { NORTH_SOUTH: 0, EAST_WEST: 0 },
+    balootQaid: { NORTH_SOUTH: 0, EAST_WEST: 0 },
+    finalQaid: { NORTH_SOUTH: 26, EAST_WEST: 0 },
+    kabootTeamId: null,
+    reverseKaboot: false,
+    gahwa: false,
+  };
+  const completed = completeMatchRound(match, roundScore);
+  assert.equal(completed.phase, "ROUND_COMPLETE");
+  assert.equal(completed.stateVersion, 1);
+  assert.deepEqual(completed.score, { NORTH_SOUTH: 26, EAST_WEST: 0 });
+  const next = startNextRound(completed);
+  assert.equal(next.phase, "ROUND_ACTIVE");
+  assert.equal(next.roundNumber, 2);
+  assert.equal(next.dealerSeat, "WEST");
+  assert.equal(next.roundId, "match-17:round:2");
+  assert.equal(next.stateVersion, 2);
+  assert.deepEqual(next.score, { NORTH_SOUTH: 26, EAST_WEST: 0 });
+});
+
+test("match state reaches MATCH_COMPLETE and rejects further rounds", () => {
+  const match = createMatchState("match-17-finish", "NORTH");
+  const winningRound = {
+    cardRaw: { NORTH_SOUTH: 0, EAST_WEST: 0 },
+    projectRaw: { NORTH_SOUTH: 0, EAST_WEST: 0 },
+    balootRaw: { NORTH_SOUTH: 0, EAST_WEST: 0 },
+    contractRaw: { NORTH_SOUTH: 0, EAST_WEST: 0 },
+    contractResult: "SUCCESS",
+    convertedQaid: { NORTH_SOUTH: 152, EAST_WEST: 0 },
+    projectQaid: { NORTH_SOUTH: 0, EAST_WEST: 0 },
+    balootQaid: { NORTH_SOUTH: 0, EAST_WEST: 0 },
+    finalQaid: { NORTH_SOUTH: 152, EAST_WEST: 0 },
+    kabootTeamId: null,
+    reverseKaboot: false,
+    gahwa: false,
+  };
+  const completed = completeMatchRound(match, winningRound);
+  assert.equal(completed.phase, "MATCH_COMPLETE");
+  assert.equal(completed.end.status, "FINISHED");
+  assert.equal(isMatchFinished(completed), true);
+  assert.equal(winningTeam(completed), "NORTH_SOUTH");
+  assert.throws(() => startNextRound(completed), /completed non-final round/);
 });

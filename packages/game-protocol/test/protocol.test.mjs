@@ -1,0 +1,344 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+
+import {
+  applyProtocolEvent,
+  deterministicEventId,
+  replayProtocol,
+} from "../src/index.ts";
+
+const initial = {
+  matchId: "match-protocol-17",
+  stateVersion: 0,
+  roundId: "match-protocol-17:round:1",
+  roundNumber: 1,
+  dealerSeat: "NORTH",
+  phase: "DEAL",
+  score: { NORTH_SOUTH: 0, EAST_WEST: 0 },
+  escalation: "NORMAL",
+};
+
+const dealEvent = {
+  type: "DEAL",
+  roundId: initial.roundId,
+  roundNumber: 1,
+  dealerSeat: "NORTH",
+};
+
+test("deterministic event IDs are stable and state-version scoped", () => {
+  const first = deterministicEventId(initial.matchId, 1, dealEvent);
+  const second = deterministicEventId(initial.matchId, 1, dealEvent);
+  const later = deterministicEventId(initial.matchId, 2, dealEvent);
+
+  assert.equal(first, second);
+  assert.notEqual(first, later);
+  assert.equal(first, "match-protocol-17:v1:DEAL:match-protocol-17:round:1");
+});
+
+test("protocol replay is deterministic and duplicate event IDs are idempotent", () => {
+  const events = [
+    {
+      matchId: initial.matchId,
+      eventId: deterministicEventId(initial.matchId, 1, dealEvent),
+      stateVersion: 1,
+      event: dealEvent,
+    },
+    {
+      matchId: initial.matchId,
+      eventId: deterministicEventId(initial.matchId, 2, {
+        type: "BID",
+        roundId: initial.roundId,
+        playerId: "WEST_PLAYER",
+        action: { type: "PASS", actionId: "bid-2" },
+      }),
+      stateVersion: 2,
+      event: {
+        type: "BID",
+        roundId: initial.roundId,
+        playerId: "WEST_PLAYER",
+        action: { type: "PASS", actionId: "bid-2" },
+      },
+    },
+    {
+      matchId: initial.matchId,
+      eventId: deterministicEventId(initial.matchId, 3, {
+        type: "PLAY_CARD",
+        roundId: initial.roundId,
+        playerId: "WEST_PLAYER",
+        cardId: "clubs-7",
+        ikaDeclared: false,
+      }),
+      stateVersion: 3,
+      event: {
+        type: "PLAY_CARD",
+        roundId: initial.roundId,
+        playerId: "WEST_PLAYER",
+        cardId: "clubs-7",
+        ikaDeclared: false,
+      },
+    },
+    {
+      matchId: initial.matchId,
+      eventId: deterministicEventId(initial.matchId, 4, {
+        type: "ROUND_COMPLETE",
+        roundId: initial.roundId,
+        score: { NORTH_SOUTH: 26, EAST_WEST: 0 },
+        matchEnd: { status: "ONGOING", score: { NORTH_SOUTH: 26, EAST_WEST: 0 } },
+      }),
+      stateVersion: 4,
+      event: {
+        type: "ROUND_COMPLETE",
+        roundId: initial.roundId,
+        score: { NORTH_SOUTH: 26, EAST_WEST: 0 },
+        matchEnd: { status: "ONGOING", score: { NORTH_SOUTH: 26, EAST_WEST: 0 } },
+      },
+    },
+  ];
+
+  const once = replayProtocol(initial, events);
+  const twice = replayProtocol(initial, [...events, events[2]]);
+
+  assert.deepEqual(twice.state, once.state);
+  assert.deepEqual(twice.appliedEventIds, once.appliedEventIds);
+  assert.equal(once.state.stateVersion, 4);
+  assert.deepEqual(once.state.score, { NORTH_SOUTH: 26, EAST_WEST: 0 });
+});
+
+test("protocol replay rejects skipped state versions and cross-match events", () => {
+  assert.throws(
+    () => applyProtocolEvent(
+      initial,
+      {
+        matchId: initial.matchId,
+        eventId: "bad-version",
+        stateVersion: 2,
+        event: dealEvent,
+      },
+    ),
+    /not sequential/,
+  );
+
+  assert.throws(
+    () => applyProtocolEvent(
+      initial,
+      {
+        matchId: "other-match",
+        eventId: "other-match-event",
+        stateVersion: 1,
+        event: dealEvent,
+      },
+    ),
+    /another match/,
+  );
+});
+
+
+test("protocol replay rejects invalid lifecycle transitions", () => {
+  assert.throws(
+    () => applyProtocolEvent(
+      initial,
+      {
+        matchId: initial.matchId,
+        eventId: "invalid-transition",
+        stateVersion: 1,
+        event: {
+          type: "ROUND_COMPLETE",
+          roundId: initial.roundId,
+          score: { NORTH_SOUTH: 0, EAST_WEST: 0 },
+          matchEnd: { status: "ONGOING", score: { NORTH_SOUTH: 0, EAST_WEST: 0 } },
+        },
+      },
+    ),
+    /Invalid protocol transition: DEAL -> ROUND_COMPLETE/,
+  );
+});
+
+
+test("authoritative card play delegates legality and mutation to game-engine", async () => {
+  const { applyAuthoritativePlayCard } = await import("../src/index.ts");
+  const { DECK } = await import("@sakkah-baloot/game-engine");
+  const card = DECK[0];
+  const game = {
+    phase: "PLAYING",
+    currentPlayerId: "WEST_PLAYER",
+    players: { NORTH_PLAYER: "NORTH", EAST_PLAYER: "EAST", SOUTH_PLAYER: "SOUTH", WEST_PLAYER: "WEST" },
+    hands: { NORTH_PLAYER: [], EAST_PLAYER: [], SOUTH_PLAYER: [], WEST_PLAYER: [card] },
+    contract: "SUN",
+    trumpSuit: null,
+    hokumPlayMode: "OPEN",
+    dealerSeat: "NORTH",
+    trickNumber: 1,
+    currentTrick: [],
+    completedTricks: [],
+  };
+  const result = applyAuthoritativePlayCard(game, {
+    type: "PLAY_CARD",
+    roundId: "authoritative-round",
+    playerId: "WEST_PLAYER",
+    cardId: card.id,
+    ikaDeclared: false,
+  });
+  assert.equal(result.state.hands.WEST_PLAYER.length, 0);
+});
+
+
+test("authoritative project rejects a closed declaration window", async () => {
+  const { applyAuthoritativeProject } = await import("../src/index.ts");
+  const game = {
+    phase: "PLAYING", currentPlayerId: "WEST_PLAYER",
+    players: { NORTH_PLAYER:"NORTH", EAST_PLAYER:"EAST", SOUTH_PLAYER:"SOUTH", WEST_PLAYER:"WEST" },
+    hands: { NORTH_PLAYER:[], EAST_PLAYER:[], SOUTH_PLAYER:[], WEST_PLAYER:[] },
+    contract:"SUN", trumpSuit:null, hokumPlayMode:"OPEN", dealerSeat:"NORTH", trickNumber:2,
+    currentTrick:[], completedTricks:[],
+  };
+  const candidate = { id:"SERA:WEST:cards", type:"SERA", cards:["clubs-7","clubs-8","clubs-9"], ownerSeat:"WEST", teamId:"EAST_WEST", contract:"SUN", subtype:"SEQUENCE_3", highRankIndex:2, rawValue:2, qaydValue:2 };
+  assert.throws(() => applyAuthoritativeProject(game, candidate, [], { type:"PROJECT", roundId:"r", playerId:"WEST_PLAYER", project:"SERA", suit:"CLUBS" }), /window is closed/);
+});
+
+
+test("authoritative trick completion matches the canonical completed trick", async () => {
+  const { applyAuthoritativeTrickComplete } = await import("../src/index.ts");
+  const { DECK } = await import("@sakkah-baloot/game-engine");
+  const cards = DECK.slice(0, 4);
+  const round = {
+    roundId: "trick-round",
+    roundNumber: 1,
+    dealerSeat: "NORTH",
+    phase: "PLAYING",
+    deal: {},
+    bidding: {},
+    game: {
+      phase: "PLAYING",
+      currentPlayerId: "NORTH_PLAYER",
+      players: { NORTH_PLAYER: "NORTH", EAST_PLAYER: "EAST", SOUTH_PLAYER: "SOUTH", WEST_PLAYER: "WEST" },
+      hands: { NORTH_PLAYER: [], EAST_PLAYER: [], SOUTH_PLAYER: [], WEST_PLAYER: [] },
+      contract: "SUN",
+      trumpSuit: null,
+      hokumPlayMode: "OPEN",
+      dealerSeat: "NORTH",
+      trickNumber: 2,
+      currentTrick: [],
+      completedTricks: [{
+        trickNumber: 1,
+        leaderSeat: "NORTH",
+        plays: cards.map((card, index) => ({
+          playerId: ["NORTH_PLAYER", "EAST_PLAYER", "SOUTH_PLAYER", "WEST_PLAYER"][index],
+          seat: ["NORTH", "EAST", "SOUTH", "WEST"][index],
+          card,
+          ikaDeclared: false,
+          sequence: index + 1,
+        })),
+        winnerSeat: "WEST",
+      }],
+    },
+    projects: [],
+    baloot: null,
+    score: null,
+  };
+  const result = applyAuthoritativeTrickComplete(round, {
+    type: "TRICK_COMPLETE",
+    roundId: "trick-round",
+    trickNumber: 1,
+    winnerSeat: "WEST",
+  });
+  assert.equal(result.state.completedTricks.length, 1);
+});
+
+test("authoritative Baloot declaration is validated before the K/Q card commit", async () => {
+  const { applyAuthoritativePlayCard } = await import("../src/index.ts");
+  const { DECK } = await import("@sakkah-baloot/game-engine");
+  const king = DECK.find((card) => card.suit === "HEARTS" && card.rank === "K");
+  const queen = DECK.find((card) => card.suit === "HEARTS" && card.rank === "Q");
+  assert.ok(king);
+  assert.ok(queen);
+
+  const game = {
+    phase: "PLAYING",
+    currentPlayerId: "WEST_PLAYER",
+    players: { NORTH_PLAYER: "NORTH", EAST_PLAYER: "EAST", SOUTH_PLAYER: "SOUTH", WEST_PLAYER: "WEST" },
+    hands: { NORTH_PLAYER: [], EAST_PLAYER: [], SOUTH_PLAYER: [], WEST_PLAYER: [queen] },
+    contract: "HOKUM",
+    trumpSuit: "HEARTS",
+    hokumPlayMode: "OPEN",
+    dealerSeat: "NORTH",
+    trickNumber: 2,
+    currentTrick: [],
+    completedTricks: [{
+      trickNumber: 1,
+      leaderSeat: "WEST",
+      plays: [
+        { playerId: "WEST_PLAYER", seat: "WEST", card: king, ikaDeclared: false, sequence: 1 },
+        { playerId: "NORTH_PLAYER", seat: "NORTH", card: DECK[0], ikaDeclared: false, sequence: 2 },
+        { playerId: "EAST_PLAYER", seat: "EAST", card: DECK[1], ikaDeclared: false, sequence: 3 },
+        { playerId: "SOUTH_PLAYER", seat: "SOUTH", card: DECK[2], ikaDeclared: false, sequence: 4 },
+      ],
+      winnerSeat: "WEST",
+    }],
+  };
+
+  const result = applyAuthoritativePlayCard(game, {
+    type: "PLAY_CARD",
+    roundId: "baloot-round",
+    playerId: "WEST_PLAYER",
+    cardId: queen.id,
+    ikaDeclared: false,
+    balootDeclared: true,
+  });
+
+  assert.equal(result.baloot?.ownerSeat, "WEST");
+  assert.deepEqual(result.baloot?.cards, [king.id, queen.id]);
+  assert.equal(result.state.hands.WEST_PLAYER.length, 0);
+});
+
+test("authoritative match completion requires the canonical finished match state", async () => {
+  const { applyAuthoritativeMatchComplete } = await import("../src/index.ts");
+  const match = {
+    matchId: "finished-match",
+    roundId: "finished-match:round:7",
+    roundNumber: 7,
+    dealerSeat: "NORTH",
+    phase: "MATCH_COMPLETE",
+    stateVersion: 12,
+    score: { NORTH_SOUTH: 152, EAST_WEST: 140 },
+    lastRoundScore: null,
+    end: { status: "FINISHED", score: { NORTH_SOUTH: 152, EAST_WEST: 140 }, winnerTeamId: "NORTH_SOUTH" },
+    round: null,
+  };
+
+  const result = applyAuthoritativeMatchComplete(match, {
+    type: "MATCH_COMPLETE",
+    score: { NORTH_SOUTH: 152, EAST_WEST: 140 },
+    winnerTeamId: "NORTH_SOUTH",
+  });
+  assert.equal(result.state.phase, "MATCH_COMPLETE");
+
+  assert.throws(
+    () => applyAuthoritativeMatchComplete(match, {
+      type: "MATCH_COMPLETE",
+      score: { NORTH_SOUTH: 151, EAST_WEST: 140 },
+      winnerTeamId: "NORTH_SOUTH",
+    }),
+    /score does not match/,
+  );
+});
+
+test("protocol lifecycle no longer permits BID to PROJECT directly", () => {
+  assert.throws(
+    () => applyProtocolEvent(
+      { ...initial, phase: "BID", stateVersion: 2 },
+      {
+        matchId: initial.matchId,
+        eventId: "invalid-bid-project",
+        stateVersion: 3,
+        event: {
+          type: "PROJECT",
+          roundId: initial.roundId,
+          playerId: "WEST_PLAYER",
+          project: "SERA",
+          suit: "CLUBS",
+        },
+      },
+    ),
+    /Invalid protocol transition: BID -> PROJECT/,
+  );
+});
