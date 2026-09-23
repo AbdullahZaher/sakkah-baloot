@@ -11,7 +11,7 @@ export function GameTableScreen() {
     <View style={styles.root}>
       <GameTable
         dealerSeat={preview.dealerSeat}
-        actingSeat={preview.game ? preview.game.players[preview.game.currentPlayerId] : preview.bidding.actingSeat}
+        actingSeat={preview.game ? (preview.game.players[preview.game.currentPlayerId] ?? preview.playerSeat) : preview.bidding.actingSeat}
         phase={preview.bidding.phase}
         exposedCard={preview.exposedCard}
         hand={preview.playerHand}
@@ -21,6 +21,10 @@ export function GameTableScreen() {
         playerSeat={preview.playerSeat}
         onBiddingAction={(action, suit) => setPreview(session.dispatchBiddingAction(action, suit))}
         onCardPlay={(cardId) => setPreview(session.dispatchCardPlay(cardId))}
+        onNextRound={() => setPreview(session.advanceRound())}
+        roundScore={preview.roundScore}
+        matchScore={preview.matchScore}
+        matchEnd={preview.matchEnd}
       />
     </View>
   );

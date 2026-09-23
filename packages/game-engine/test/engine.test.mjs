@@ -14,6 +14,7 @@ import {
   evaluateMatchEnd,
   projectMultiplier,
   scoreRound,
+  isReverseKabootEligible,
   teamOfSeat,
   nextCounterClockwise,
   createEscalationState,
@@ -22,6 +23,10 @@ import {
   closeEscalation,
   declareProject,
   resolveProjects,
+  isBalootPair,
+  canDeclareBaloot,
+  declareBaloot,
+  isBalootAbsorbedByHundred,
   replay,
   createBiddingState,
   legalBiddingActions,
@@ -818,4 +823,266 @@ test("invalid client requests remain ordinary rejections, not integrity incident
     /Kasho requires five/,
   );
   assert.equal(state.phase, "FIRST_ROUND");
+});
+
+test("full trick lifecycle completes exactly eight tricks and enters ROUND_COMPLETE", () => {
+  const players = { pN: "NORTH", pW: "WEST", pS: "SOUTH", pE: "EAST" };
+  const hands = {
+    pN: hand(
+      "CLUBS-A","CLUBS-K","DIAMONDS-A","DIAMONDS-K",
+      "HEARTS-A","HEARTS-K","SPADES-A","SPADES-K",
+    ),
+    pW: hand(
+      "CLUBS-Q","CLUBS-J","DIAMONDS-Q","DIAMONDS-J",
+      "HEARTS-Q","HEARTS-J","SPADES-Q","SPADES-J",
+    ),
+    pS: hand(
+      "CLUBS-10","CLUBS-9","DIAMONDS-10","DIAMONDS-9",
+      "HEARTS-10","HEARTS-9","SPADES-10","SPADES-9",
+    ),
+    pE: hand(
+      "CLUBS-8","CLUBS-7","DIAMONDS-8","DIAMONDS-7",
+      "HEARTS-8","HEARTS-7","SPADES-8","SPADES-7",
+    ),
+  };
+
+  let state = legalState({
+    currentPlayerId: "pN",
+    players,
+    hands,
+    contract: "SUN",
+    trumpSuit: null,
+    dealerSeat: "EAST",
+  });
+
+  const suits = ["CLUBS", "DIAMONDS", "HEARTS", "SPADES"];
+  for (const suit of suits) {
+    for (const high of [true, false]) {
+      const ranks = high
+        ? ["A", "Q", "10", "8"]
+        : ["K", "J", "9", "7"];
+      const ids = ranks.map((rank) => `${suit}-${rank}`);
+      for (const [playerId, id] of [
+        ["pN", ids[0]],
+        ["pW", ids[1]],
+        ["pS", ids[2]],
+        ["pE", ids[3]],
+      ]) {
+        assert.equal(state.currentPlayerId, playerId);
+        state = applyCardPlay(state, playerId, id);
+      }
+      assert.equal(state.currentTrick.length, 0);
+      assert.equal(state.completedTricks.length, suits.indexOf(suit) * 2 + (high ? 1 : 2));
+      assert.equal(state.currentPlayerId, "pN");
+    }
+  }
+
+  assert.equal(state.phase, "ROUND_COMPLETE");
+  assert.equal(state.completedTricks.length, 8);
+  assert.equal(state.currentTrick.length, 0);
+  for (const playerId of Object.keys(players)) {
+    assert.equal(state.hands[playerId].length, 0);
+  }
+  assert.equal(state.currentPlayerId, "pN");
+  assert.deepEqual(
+    state.completedTricks.map((trick) => trick.trickNumber),
+    [1,2,3,4,5,6,7,8],
+  );
+  assert.ok(state.completedTricks.every((trick) => trick.winnerSeat === "NORTH"));
+});
+
+test("completed eight-trick round resolves through the canonical scoring engine", () => {
+  const players = { pN: "NORTH", pW: "WEST", pS: "SOUTH", pE: "EAST" };
+  const hands = {
+    pN: hand(
+      "CLUBS-A","CLUBS-K","DIAMONDS-A","DIAMONDS-K",
+      "HEARTS-A","HEARTS-K","SPADES-A","SPADES-K",
+    ),
+    pW: hand(
+      "CLUBS-Q","CLUBS-J","DIAMONDS-Q","DIAMONDS-J",
+      "HEARTS-Q","HEARTS-J","SPADES-Q","SPADES-J",
+    ),
+    pS: hand(
+      "CLUBS-10","CLUBS-9","DIAMONDS-10","DIAMONDS-9",
+      "HEARTS-10","HEARTS-9","SPADES-10","SPADES-9",
+    ),
+    pE: hand(
+      "CLUBS-8","CLUBS-7","DIAMONDS-8","DIAMONDS-7",
+      "HEARTS-8","HEARTS-7","SPADES-8","SPADES-7",
+    ),
+  };
+
+  let state = legalState({
+    currentPlayerId: "pN",
+    players,
+    hands,
+    contract: "SUN",
+    trumpSuit: null,
+    dealerSeat: "EAST",
+  });
+
+  for (const suit of ["CLUBS", "DIAMONDS", "HEARTS", "SPADES"]) {
+    for (const high of [true, false]) {
+      const ranks = high ? ["A", "Q", "10", "8"] : ["K", "J", "9", "7"];
+      const ids = ranks.map((rank) => `${suit}-${rank}`);
+      for (const [playerId, id] of [["pN", ids[0]], ["pW", ids[1]], ["pS", ids[2]], ["pE", ids[3]]]) {
+        state = applyCardPlay(state, playerId, id);
+      }
+    }
+  }
+
+  assert.equal(state.phase, "ROUND_COMPLETE");
+  const score = scoreRound({
+    contract: "SUN",
+    trumpSuit: null,
+    purchaserSeat: "NORTH",
+    dealerSeat: "EAST",
+    buyerOriginallyHeldAce: true,
+    escalation: "NORMAL",
+    tricks: state.completedTricks,
+    projectRaw: { NORTH_SOUTH: 0, EAST_WEST: 0 },
+    projectQaid: { NORTH_SOUTH: 0, EAST_WEST: 0 },
+    balootRaw: { NORTH_SOUTH: 0, EAST_WEST: 0 },
+    balootQaid: { NORTH_SOUTH: 0, EAST_WEST: 0 },
+  });
+
+  assert.deepEqual(score.cardRaw, { NORTH_SOUTH: 110, EAST_WEST: 20 });
+  assert.equal(score.contractResult, "SUCCESS");
+  assert.equal(score.kabootTeamId, "NORTH_SOUTH");
+  assert.deepEqual(score.finalQaid, { NORTH_SOUTH: 26, EAST_WEST: 0 });
+});
+
+test("completed round rejects further card-play through the authoritative phase guard", () => {
+  const state = legalState({
+    phase: "ROUND_COMPLETE",
+    currentPlayerId: "pN",
+    hands: {
+      pN: hand("CLUBS-A"),
+      pE: [],
+      pS: [],
+      pW: [],
+    },
+    completedTricks: Array.from({ length: 8 }, (_, index) => ({
+      trickNumber: index + 1,
+      leaderSeat: "NORTH",
+      plays: [],
+      winnerSeat: "NORTH",
+    })),
+  });
+  assert.throws(() => applyCardPlay(state, "pN", "CLUBS-A"), /PLAYING phase/);
+});
+
+
+test("round scoring applies contract failure and transfers the full contract award", () => {
+  const players = { pN: "NORTH", pW: "WEST", pS: "SOUTH", pE: "EAST" };
+  const hands = {
+    pN: hand("CLUBS-A","CLUBS-K","DIAMONDS-A","DIAMONDS-K","HEARTS-A","HEARTS-K","SPADES-A","SPADES-K"),
+    pW: hand("CLUBS-Q","CLUBS-J","DIAMONDS-Q","DIAMONDS-J","HEARTS-Q","HEARTS-J","SPADES-Q","SPADES-J"),
+    pS: hand("CLUBS-10","CLUBS-9","DIAMONDS-10","DIAMONDS-9","HEARTS-10","HEARTS-9","SPADES-10","SPADES-9"),
+    pE: hand("CLUBS-8","CLUBS-7","DIAMONDS-8","DIAMONDS-7","HEARTS-8","HEARTS-7","SPADES-8","SPADES-7"),
+  };
+  let state = { phase: "PLAYING", currentPlayerId: "pN", players, hands, contract: "SUN", trumpSuit: null, dealerSeat: "EAST", trickNumber: 1, currentTrick: [], completedTricks: [] };
+  for (const suit of ["CLUBS", "DIAMONDS", "HEARTS", "SPADES"]) {
+    for (const high of [true, false]) {
+      const ranks = high ? ["A", "Q", "10", "8"] : ["K", "J", "9", "7"];
+      for (const [playerId, rank] of [["pN", ranks[0]], ["pW", ranks[1]], ["pS", ranks[2]], ["pE", ranks[3]]]) state = applyCardPlay(state, playerId, suit + "-" + rank);
+    }
+  }
+  const score = scoreRound({ contract: "SUN", trumpSuit: null, purchaserSeat: "EAST", dealerSeat: "EAST", buyerOriginallyHeldAce: false, escalation: "NORMAL", tricks: state.completedTricks, projectRaw: { NORTH_SOUTH: 0, EAST_WEST: 0 }, projectQaid: { NORTH_SOUTH: 0, EAST_WEST: 0 }, balootRaw: { NORTH_SOUTH: 0, EAST_WEST: 0 }, balootQaid: { NORTH_SOUTH: 0, EAST_WEST: 0 } });
+  assert.equal(score.contractResult, "FAILURE");
+  assert.deepEqual(score.finalQaid, { NORTH_SOUTH: 26, EAST_WEST: 0 });
+});
+
+test("match end distinguishes ongoing, finished, and tied extra deal", () => {
+  assert.deepEqual(evaluateMatchEnd({ NORTH_SOUTH: 150, EAST_WEST: 120 }), { status: "ONGOING", score: { NORTH_SOUTH: 150, EAST_WEST: 120 } });
+  assert.deepEqual(evaluateMatchEnd({ NORTH_SOUTH: 152, EAST_WEST: 120 }), { status: "FINISHED", score: { NORTH_SOUTH: 152, EAST_WEST: 120 }, winnerTeamId: "NORTH_SOUTH" });
+  assert.deepEqual(evaluateMatchEnd({ NORTH_SOUTH: 152, EAST_WEST: 152 }), { status: "EXTRA_DEAL", score: { NORTH_SOUTH: 152, EAST_WEST: 152 } });
+});
+
+test("reverse kaboot predicate is authoritative for Sun dealer-right Ace purchaser", () => {
+  const tricks = Array.from({ length: 8 }, (_, index) => ({ trickNumber: index + 1, leaderSeat: "NORTH", plays: [{ seat: "NORTH", card: card("CLUBS-A") }, { seat: "WEST", card: card("CLUBS-K") }, { seat: "SOUTH", card: card("CLUBS-Q") }, { seat: "EAST", card: card("CLUBS-J") }], winnerSeat: "WEST" }));
+  assert.equal(isReverseKabootEligible({ contract: "SUN", purchaserSeat: "SOUTH", dealerSeat: "EAST", buyerOriginallyHeldAce: true }, tricks), true);
+});
+
+
+test("project resolution feeds canonical project raw and Qaid into round scoring", () => {
+  const seraN = detectProjects(hand("CLUBS-7","CLUBS-8","CLUBS-9"), "SUN", null, "NORTH")[0];
+  const seraE = detectProjects(hand("DIAMONDS-7","DIAMONDS-8","DIAMONDS-9"), "SUN", null, "EAST")[0];
+  assert.ok(seraN && seraE);
+  const n = declareProject(seraN, "p-n", "PLAYING", 1, 0, []);
+  const e = declareProject(seraE, "p-e", "PLAYING", 1, 0, [n]);
+  const projects = resolveProjects([n, e], "NORTH");
+  assert.deepEqual(projects.projectRaw, { NORTH_SOUTH: 0, EAST_WEST: 20 });
+  assert.deepEqual(projects.projectQaid, { NORTH_SOUTH: 0, EAST_WEST: 2 });
+
+  const score = scoreRound({
+    contract: "SUN",
+    trumpSuit: null,
+    purchaserSeat: "NORTH",
+    dealerSeat: "EAST",
+    buyerOriginallyHeldAce: true,
+    escalation: "NORMAL",
+    tricks: canonicalSunTricks("NORTH"),
+    projectRaw: projects.projectRaw,
+    projectQaid: projects.projectQaid,
+    balootRaw: { NORTH_SOUTH: 0, EAST_WEST: 0 },
+    balootQaid: { NORTH_SOUTH: 0, EAST_WEST: 0 },
+  });
+  assert.deepEqual(score.projectRaw, { NORTH_SOUTH: 0, EAST_WEST: 20 });
+  assert.deepEqual(score.projectQaid, { NORTH_SOUTH: 0, EAST_WEST: 2 });
+});
+  
+test("Baloot declaration is Hokum-only, same-player K+Q, and resolves to two Qaid", () => {
+  const king = card("HEARTS-K");
+  const queen = card("HEARTS-Q");
+  assert.equal(isBalootPair([king, queen], "HOKUM", "HEARTS"), true);
+  assert.equal(isBalootPair([king, queen], "SUN", null), false);
+  assert.equal(
+    canDeclareBaloot("HOKUM", "HEARTS", "NORTH", queen, [king], true),
+    true,
+  );
+  assert.equal(
+    canDeclareBaloot("HOKUM", "HEARTS", "NORTH", queen, [king], false),
+    false,
+  );
+  assert.equal(
+    canDeclareBaloot("HOKUM", "HEARTS", "NORTH", queen, [card("SPADES-K")], true),
+    false,
+  );
+  const declaration = declareBaloot("b-1", "NORTH", "HEARTS", king, queen);
+  assert.equal(declaration.teamId, "NORTH_SOUTH");
+  assert.equal(declaration.qaydValue, 2);
+});
+  
+test("Hundred absorbs Baloot when both trump K and Q belong to the same Hundred", () => {
+  const baloot = declareBaloot(
+    "b-2",
+    "NORTH",
+    "HEARTS",
+    card("HEARTS-K"),
+    card("HEARTS-Q"),
+  );
+  assert.equal(
+    isBalootAbsorbedByHundred(baloot, ["HEARTS-K","HEARTS-Q","CLUBS-10","DIAMONDS-10","SPADES-10"]),
+    false,
+  );
+  assert.equal(
+    isBalootAbsorbedByHundred(baloot, ["HEARTS-K","HEARTS-Q"]),
+    true,
+  );
+
+  const score = scoreRound({
+    contract: "HOKUM",
+    trumpSuit: "HEARTS",
+    purchaserSeat: "NORTH",
+    dealerSeat: "EAST",
+    buyerOriginallyHeldAce: true,
+    escalation: "NORMAL",
+    tricks: canonicalSunTricks("NORTH"),
+    projectRaw: { NORTH_SOUTH: 0, EAST_WEST: 0 },
+    projectQaid: { NORTH_SOUTH: 0, EAST_WEST: 0 },
+    balootRaw: { NORTH_SOUTH: 0, EAST_WEST: 0 },
+    balootQaid: { NORTH_SOUTH: 2, EAST_WEST: 0 },
+  });
+  assert.deepEqual(score.balootQaid, { NORTH_SOUTH: 2, EAST_WEST: 0 });
 });
