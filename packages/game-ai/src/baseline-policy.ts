@@ -4,7 +4,10 @@ import type { AIAction, AIRoundObservation } from "./index.js";
 import { createCardMemory } from "./card-memory.js";
 import { extractStrategyFeatures } from "./strategy-features.js";
 
+export type AIDifficulty = "EASY" | "NORMAL" | "HARD";
+
 export interface BaselinePolicyConfig {
+  readonly difficulty?: AIDifficulty;
   readonly preferInformation?: boolean;
 }
 
@@ -156,6 +159,7 @@ function chooseCard(
       playing.trumpSuit,
       features.partnerWinning,
       config.preferInformation ?? true,
+      config.difficulty ?? "NORMAL",
     );
 
     return {
@@ -190,9 +194,11 @@ function scoreCard(
   trumpSuit: "CLUBS" | "DIAMONDS" | "HEARTS" | "SPADES" | null,
   partnerWinning: boolean,
   preferInformation: boolean,
+  difficulty: AIDifficulty,
 ): number {
-  let score = cardRawValue(card, contract, trumpSuit) * 0.8;
-  score += cardStrength(card, contract, trumpSuit) * 0.2;
+  const profile = difficultyProfile(difficulty);
+  let score = cardRawValue(card, contract, trumpSuit) * profile.rawValueWeight;
+  score += cardStrength(card, contract, trumpSuit) * profile.strengthWeight;
 
   if (currentTrick.length > 0) {
     const ledSuit = currentTrick[0]!.card.suit;
@@ -211,8 +217,24 @@ function scoreCard(
     if (card.rank === "10") score += 4;
   }
 
-  if (preferInformation && currentTrick.length === 0) score += 0.1;
+  if (preferInformation && currentTrick.length === 0) score += profile.informationWeight;
   return score;
+}
+
+function difficultyProfile(difficulty: AIDifficulty): {
+  readonly rawValueWeight: number;
+  readonly strengthWeight: number;
+  readonly informationWeight: number;
+} {
+  switch (difficulty) {
+    case "EASY":
+      return { rawValueWeight: 0.65, strengthWeight: 0.12, informationWeight: 0.02 };
+    case "HARD":
+      return { rawValueWeight: 0.95, strengthWeight: 0.28, informationWeight: 0.2 };
+    case "NORMAL":
+    default:
+      return { rawValueWeight: 0.8, strengthWeight: 0.2, informationWeight: 0.1 };
+  }
 }
 
 function currentWinner(
