@@ -133,6 +133,9 @@ export function createLocalPreview(): LocalPreview {
     createInitialDeal("ui-preview", dealerSeat, createSeededRandom("ui-preview")),
     createBiddingState("ui-preview", dealerSeat),
     null,
+    null,
+    { NORTH_SOUTH: 0, EAST_WEST: 0 },
+    { status: "ONGOING", score: { NORTH_SOUTH: 0, EAST_WEST: 0 } },
   );
 }
 
