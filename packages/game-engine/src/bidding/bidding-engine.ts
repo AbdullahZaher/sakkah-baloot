@@ -79,96 +79,12 @@ function hasProcessed(state: BiddingState, actionId: string): boolean {
   return state.processedActionIds.includes(actionId);
 }
 
-function firstRoundAshkalEligible(seat: Seat, dealerSeat: Seat): boolean {
-  return seat === dealerSeat || seat === previousCounterClockwise(dealerSeat);
-}
-
-function advanceSeat(seat: Seat): Seat {
-  return nextCounterClockwise(seat);
-}
-
-function nextTurn(
-  state: BiddingState,
-  dealerSeat: Seat,
-  action: BiddingAction,
-): BiddingState {
-  const nextTurnNumber = state.turnNumber + 1;
-  const historyRecord: BiddingActionRecord = {
-    actionId: action.actionId,
-    turnNumber: state.turnNumber,
-    seat: state.actingSeat,
-    phase: state.phase as "FIRST_ROUND" | "SECOND_ROUND",
-    action: action.type,
-    stateVersion: state.stateVersion + 1,
-  };
-
-  return {
-    ...state,
-    actingSeat: advanceSeat(state.actingSeat),
-    turnNumber: nextTurnNumber,
-    stateVersion: state.stateVersion + 1,
-    history: [...state.history, historyRecord],
-    processedActionIds: [...state.processedActionIds, action.actionId],
-    passCount: state.passCount + 1,
-  };
-}
-
-function selectContract(
-  state: BiddingState,
-  action: BiddingAction,
-  contract: SelectedContract,
-): BiddingState {
-  const record: BiddingActionRecord = {
-    actionId: action.actionId,
-    turnNumber: state.turnNumber,
-    seat: state.actingSeat,
-    phase: state.phase as "FIRST_ROUND" | "SECOND_ROUND",
-    action: action.type,
-    stateVersion: state.stateVersion + 1,
-  };
-
-  return {
-    ...state,
-    phase: "CONTRACT_SELECTED",
-    selectedContract: contract,
-    stateVersion: state.stateVersion + 1,
-    history: [...state.history, record],
-    processedActionIds: [...state.processedActionIds, action.actionId],
-  };
-}
-
-export function legalBiddingActions(
-  state: BiddingState,
-  dealerSeat: Seat,
-  exposedSuit: Suit | null,
-  hands: BiddingHands,
-): readonly BiddingAction["type"][] {
-  if (state.phase !== "FIRST_ROUND" && state.phase !== "SECOND_ROUND") return [];
-  const actions: BiddingAction["type"][] = ["PASS"];
-  const actingHand = hands[state.actingSeat] ?? [];
-  const kashoCount = actingHand.filter((id) => /-(7|8|9)$/.test(id)).length;
-  if (state.phase === "FIRST_ROUND" && kashoCount >= 5) actions.push("DECLARE_KASHO");
-  if (state.phase === "FIRST_ROUND") {
-    if (exposedSuit !== null) actions.push("BUY_HOKUM_EXPOSED");
-    actions.push("BUY_SUN");
-    if (firstRoundAshkalEligible(state.actingSeat, dealerSeat)) actions.push("BUY_ASHKAL");
-  } else {
-    const actingHand = hands[state.actingSeat] ?? [];
-    const hasAce = actingHand.some((id) => id.endsWith("-A"));
-    if (state.actingSeat === nextCounterClockwise(dealerSeat) && hasAce) actions.push("BUY_SUN");
-    for (const suit of ["CLUBS", "DIAMONDS", "HEARTS", "SPADES"] as const) {
-      if (suit !== exposedSuit) actions.push("BUY_HOKUM");
-    }
-  }
-  return actions;
-}
-
 export function applyBiddingAction(
   state: BiddingState,
   action: BiddingAction,
   dealerSeat: Seat,
   exposedCardId: CardId | null,
-  cards: Readonly<Record<CardId, { readonly suit: Suit }>>,
+  cards: Readonly<Record<CardId, { readonly suit: Suit }>> | null,
   hands: BiddingHands = { NORTH: [], EAST: [], SOUTH: [], WEST: [] },
 ): BiddingState {
   if (hasProcessed(state, action.actionId)) return state;
@@ -176,7 +92,9 @@ export function applyBiddingAction(
     throw new Error("Bidding is not active");
   }
 
-  const exposedSuit = exposedCardId === null ? null : cards[exposedCardId]?.suit ?? null;
+  const exposedSuit = exposedCardId === null || cards === null
+    ? null
+    : cards[exposedCardId]?.suit ?? null;
   if (state.actingSeat === undefined) throw new Error("Missing acting seat");
 
   if (action.type === "DECLARE_KASHO") {
@@ -184,18 +102,19 @@ export function applyBiddingAction(
     const actingHand = hands[state.actingSeat] ?? [];
     const kashoCount = actingHand.filter((id) => /-(7|8|9)$/.test(id)).length;
     if (kashoCount < 5) throw new Error("Kasho requires five cards of ranks 7/8/9");
+    const historyEntry: BiddingActionRecord = {
+      actionId: action.actionId,
+      turnNumber: state.turnNumber,
+      seat: state.actingSeat,
+      phase: "FIRST_ROUND",
+      action: action.type,
+      stateVersion: state.stateVersion + 1,
+    };
     return {
       ...state,
       phase: "CANCELLED",
       stateVersion: state.stateVersion + 1,
-      history: [{
-        actionId: action.actionId,
-        turnNumber: state.turnNumber,
-        seat: state.actingSeat,
-        phase: "FIRST_ROUND",
-        action: action.type,
-        stateVersion: state.stateVersion + 1,
-      }, ...state.history].reverse(),
+      history: [...state.history, historyEntry],
       processedActionIds: [...state.processedActionIds, action.actionId],
       cancellationReason: "KASHO",
       nextDealerSeat: nextCounterClockwise(dealerSeat),
@@ -203,124 +122,3 @@ export function applyBiddingAction(
   }
 
   if (action.type === "PASS") {
-    const next = nextTurn(state, dealerSeat, action);
-    if (state.phase === "FIRST_ROUND" && next.passCount >= SEATS.length) {
-      return {
-        ...next,
-        phase: "SECOND_ROUND",
-        actingSeat: nextCounterClockwise(dealerSeat),
-        passCount: 0,
-      };
-    }
-    if (state.phase === "SECOND_ROUND" && next.passCount >= SEATS.length) {
-      return {
-        ...next,
-        phase: "CANCELLED",
-        cancellationReason: "ALL_PASS",
-        nextDealerSeat: nextCounterClockwise(dealerSeat),
-      };
-    }
-    return next;
-  }
-
-  if (state.phase === "FIRST_ROUND") {
-    if (action.type === "BUY_HOKUM_EXPOSED") {
-      if (exposedSuit === null) throw new Error("No exposed card");
-      return selectContract(state, action, {
-        contract: "HOKUM",
-        purchaserSeat: state.actingSeat,
-        source: "FIRST_ROUND",
-        trumpSuit: exposedSuit,
-        mode: "NORMAL",
-        exposedCardReceiverSeat: state.actingSeat,
-      });
-    }
-
-    if (action.type === "BUY_SUN") {
-      return selectContract(state, action, {
-        contract: "SUN",
-        purchaserSeat: state.actingSeat,
-        source: "FIRST_ROUND",
-        trumpSuit: null,
-        mode: "NORMAL",
-        exposedCardReceiverSeat: state.actingSeat,
-      });
-    }
-
-    if (action.type === "BUY_ASHKAL") {
-      if (!firstRoundAshkalEligible(state.actingSeat, dealerSeat)) {
-        throw new Error("Ashkal is not eligible for this seat");
-      }
-      return selectContract(state, action, {
-        contract: "SUN",
-        purchaserSeat: state.actingSeat,
-        source: "FIRST_ROUND",
-        trumpSuit: null,
-        mode: "ASHKAL",
-        exposedCardReceiverSeat: partnerOfSeat(state.actingSeat),
-      });
-    }
-
-    throw new Error("Invalid first-round action");
-  }
-
-  if (action.type === "BUY_HOKUM") {
-    if (action.suit === exposedSuit) throw new Error("Second-round Hokum must differ from exposed suit");
-    return selectContract(state, action, {
-      contract: "HOKUM",
-      purchaserSeat: state.actingSeat,
-      source: "SECOND_ROUND",
-      trumpSuit: action.suit,
-      mode: "NORMAL",
-      exposedCardReceiverSeat: state.actingSeat,
-    });
-  }
-
-  if (action.type === "BUY_SUN") {
-    const hasAce = (hands[state.actingSeat] ?? []).some((id) => id.endsWith("-A"));
-    if (state.actingSeat !== nextCounterClockwise(dealerSeat) || !hasAce) {
-      throw new Error("Second-round Sun requires the dealer-right Ace priority");
-    }
-    return selectContract(state, action, {
-      contract: "SUN",
-      purchaserSeat: state.actingSeat,
-      source: "SECOND_ROUND",
-      trumpSuit: null,
-      mode: "NORMAL",
-      exposedCardReceiverSeat: state.actingSeat,
-    });
-  }
-
-  throw new Error("Invalid second-round action");
-}
-
-export function applyBiddingTimeout(
-  state: BiddingState,
-  dealerSeat: Seat,
-  elapsedMs: number,
-  timeoutActionId: string,
-): BiddingState {
-  if (elapsedMs < BIDDING_TIMEOUT_MS) {
-    throw new Error("Bidding timeout has not elapsed");
-  }
-  if (state.phase !== "FIRST_ROUND" && state.phase !== "SECOND_ROUND") {
-    return state;
-  }
-  return applyBiddingAction(
-    state,
-    { type: "PASS", actionId: timeoutActionId },
-    dealerSeat,
-    null,
-    {},
-  );
-}
-
-export function finalizeBiddingDeal(
-  deal: DealState,
-  bidding: BiddingState,
-): DealState {
-  if (bidding.phase !== "CONTRACT_SELECTED" || bidding.selectedContract === null) {
-    throw new Error("Contract is not selected");
-  }
-  return completeDeal(deal, bidding.selectedContract.exposedCardReceiverSeat);
-}
