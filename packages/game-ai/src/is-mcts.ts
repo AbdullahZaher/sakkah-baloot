@@ -1,5 +1,4 @@
 import {
-  CARDS_PER_PLAYER,
   cardRawValue,
   getLegalMoves,
   applyCardPlay,
@@ -45,10 +44,10 @@ export function chooseISMCTSCard(
   );
 
   const iterations = Math.max(1, Math.floor(config.iterations));
-  for (let i = 0; i < iterations; i += 1) {
-    const world = sampleHiddenWorld(input, rng);
-    if (!worldMatchesBelief(world, belief)) continue;
+  const worlds = sampleBeliefWorlds(input, belief, iterations, `${config.seed}:worlds`);
 
+  for (let i = 0; i < iterations; i += 1) {
+    const world = worlds[i]!.world;
     const selected = selectRoot([...stats.keys()], stats, i + 1);
     const state = buildSimulationState(observation, world.hands);
     const next = applyCardPlay(state, observation.playerId, selected);
@@ -73,33 +72,10 @@ export function chooseISMCTSCard(
 
 function buildInformationSetInput(observation: AIRoundObservation) {
   const playing = observation.playing!;
-  const allPlayerIds = Object.keys(playing.game.players);
-  const playedCounts = Object.fromEntries(
-    allPlayerIds.map((playerId) => [
-      playerId,
-      [
-        ...playing.game.completedTricks.flatMap((trick) => trick.plays),
-        ...playing.game.currentTrick,
-      ].filter((play) => play.playerId === playerId).length,
-    ]),
-  ) as Record<PlayerId, number>;
-
-  const hands = Object.fromEntries(
-    allPlayerIds.map((playerId) => [
-      playerId,
-      playerId === observation.playerId
-        ? playing.game.ownHand
-        : Array.from({ length: CARDS_PER_PLAYER - playedCounts[playerId]! }, (_, index) =>
-            placeholderCard(`HIDDEN-${playerId}-${index}`),
-          ),
-    ]),
-  ) as Readonly<Record<PlayerId, readonly Card[]>>;
-
   return {
     playerId: observation.playerId,
     ownHand: playing.game.ownHand,
     game: {
-      hands,
       players: playing.game.players,
       currentTrick: playing.game.currentTrick,
       completedTricks: playing.game.completedTricks,
@@ -107,28 +83,6 @@ function buildInformationSetInput(observation: AIRoundObservation) {
     contract: playing.contract,
     trumpSuit: playing.trumpSuit,
   };
-}
-
-function placeholderCard(id: string): Card {
-  return {
-    id: id as CardId,
-    suit: "CLUBS",
-    rank: "7",
-  };
-}
-
-function worldMatchesBelief(
-  world: { readonly hands: Readonly<Record<PlayerId, readonly Card[]>> },
-  belief: BeliefState,
-): boolean {
-  for (const [cardId, owners] of Object.entries(belief.possibleOwners)) {
-    const owner = Object.entries(world.hands).find(([, hand]) =>
-      hand.some((card) => card.id === cardId),
-    )?.[0];
-
-    if (owner && !owners.includes(owner)) return false;
-  }
-  return true;
 }
 
 function selectRoot(ids: readonly CardId[], stats: Map<CardId, RootStat>, total: number): CardId {
