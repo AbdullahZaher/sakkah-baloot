@@ -21,10 +21,10 @@ import {
 } from "@sakkah-baloot/game-engine";
 
 const PLAYER_IDS: Readonly<Record<Seat, PlayerId>> = {
-  NORTH: "NORTH",
-  EAST: "EAST",
-  SOUTH: "SOUTH",
-  WEST: "WEST",
+  NORTH: "NORTH_PLAYER",
+  EAST: "EAST_PLAYER",
+  SOUTH: "SOUTH_PLAYER",
+  WEST: "WEST_PLAYER",
 };
 
 export interface LocalPreview {
@@ -56,6 +56,7 @@ function cardsById(): Map<CardId, Card> {
 function buildGameState(deal: DealState, bidding: BiddingState): GameState {
   const selected = bidding.selectedContract;
   if (selected === null) throw new Error("Cannot start playing without a selected contract");
+
   const hands = Object.fromEntries(
     (Object.keys(PLAYER_IDS) as Seat[]).map((seat) => [
       PLAYER_IDS[seat],
