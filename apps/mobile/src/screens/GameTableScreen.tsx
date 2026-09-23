@@ -1,12 +1,11 @@
 import { useState } from "react";
 import { StyleSheet, View } from "react-native";
-import { createLocalBiddingSession } from "@sakkah-baloot/game-client";
+import { createLocalBiddingSession, type LocalBiddingSession } from "@sakkah-baloot/game-client";
 import { GameTable } from "@sakkah-baloot/ui";
 
-const session = createLocalBiddingSession();
-
 export function GameTableScreen() {
-  const [preview, setPreview] = useState(session.getSnapshot);
+  const [session] = useState<LocalBiddingSession>(createLocalBiddingSession);
+  const [preview, setPreview] = useState(() => session.getSnapshot());
 
   return (
     <View style={styles.root}>
