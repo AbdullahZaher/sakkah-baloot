@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {
   simulateMatch,
   simulateMatchBatch,
-} from "../dist/index.js";
+} from "../src/index.ts";
 
 const aiPlayers = [
   {
