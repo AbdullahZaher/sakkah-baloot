@@ -6,7 +6,7 @@ import {
   simulateMatch,
   simulateMatchBatch,
   replayCardPlayRound,
-} from "../dist/index.js";
+} from "../src/index.ts";
 
 function card(id) {
   const [suit, rank] = id.split("-");
