@@ -4,7 +4,6 @@
     "module": "ES2022",
     "moduleResolution": "Bundler",
     "noEmit": true,
-    "baseUrl": ".",
     "paths": { "@sakkah-baloot/game-ai": ["../game-ai/src/index.ts"] }
   },
   "include": ["src/**/*.ts"]
