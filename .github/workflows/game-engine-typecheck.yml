@@ -57,4 +57,37 @@ jobs:
           with urllib.request.urlopen(req) as response:
               print(response.read().decode())
           PY
-      - run: npm test
+      - name: Test
+        run: |
+          set -o pipefail
+          npm test 2>&1 | tee /tmp/test.log
+      - name: Persist test diagnostics
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_SHA: ${{ github.sha }}
+        run: |
+          python3 - <<'PY'
+          import base64, json, os, urllib.request
+          log = open("/tmp/test.log", "r", encoding="utf-8").read()
+          body = f"Commit: {os.environ['GITHUB_SHA']}\\n\\n{log}"
+          payload = json.dumps({
+              "message": "ci: persist test diagnostics",
+              "content": base64.b64encode(body.encode()).decode(),
+              "branch": os.environ["GITHUB_REF_NAME"],
+          }).encode()
+          req = urllib.request.Request(
+              f"https://api.github.com/repos/{os.environ['GITHUB_REPOSITORY']}/contents/ci/test-error-${{GITHUB_SHA}}.txt",
+              data=payload,
+              method="PUT",
+              headers={
+                  "Authorization": f"Bearer {os.environ['GH_TOKEN']}",
+                  "Accept": "application/vnd.github+json",
+                  "X-GitHub-Api-Version": "2022-11-28",
+                  "Content-Type": "application/json",
+              },
+          )
+          with urllib.request.urlopen(req) as response:
+              print(response.read().decode())
+          PY
