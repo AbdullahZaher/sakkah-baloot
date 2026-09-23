@@ -124,64 +124,175 @@ const matchupResults = [
   runMatchupBenchmark("Endgame Enhanced (NS) vs Baseline Normal (EW)", endgameEnhancedPolicy, baselineNormal, 50),
 ];
 
-// --- 3. Endgame Threshold Sweeps (4, 6, 8, 10, 12 cards) ---
-console.log(">>> [4/4] Running Endgame Solver Threshold Sweeps (4, 6, 8, 10, 12 cards)...");
+// --- 3. Endgame Threshold Sweeps (4, 6, 8, 10, 12 cards) & Oracle Agreement ---
+console.log(">>> [4/4] Running Endgame Solver Threshold Sweeps (4, 6, 8, 10, 12 cards) with Oracle Comparison...\n");
+
+import {
+  applyCardPlay,
+  getLegalMoves,
+  createSeededRandom,
+  teamOfSeat,
+  cardRawValue,
+} from "@sakkah-baloot/game-engine";
+
+function cardHelper(id) {
+  const [suit, rank] = id.split("-");
+  return { id, suit, rank };
+}
+
+function generateEndgameStatesForSize(targetCards, count = 20) {
+  const states = [];
+  let seedNum = 1;
+  const SUITS = ["CLUBS", "DIAMONDS", "HEARTS", "SPADES"];
+  const RANKS = ["7", "8", "9", "10", "J", "Q", "K", "A"];
+  const ALL_CARDS = SUITS.flatMap((s) => RANKS.map((r) => `${s}-${r}`));
+
+  while (states.length < count && seedNum < 500) {
+    const roundId = `endgame-bench-${targetCards}-${seedNum++}`;
+    const rng = createSeededRandom(roundId);
+    
+    const shuffled = [...ALL_CARDS].sort(() => rng.next() - 0.5);
+    const selected = shuffled.slice(0, targetCards);
+    
+    const hands = {
+      NORTH_PLAYER: [],
+      EAST_PLAYER: [],
+      SOUTH_PLAYER: [],
+      WEST_PLAYER: [],
+    };
+    const playerIds = ["NORTH_PLAYER", "EAST_PLAYER", "SOUTH_PLAYER", "WEST_PLAYER"];
+    selected.forEach((id, idx) => {
+      hands[playerIds[idx % 4]].push(cardHelper(id));
+    });
+
+    const isSun = seedNum % 2 === 0;
+    const trumpSuit = isSun ? null : SUITS[Math.floor(rng.next() * 4)];
+
+    const state = {
+      phase: "PLAYING",
+      currentPlayerId: playerIds[Math.floor(rng.next() * 4)],
+      players: {
+        NORTH_PLAYER: "NORTH",
+        EAST_PLAYER: "EAST",
+        SOUTH_PLAYER: "SOUTH",
+        WEST_PLAYER: "WEST",
+      },
+      hands,
+      contract: isSun ? "SUN" : "HOKUM",
+      trumpSuit,
+      hokumPlayMode: "OPEN",
+      dealerSeat: "WEST",
+      trickNumber: 8 - Math.floor(targetCards / 4),
+      currentTrick: [],
+      completedTricks: [],
+    };
+
+    const legal = getLegalMoves(state, state.currentPlayerId);
+    if (legal.length > 0) {
+      states.push(state);
+    }
+  }
+  return states;
+}
+
+function exhaustiveOracle(state, rootPlayerId) {
+  const rootTeam = teamOfSeat(state.players[rootPlayerId]);
+  const memo = new Map();
+
+  function minimaxOracle(st) {
+    if (st.phase !== "PLAYING") {
+      return st.completedTricks.reduce((score, trick) => {
+        const points = trick.plays.reduce(
+          (sum, play) => sum + cardRawValue(play.card, st.contract, st.trumpSuit),
+          0,
+        );
+        return score + (teamOfSeat(trick.winnerSeat) === rootTeam ? points : -points);
+      }, 0);
+    }
+
+    const legal = getLegalMoves(st, st.currentPlayerId);
+    if (legal.length === 0) return 0;
+
+    const key = JSON.stringify({
+      cp: st.currentPlayerId,
+      h: Object.entries(st.hands).map(([k, v]) => [k, v.map((c) => c.id).sort()]),
+      ct: st.currentTrick.map((p) => p.card.id),
+      tr: st.completedTricks.length,
+    });
+    if (memo.has(key)) return memo.get(key);
+
+    const maximizing = teamOfSeat(st.players[st.currentPlayerId]) === rootTeam;
+    let best = maximizing ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY;
+
+    for (const move of legal) {
+      const next = applyCardPlay(st, st.currentPlayerId, move.cardId);
+      const val = minimaxOracle(next);
+      best = maximizing ? Math.max(best, val) : Math.min(best, val);
+    }
+
+    memo.set(key, best);
+    return best;
+  }
+
+  const legal = getLegalMoves(state, state.currentPlayerId);
+  let bestCard = legal[0]?.cardId;
+  let bestVal = Number.NEGATIVE_INFINITY;
+  for (const move of legal) {
+    const next = applyCardPlay(state, state.currentPlayerId, move.cardId);
+    const val = minimaxOracle(next);
+    if (val > bestVal || (val === bestVal && move.cardId.localeCompare(bestCard) < 0)) {
+      bestVal = val;
+      bestCard = move.cardId;
+    }
+  }
+
+  return { cardId: bestCard, value: bestVal };
+}
 
 function runEndgameThresholdSweep() {
   const thresholds = [4, 6, 8, 10, 12];
   const maxNodesLimit = 5000;
   const results = [];
 
+  console.log("  Threshold | States | Exact | Cutoff | Oracle Agreement | Avg Nodes | Max Nodes | Time (ms) | Avg Latency");
+  console.log("  ----------|--------|-------|--------|------------------|-----------|-----------|-----------|------------");
+
   for (const threshold of thresholds) {
+    const states = generateEndgameStatesForSize(threshold, 20);
     let totalNodes = 0;
+    let maxNodes = 0;
     let exactCount = 0;
-    let totalCalls = 0;
+    let cutoffCount = 0;
+    let oracleMatches = 0;
     const tStart = performance.now();
 
-    for (let i = 0; i < 50; i += 1) {
-      const sampleState = {
-        phase: "PLAYING",
-        currentPlayerId: "NORTH_PLAYER",
-        players: {
-          NORTH_PLAYER: "NORTH",
-          EAST_PLAYER: "EAST",
-          SOUTH_PLAYER: "SOUTH",
-          WEST_PLAYER: "WEST",
-        },
-        hands: {
-          NORTH_PLAYER: [{ id: "SPADES-A", suit: "SPADES", rank: "A" }],
-          EAST_PLAYER: [{ id: "SPADES-10", suit: "SPADES", rank: "10" }],
-          SOUTH_PLAYER: [{ id: "SPADES-K", suit: "SPADES", rank: "K" }],
-          WEST_PLAYER: [{ id: "SPADES-Q", suit: "SPADES", rank: "Q" }],
-        },
-        contract: "SUN",
-        trumpSuit: null,
-        hokumPlayMode: "OPEN",
-        dealerSeat: "WEST",
-        trickNumber: 8,
-        currentTrick: [],
-        completedTricks: [],
-      };
-
-      const decision = solveEndgame(sampleState, "NORTH_PLAYER", {
+    for (const st of states) {
+      const decision = solveEndgame(st, st.currentPlayerId, {
         maxRemainingCards: threshold,
         maxNodes: maxNodesLimit,
       });
+      const oracle = exhaustiveOracle(st, st.currentPlayerId);
 
       if (decision) {
-        totalCalls += 1;
         totalNodes += decision.nodes;
+        maxNodes = Math.max(maxNodes, decision.nodes);
         if (decision.exact) exactCount += 1;
+        else cutoffCount += 1;
+        if (decision.cardId === oracle.cardId || decision.value === oracle.value) {
+          oracleMatches += 1;
+        }
       }
     }
 
     const tEnd = performance.now();
     const durationMs = tEnd - tStart;
-    const avgNodes = totalCalls > 0 ? (totalNodes / totalCalls).toFixed(1) : "0";
-    const exactRate = totalCalls > 0 ? ((exactCount / totalCalls) * 100).toFixed(1) : "0";
+    const avgNodes = (totalNodes / states.length).toFixed(1);
+    const avgLatency = (durationMs / states.length).toFixed(3) + " ms";
+    const oracleAgreePct = ((oracleMatches / states.length) * 100).toFixed(0);
+    const agreementStr = `${oracleMatches}/${states.length} (${oracleAgreePct}%)`;
 
-    console.log(`  Threshold: ${threshold} cards | Total Calls: ${totalCalls} | Exact: ${exactRate}% | Avg Nodes: ${avgNodes} | Time: ${durationMs.toFixed(2)} ms`);
-    results.push({ threshold, totalCalls, exactRate, avgNodes, durationMs });
+    console.log(`  ${threshold.toString().padEnd(9)} | ${states.length.toString().padEnd(6)} | ${exactCount.toString().padEnd(5)} | ${cutoffCount.toString().padEnd(6)} | ${agreementStr.padEnd(16)} | ${avgNodes.padEnd(9)} | ${maxNodes.toString().padEnd(9)} | ${durationMs.toFixed(2).padEnd(9)} | ${avgLatency}`);
+    results.push({ threshold, statesCount: states.length, exactCount, cutoffCount, oracleMatches, oracleAgreePct, avgNodes, maxNodes, durationMs, avgLatency });
   }
 
   return results;
@@ -192,3 +303,4 @@ const sweepResults = runEndgameThresholdSweep();
 console.log("\n================================================================================");
 console.log("                     BENCHMARK SUITE COMPLETE");
 console.log("================================================================================");
+

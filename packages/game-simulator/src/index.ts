@@ -722,7 +722,48 @@ function assertGameStateConservation(state: GameState): void {
   }
 }
 
-function assertReplayEquivalent(
+export function serializeGameStateCanonical(state: GameState): string {
+  const normalizedHands = Object.entries(state.hands)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([playerId, hand]) => [playerId, hand.map((c) => c.id).sort()]);
+
+  const normalizedCurrentTrick = state.currentTrick.map((p) => ({
+    playerId: p.playerId,
+    seat: p.seat,
+    cardId: p.card.id,
+    ikaDeclared: p.ikaDeclared,
+    sequence: p.sequence,
+  }));
+
+  const normalizedCompletedTricks = state.completedTricks.map((t) => ({
+    trickNumber: t.trickNumber,
+    leaderSeat: t.leaderSeat,
+    winnerSeat: t.winnerSeat,
+    plays: t.plays.map((p) => ({
+      playerId: p.playerId,
+      seat: p.seat,
+      cardId: p.card.id,
+      ikaDeclared: p.ikaDeclared,
+      sequence: p.sequence,
+    })),
+  }));
+
+  return JSON.stringify({
+    phase: state.phase,
+    currentPlayerId: state.currentPlayerId,
+    dealerSeat: state.dealerSeat,
+    contract: state.contract,
+    trumpSuit: state.trumpSuit,
+    hokumPlayMode: state.hokumPlayMode,
+    trickNumber: state.trickNumber,
+    players: Object.entries(state.players).sort(([a], [b]) => a.localeCompare(b)),
+    hands: normalizedHands,
+    currentTrick: normalizedCurrentTrick,
+    completedTricks: normalizedCompletedTricks,
+  });
+}
+
+export function assertReplayEquivalent(
   initial: GameState,
   played: readonly CardId[],
   expected: GameState,
@@ -730,18 +771,43 @@ function assertReplayEquivalent(
   let replay = cloneGameState(initial);
   for (const cardId of played) {
     const playerId = replay.currentPlayerId;
-    if (!getLegalMoves(replay, playerId).some((move) => move.cardId === cardId)) {
-      throw new Error(`Replay divergence: illegal replay card ${cardId}`);
+    const legalMoves = getLegalMoves(replay, playerId);
+    if (!legalMoves.some((move) => move.cardId === cardId)) {
+      throw new Error(`Replay divergence: illegal replay card ${cardId} for player ${playerId}`);
     }
     replay = applyCardPlay(replay, playerId, cardId);
   }
 
-  if (
-    replay.currentPlayerId !== expected.currentPlayerId ||
-    replay.trickNumber !== expected.trickNumber ||
-    replay.completedTricks.length !== expected.completedTricks.length ||
-    JSON.stringify(replay.completedTricks) !== JSON.stringify(expected.completedTricks)
-  ) {
-    throw new Error("Replay divergence detected");
+  if (replay.phase !== expected.phase) {
+    throw new Error(`Replay divergence: phase mismatch (replayed: ${replay.phase}, expected: ${expected.phase})`);
+  }
+  if (replay.currentPlayerId !== expected.currentPlayerId) {
+    throw new Error(`Replay divergence: currentPlayerId mismatch (replayed: ${replay.currentPlayerId}, expected: ${expected.currentPlayerId})`);
+  }
+  if (replay.dealerSeat !== expected.dealerSeat) {
+    throw new Error(`Replay divergence: dealerSeat mismatch (replayed: ${replay.dealerSeat}, expected: ${expected.dealerSeat})`);
+  }
+  if (replay.contract !== expected.contract) {
+    throw new Error(`Replay divergence: contract mismatch (replayed: ${replay.contract}, expected: ${expected.contract})`);
+  }
+  if (replay.trumpSuit !== expected.trumpSuit) {
+    throw new Error(`Replay divergence: trumpSuit mismatch (replayed: ${replay.trumpSuit}, expected: ${expected.trumpSuit})`);
+  }
+  if (replay.hokumPlayMode !== expected.hokumPlayMode) {
+    throw new Error(`Replay divergence: hokumPlayMode mismatch (replayed: ${replay.hokumPlayMode}, expected: ${expected.hokumPlayMode})`);
+  }
+  if (replay.trickNumber !== expected.trickNumber) {
+    throw new Error(`Replay divergence: trickNumber mismatch (replayed: ${replay.trickNumber}, expected: ${expected.trickNumber})`);
+  }
+  if (replay.completedTricks.length !== expected.completedTricks.length) {
+    throw new Error(`Replay divergence: completedTricks length mismatch (replayed: ${replay.completedTricks.length}, expected: ${expected.completedTricks.length})`);
+  }
+
+  const replayCanonical = serializeGameStateCanonical(replay);
+  const expectedCanonical = serializeGameStateCanonical(expected);
+
+  if (replayCanonical !== expectedCanonical) {
+    throw new Error(`Replay divergence: canonical state mismatch.\nReplayed: ${replayCanonical}\nExpected: ${expectedCanonical}`);
   }
 }
+

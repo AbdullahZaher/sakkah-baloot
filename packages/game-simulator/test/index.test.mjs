@@ -151,3 +151,39 @@ test("10,000 full-match deterministic validation has zero illegal actions", () =
   assert.equal(result.finishedMatches + result.maxRoundTerminations, 10000);
   assert.ok(result.deterministicDigest.length > 0);
 });
+
+test("assertReplayEquivalent validates full canonical state equality", async () => {
+  const { assertReplayEquivalent } = await import("../dist/index.js");
+  const initial = state();
+  const result = simulateCardPlayRound(initial, firstLegalPolicy, "replay-full");
+  
+  // Identical replay succeeds
+  assert.doesNotThrow(() => {
+    assertReplayEquivalent(initial, result.playedCardIds, result.final);
+  });
+
+  // Mutated currentPlayerId is detected
+  assert.throws(() => {
+    const mutated = { ...result.final, currentPlayerId: "EAST" };
+    assertReplayEquivalent(initial, result.playedCardIds, mutated);
+  }, /Replay divergence/);
+
+  // Mutated trickNumber is detected
+  assert.throws(() => {
+    const mutated = { ...result.final, trickNumber: 1 };
+    assertReplayEquivalent(initial, result.playedCardIds, mutated);
+  }, /Replay divergence/);
+
+  // Mutated contract is detected
+  assert.throws(() => {
+    const mutated = { ...result.final, contract: "HOKUM" };
+    assertReplayEquivalent(initial, result.playedCardIds, mutated);
+  }, /Replay divergence/);
+
+  // Mutated completedTricks is detected
+  assert.throws(() => {
+    const mutated = { ...result.final, completedTricks: [] };
+    assertReplayEquivalent(initial, result.playedCardIds, mutated);
+  }, /Replay divergence/);
+});
+
