@@ -1,8 +1,10 @@
 import {
+  CARDS_PER_PLAYER,
   cardRawValue,
   getLegalMoves,
   applyCardPlay,
   teamOfSeat,
+  type Card,
   type CardId,
   type GameState,
   type PlayerId,
@@ -35,58 +37,112 @@ export function chooseISMCTSCard(
   if (!observation.playing) throw new Error("IS-MCTS requires PLAYING observation");
   if (observation.playing.game.legalCardIds.length === 0) throw new Error("No legal card actions");
 
+  const input = buildInformationSetInput(observation);
   const rng = createSeededRng(config.seed);
   const stats = new Map<CardId, RootStat>(
     observation.playing.game.legalCardIds.map((id) => [id, { visits: 0, value: 0 }]),
   );
 
-  const input = {
-    playerId: observation.playerId,
-    ownHand: observation.playing.game.ownHand,
-    game: {
-      hands: Object.fromEntries(
-        Object.entries(observation.playing.game.players).map(([id]) => [id, observation.playing!.game.ownHand]),
-      ),
-      players: observation.playing.game.players,
-      currentTrick: observation.playing.game.currentTrick,
-      completedTricks: observation.playing.game.completedTricks,
-    },
-    currentTrick: observation.playing.game.currentTrick,
-    completedTricks: observation.playing.game.completedTricks,
-    contract: observation.playing.contract,
-    trumpSuit: observation.playing.trumpSuit,
-  };
-
-  const iterations = Math.max(1, config.iterations);
+  const iterations = Math.max(1, Math.floor(config.iterations));
   for (let i = 0; i < iterations; i += 1) {
     const world = sampleHiddenWorld(input, rng);
-    const actionIds = [...stats.keys()];
-    const selected = selectRoot(actionIds, stats, i + 1);
+    if (!worldMatchesBelief(world, belief)) continue;
+
+    const selected = selectRoot([...stats.keys()], stats, i + 1);
     const state = buildSimulationState(observation, world.hands);
     const next = applyCardPlay(state, observation.playerId, selected);
     const value = rolloutValue(next, observation.playerId, rng);
+
     const stat = stats.get(selected)!;
     stat.visits += 1;
     stat.value += value;
   }
 
-  return [...stats.entries()]
-    .sort((a, b) => {
-      const av = a[1].value / Math.max(1, a[1].visits);
-      const bv = b[1].value / Math.max(1, b[1].visits);
-      return bv - av || a[0].localeCompare(b[0]);
-    })
+  const decisions = [...stats.entries()]
     .map(([cardId, stat]) => ({
       cardId,
       visits: stat.visits,
       value: stat.value / Math.max(1, stat.visits),
-    }))[0]!;
+    }))
+    .sort((a, b) => b.value - a.value || b.visits - a.visits || a.cardId.localeCompare(b.cardId));
+
+  const selected = decisions[0]!;
+  return selected;
+}
+
+function buildInformationSetInput(observation: AIRoundObservation) {
+  const playing = observation.playing!;
+  const allPlayerIds = Object.keys(playing.game.players);
+  const playedCounts = Object.fromEntries(
+    allPlayerIds.map((playerId) => [
+      playerId,
+      [
+        ...playing.game.completedTricks.flatMap((trick) => trick.plays),
+        ...playing.game.currentTrick,
+      ].filter((play) => play.playerId === playerId).length,
+    ]),
+  ) as Record<PlayerId, number>;
+
+  const hands = Object.fromEntries(
+    allPlayerIds.map((playerId) => [
+      playerId,
+      playerId === observation.playerId
+        ? playing.game.ownHand
+        : Array.from({ length: CARDS_PER_PLAYER - playedCounts[playerId]! }, (_, index) =>
+            placeholderCard(`HIDDEN-${playerId}-${index}`),
+          ),
+    ]),
+  ) as Readonly<Record<PlayerId, readonly Card[]>>;
+
+  return {
+    playerId: observation.playerId,
+    ownHand: playing.game.ownHand,
+    game: {
+      hands,
+      players: playing.game.players,
+      currentTrick: playing.game.currentTrick,
+      completedTricks: playing.game.completedTricks,
+    },
+    contract: playing.contract,
+    trumpSuit: playing.trumpSuit,
+  };
+}
+
+function placeholderCard(id: string): Card {
+  return {
+    id: id as CardId,
+    suit: "CLUBS",
+    rank: "7",
+  };
+}
+
+function worldMatchesBelief(
+  world: { readonly hands: Readonly<Record<PlayerId, readonly Card[]>> },
+  belief: BeliefState,
+): boolean {
+  for (const [cardId, owners] of Object.entries(belief.possibleOwners)) {
+    const owner = Object.entries(world.hands).find(([, hand]) =>
+      hand.some((card) => card.id === cardId),
+    )?.[0];
+
+    if (owner && !owners.includes(owner)) return false;
+  }
+  return true;
 }
 
 function selectRoot(ids: readonly CardId[], stats: Map<CardId, RootStat>, total: number): CardId {
-  for (const id of ids) if (stats.get(id)!.visits === 0) return id;
-  const logTotal = Math.log(total);
-  return [...ids].sort((a, b) => ucb(stats.get(b)!, logTotal) - ucb(stats.get(a)!, logTotal) || a.localeCompare(b))[0]!;
+  for (const id of ids) {
+    if (stats.get(id)!.visits === 0) return id;
+  }
+
+  const logTotal = Math.log(Math.max(2, total));
+  return [...ids]
+    .sort(
+      (a, b) =>
+        ucb(stats.get(b)!, logTotal) -
+        ucb(stats.get(a)!, logTotal) ||
+        a.localeCompare(b),
+    )[0]!;
 }
 
 function ucb(stat: RootStat, logTotal: number): number {
@@ -95,7 +151,7 @@ function ucb(stat: RootStat, logTotal: number): number {
 
 function buildSimulationState(
   observation: AIRoundObservation,
-  hands: Readonly<Record<PlayerId, readonly import("@sakkah-baloot/game-engine").Card[]>>,
+  hands: Readonly<Record<PlayerId, readonly Card[]>>,
 ): GameState {
   const playing = observation.playing!;
   return {
@@ -113,7 +169,11 @@ function buildSimulationState(
   };
 }
 
-function rolloutValue(state: GameState, rootPlayerId: PlayerId, rng: ReturnType<typeof createSeededRng>): number {
+function rolloutValue(
+  state: GameState,
+  rootPlayerId: PlayerId,
+  rng: ReturnType<typeof createSeededRng>,
+): number {
   const rootTeam = teamOfSeat(state.players[rootPlayerId]!);
   let current = state;
 
