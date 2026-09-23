@@ -27,4 +27,4 @@ jobs:
       - run: pnpm --filter @sakkah-baloot/game-engine build
       - run: pnpm --filter @sakkah-baloot/game-ai build
       - run: pnpm --filter @sakkah-baloot/game-simulator build
-      - run: SIMULATION_GAMES=${{ matrix.games }} node packages/game-simulator/scripts/stress-simulation.mjs
+      - run: SIMULATION_GAMES=${{ matrix.games }} node --import tsx packages/game-simulator/scripts/stress-simulation.mjs
