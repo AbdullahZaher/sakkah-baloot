@@ -48,8 +48,10 @@ export function chooseAuthoritativeAIAction(
     throw new Error("AI controller requires an active bidding or playing phase");
   }
 
-  if (actionSpace.projects.length > 0 && observation.playing.game.currentTrick.length === 0) {
-    const candidate = [...actionSpace.projects].sort(
+  const undeclaredProjects = actionSpace.projects.filter((candidate) => !observation.projects.some((project) => project.candidate.id === candidate.id));
+
+  if (undeclaredProjects.length > 0 && observation.playing.game.currentTrick.length === 0) {
+    const candidate = [...undeclaredProjects].sort(
       (a, b) =>
         b.qaydValue - a.qaydValue ||
         b.rawValue - a.rawValue ||
