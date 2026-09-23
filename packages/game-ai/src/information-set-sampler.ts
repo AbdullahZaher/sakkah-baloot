@@ -39,11 +39,7 @@ export function sampleHiddenWorld(
   rng: SeededRng,
 ): HiddenWorld {
   const knownCards = collectKnownCards(input);
-  const knownIds = new Set(knownCards.map((card) => card.id));
-
-  if (knownIds.size !== knownCards.length) {
-    throw new Error("Information-set known cards contain duplicates");
-  }
+  const knownIds = new Set<CardId>(knownCards.map((card) => card.id));
 
   const deckById = new Map(DECK.map((card) => [card.id, card] as const));
   for (const card of knownCards) {
