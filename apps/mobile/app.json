@@ -1,0 +1,10 @@
+{
+  "expo": {
+    "name": "Sakkah Baloot",
+    "slug": "sakkah-baloot",
+    "version": "0.1.0",
+    "orientation": "landscape",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true
+  }
+}
