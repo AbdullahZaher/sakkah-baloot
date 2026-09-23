@@ -7,7 +7,8 @@ export interface InformationSetInput {
   readonly game: Pick<GameState, "players" | "currentTrick" | "completedTricks"> & {
     readonly hands?: Readonly<Record<PlayerId, readonly Card[]>>;
   };
-  readonly exposedCard?: Card | null;\n  readonly bidding?: BiddingState;
+  readonly exposedCard?: Card | null;
+  readonly bidding?: BiddingState;
   readonly contract: Contract;
   readonly trumpSuit: Suit | null;
   readonly bidding?: BiddingState | null;
