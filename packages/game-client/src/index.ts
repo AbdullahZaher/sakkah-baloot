@@ -25,8 +25,9 @@ export interface LocalPreview {
   readonly legalActions: readonly BiddingAction["type"][];
 }
 
-export interface LocalBiddingSession extends LocalPreview {
-  readonly dispatchBiddingAction: (type: BiddingAction["type"], suit?: Suit) => void;
+export interface LocalBiddingSession {
+  readonly getSnapshot: () => LocalPreview;
+  readonly dispatchBiddingAction: (type: BiddingAction["type"], suit?: Suit) => LocalPreview;
 }
 
 function cardMap(): Readonly<Record<CardId, Card>> {
@@ -37,68 +38,45 @@ function cardsById(): Map<CardId, Card> {
   return new Map(DECK.map((card) => [card.id, card]));
 }
 
-function buildPreview(
-  dealerSeat: Seat,
-  playerSeat: Seat,
-  deal: DealState,
-  bidding: BiddingState,
-): LocalPreview {
+function buildPreview(dealerSeat: Seat, playerSeat: Seat, deal: DealState, bidding: BiddingState): LocalPreview {
   const cards = cardsById();
-  const playerHand = deal.hands[playerSeat]
-    .map((id) => cards.get(id))
-    .filter((card): card is Card => card !== undefined);
+  const playerHand = deal.hands[playerSeat].map((id) => cards.get(id)).filter((card): card is Card => card !== undefined);
   const exposedCard = deal.exposedCardId === null ? null : cards.get(deal.exposedCardId) ?? null;
-  const legalActions = legalBiddingActions(
-    bidding,
-    dealerSeat,
-    exposedCard?.suit ?? null,
-    deal.hands,
-  );
-
+  const legalActions = legalBiddingActions(bidding, dealerSeat, exposedCard?.suit ?? null, deal.hands);
   return { dealerSeat, deal, bidding, playerSeat, playerHand, exposedCard, legalActions };
 }
 
 export function createLocalPreview(): LocalPreview {
   const dealerSeat: Seat = "NORTH";
   const playerSeat: Seat = "SOUTH";
-  const deal = createInitialDeal("ui-preview", dealerSeat, createSeededRandom("ui-preview"));
-  const bidding = createBiddingState("ui-preview", dealerSeat);
-  return buildPreview(dealerSeat, playerSeat, deal, bidding);
+  return buildPreview(
+    dealerSeat,
+    playerSeat,
+    createInitialDeal("ui-preview", dealerSeat, createSeededRandom("ui-preview")),
+    createBiddingState("ui-preview", dealerSeat),
+  );
 }
 
 export function createLocalBiddingSession(): LocalBiddingSession {
   const dealerSeat: Seat = "NORTH";
   const playerSeat: Seat = "WEST";
-  const initialDeal = createInitialDeal("ui-preview", dealerSeat, createSeededRandom("ui-preview"));
-  let deal = initialDeal;
+  let deal = createInitialDeal("ui-preview", dealerSeat, createSeededRandom("ui-preview"));
   let bidding = createBiddingState("ui-preview", dealerSeat);
 
-  const session: LocalBiddingSession = {
-    ...buildPreview(dealerSeat, playerSeat, deal, bidding),
+  const getSnapshot = () => buildPreview(dealerSeat, playerSeat, deal, bidding);
+
+  return {
+    getSnapshot,
     dispatchBiddingAction: (type, suit) => {
-      const action: BiddingAction =
-        type === "BUY_HOKUM"
-          ? { type, actionId: `ui-${bidding.turnNumber + 1}-${type}-${suit ?? "NONE"}`, suit: suit ?? "CLUBS" }
-          : { type, actionId: `ui-${bidding.turnNumber + 1}-${type}` };
+      const snapshot = getSnapshot();
+      if (!snapshot.legalActions.includes(type)) throw new Error(`Illegal bidding action: ${type}`);
 
-      bidding = applyBiddingAction(
-        bidding,
-        action,
-        dealerSeat,
-        deal.exposedCardId,
-        cardMap(),
-        deal.hands as BiddingHands,
-      );
-      if (bidding.phase === "CONTRACT_SELECTED") {
-        deal = {
-          ...deal,
-          exposedCardId: deal.exposedCardId,
-        };
-      }
+      const action: BiddingAction = type === "BUY_HOKUM"
+        ? { type, actionId: `ui-${bidding.turnNumber + 1}-${type}-${suit ?? "NONE"}`, suit: suit ?? "CLUBS" }
+        : { type, actionId: `ui-${bidding.turnNumber + 1}-${type}` };
 
-      Object.assign(session, buildPreview(dealerSeat, playerSeat, deal, bidding));
+      bidding = applyBiddingAction(bidding, action, dealerSeat, deal.exposedCardId, cardMap(), deal.hands as BiddingHands);
+      return getSnapshot();
     },
   };
-
-  return session;
 }
