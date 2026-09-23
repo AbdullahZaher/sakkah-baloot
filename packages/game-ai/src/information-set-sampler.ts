@@ -1,10 +1,10 @@
 import type { Card, CardId, Contract, GameState, PlayerId, Suit } from "@sakkah-baloot/game-engine";
-import { DECK } from "@sakkah-baloot/game-engine";
+import { CARDS_PER_PLAYER, DECK } from "@sakkah-baloot/game-engine";
 
 export interface InformationSetInput {
   readonly playerId: PlayerId;
   readonly ownHand: readonly Card[];
-  readonly game: Pick<GameState, "hands" | "players" | "currentTrick" | "completedTricks">;
+  readonly game: Pick<GameState, "players" | "currentTrick" | "completedTricks"> & {\n    readonly hands?: Readonly<Record<PlayerId, readonly Card[]>>;\n  };
   readonly exposedCard?: Card | null;
   readonly contract: Contract;
   readonly trumpSuit: Suit | null;
@@ -48,7 +48,7 @@ export function sampleHiddenWorld(
     size: input.game.hands[playerId]?.length ?? 0,
   }));
 
-  const expectedUnknown = targetSizes.reduce((sum, target) => sum + target.size, 0);
+  const ownExpectedSize = input.game.hands?.[input.playerId]?.length ??\n    CARDS_PER_PLAYER - countPlayedCards(input, input.playerId);\n  if (ownExpectedSize !== input.ownHand.length) {\n    throw new Error(\n      `Observer hand size mismatch: expected ${ownExpectedSize}, received ${input.ownHand.length}`,\n    );\n  }\n\n  const expectedUnknown = targetSizes.reduce((sum, target) => sum + target.size, 0);
   if (expectedUnknown !== unknown.length) {
     throw new Error(
       `Hidden-world size mismatch: expected ${unknown.length} unknown cards, but hand sizes require ${expectedUnknown}`,
