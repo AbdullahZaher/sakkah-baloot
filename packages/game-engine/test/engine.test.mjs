@@ -966,3 +966,35 @@ test("completed round rejects further card-play through the authoritative phase 
   });
   assert.throws(() => applyCardPlay(state, "pN", "CLUBS-A"), /PLAYING phase/);
 });
+
+
+test("round scoring applies contract failure and transfers the full contract award", () => {
+  const players = { pN: "NORTH", pW: "WEST", pS: "SOUTH", pE: "EAST" };
+  const hands = {
+    pN: hand("CLUBS-A","CLUBS-K","DIAMONDS-A","DIAMONDS-K","HEARTS-A","HEARTS-K","SPADES-A","SPADES-K"),
+    pW: hand("CLUBS-Q","CLUBS-J","DIAMONDS-Q","DIAMONDS-J","HEARTS-Q","HEARTS-J","SPADES-Q","SPADES-J"),
+    pS: hand("CLUBS-10","CLUBS-9","DIAMONDS-10","DIAMONDS-9","HEARTS-10","HEARTS-9","SPADES-10","SPADES-9"),
+    pE: hand("CLUBS-8","CLUBS-7","DIAMONDS-8","DIAMONDS-7","HEARTS-8","HEARTS-7","SPADES-8","SPADES-7"),
+  };
+  let state = { phase: "PLAYING", currentPlayerId: "pN", players, hands, contract: "SUN", trumpSuit: null, dealerSeat: "EAST", trickNumber: 1, currentTrick: [], completedTricks: [] };
+  for (const suit of ["CLUBS", "DIAMONDS", "HEARTS", "SPADES"]) {
+    for (const high of [true, false]) {
+      const ranks = high ? ["A", "Q", "10", "8"] : ["K", "J", "9", "7"];
+      for (const [playerId, rank] of [["pN", ranks[0]], ["pW", ranks[1]], ["pS", ranks[2]], ["pE", ranks[3]]]) state = applyCardPlay(state, playerId, suit + "-" + rank);
+    }
+  }
+  const score = scoreRound({ contract: "SUN", trumpSuit: null, purchaserSeat: "EAST", dealerSeat: "EAST", buyerOriginallyHeldAce: false, escalation: "NORMAL", tricks: state.completedTricks, projectRaw: { NORTH_SOUTH: 0, EAST_WEST: 0 }, projectQaid: { NORTH_SOUTH: 0, EAST_WEST: 0 }, balootRaw: { NORTH_SOUTH: 0, EAST_WEST: 0 }, balootQaid: { NORTH_SOUTH: 0, EAST_WEST: 0 } });
+  assert.equal(score.contractResult, "FAILURE");
+  assert.deepEqual(score.finalQaid, { NORTH_SOUTH: 26, EAST_WEST: 0 });
+});
+
+test("match end distinguishes ongoing, finished, and tied extra deal", () => {
+  assert.deepEqual(evaluateMatchEnd({ NORTH_SOUTH: 150, EAST_WEST: 120 }), { status: "ONGOING", score: { NORTH_SOUTH: 150, EAST_WEST: 120 } });
+  assert.deepEqual(evaluateMatchEnd({ NORTH_SOUTH: 152, EAST_WEST: 120 }), { status: "FINISHED", score: { NORTH_SOUTH: 152, EAST_WEST: 120 }, winnerTeamId: "NORTH_SOUTH" });
+  assert.deepEqual(evaluateMatchEnd({ NORTH_SOUTH: 152, EAST_WEST: 152 }), { status: "EXTRA_DEAL", score: { NORTH_SOUTH: 152, EAST_WEST: 152 } });
+});
+
+test("reverse kaboot predicate is authoritative for Sun dealer-right Ace purchaser", () => {
+  const tricks = Array.from({ length: 8 }, (_, index) => ({ trickNumber: index + 1, leaderSeat: "NORTH", plays: [{ seat: "NORTH", card: card("CLUBS-A") }, { seat: "WEST", card: card("CLUBS-K") }, { seat: "SOUTH", card: card("CLUBS-Q") }, { seat: "EAST", card: card("CLUBS-J") }], winnerSeat: "WEST" }));
+  assert.equal(isReverseKabootEligible({ contract: "SUN", purchaserSeat: "SOUTH", dealerSeat: "EAST", buyerOriginallyHeldAce: true }, tricks), true);
+});
