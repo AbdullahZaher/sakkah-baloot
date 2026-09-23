@@ -483,18 +483,23 @@ export function createLocalHumanVsAISession(
           `project:${match.roundId}:${playerId}:${item.id}` === action.declarationId,
         );
         if (candidate) {
-          commitProject(
-            playerId,
-            declareProject(
-              candidate,
-              action.declarationId,
-              "PLAYING",
-              1,
-              0,
-              round.projects,
-            ),
-          );
-          continue;
+          try {
+            commitProject(
+              playerId,
+              declareProject(
+                candidate,
+                action.declarationId,
+                "PLAYING",
+                1,
+                0,
+                round.projects,
+              ),
+            );
+            continue;
+          } catch {
+            // The authoritative engine rejected an overlapping/invalid project.
+            // Fall through to the card action so the AI cannot stall the match.
+          }
         }
       }
 
