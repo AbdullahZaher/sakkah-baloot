@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { createLocalBiddingSession } from "../src/index.ts";
+import { createLocalBiddingSession, createLocalHumanVsAISession } from "../src/index.ts";
 import { detectProjects, getLegalMoves } from "@sakkah-baloot/game-engine";
 
 const SUITS = ["CLUBS", "DIAMONDS", "HEARTS", "SPADES"];
