@@ -10,6 +10,7 @@ export interface InformationSetInput {
   readonly exposedCard?: Card | null;\n  readonly bidding?: BiddingState;
   readonly contract: Contract;
   readonly trumpSuit: Suit | null;
+  readonly bidding?: BiddingState | null;
 }
 
 export interface HiddenWorld {
