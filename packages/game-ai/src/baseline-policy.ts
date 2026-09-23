@@ -65,7 +65,7 @@ function chooseBid(observation: AIRoundObservation): BaselineDecision {
     if (type === "PASS") {
       score = 0;
       reasons.push("PASS_BASELINE");
-    } else if (type === "BUY_HOKUM") {
+    } else if (type === "BUY_HOKUM" || type === "BUY_HOKUM_EXPOSED") {
       const exposed = bidding.exposedCard;
       const trumpCount = exposed
         ? bidding.ownHand.filter((card) => card.suit === exposed.suit).length
