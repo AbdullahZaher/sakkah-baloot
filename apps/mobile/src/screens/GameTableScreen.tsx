@@ -1,9 +1,12 @@
+import { useState } from "react";
 import { StyleSheet, View } from "react-native";
+import { createLocalBiddingSession } from "@sakkah-baloot/game-client";
 import { GameTable } from "@sakkah-baloot/ui";
-import { createLocalPreview } from "@sakkah-baloot/game-client";
+
+const session = createLocalBiddingSession();
 
 export function GameTableScreen() {
-  const preview = createLocalPreview();
+  const [preview, setPreview] = useState(session.getSnapshot);
 
   return (
     <View style={styles.root}>
@@ -14,6 +17,8 @@ export function GameTableScreen() {
         exposedCard={preview.exposedCard}
         hand={preview.playerHand}
         legalActions={preview.legalActions}
+        playerSeat={preview.playerSeat}
+        onBiddingAction={(action, suit) => setPreview(session.dispatchBiddingAction(action, suit))}
       />
     </View>
   );
