@@ -20,11 +20,18 @@ import {
   DECK,
 } from "@sakkah-baloot/game-engine";
 
-const PLAYER_IDS: Readonly<Record<Seat, PlayerId>> = {
+const PLAYER_BY_SEAT: Readonly<Record<Seat, PlayerId>> = {
   NORTH: "NORTH_PLAYER",
   EAST: "EAST_PLAYER",
   SOUTH: "SOUTH_PLAYER",
   WEST: "WEST_PLAYER",
+};
+
+const PLAYERS: Readonly<Record<PlayerId, Seat>> = {
+  NORTH_PLAYER: "NORTH",
+  EAST_PLAYER: "EAST",
+  SOUTH_PLAYER: "SOUTH",
+  WEST_PLAYER: "WEST",
 };
 
 export interface LocalPreview {
@@ -58,16 +65,16 @@ function buildGameState(deal: DealState, bidding: BiddingState): GameState {
   if (selected === null) throw new Error("Cannot start playing without a selected contract");
 
   const hands = Object.fromEntries(
-    (Object.keys(PLAYER_IDS) as Seat[]).map((seat) => [
-      PLAYER_IDS[seat],
+    (Object.keys(PLAYER_BY_SEAT) as Seat[]).map((seat) => [
+      PLAYER_BY_SEAT[seat],
       deal.hands[seat].map((id) => cardMap()[id]),
     ]),
   ) as Record<PlayerId, readonly Card[]>;
 
   return {
     phase: "PLAYING",
-    currentPlayerId: PLAYER_IDS[nextCounterClockwise(deal.dealerSeat)],
-    players: PLAYER_IDS,
+    currentPlayerId: PLAYER_BY_SEAT[nextCounterClockwise(deal.dealerSeat)],
+    players: PLAYERS,
     hands,
     contract: selected.contract,
     trumpSuit: selected.trumpSuit,
@@ -92,12 +99,13 @@ function buildPreview(
   game: GameState | null,
 ): LocalPreview {
   const cards = cardsById();
+  const playerId = PLAYER_BY_SEAT[playerSeat];
   const playerHand = game
-    ? game.hands[PLAYER_IDS[playerSeat]] ?? []
+    ? game.hands[playerId] ?? []
     : deal.hands[playerSeat].map((id) => cards.get(id)).filter((card): card is Card => card !== undefined);
   const exposedCard = deal.exposedCardId === null ? null : cards.get(deal.exposedCardId) ?? null;
   const legalActions = game ? [] : legalBiddingActions(bidding, dealerSeat, exposedCard?.suit ?? null, deal.hands);
-  const legalCardIds = game && game.currentPlayerId === PLAYER_IDS[playerSeat]
+  const legalCardIds = game && game.phase === "PLAYING" && game.currentPlayerId === playerId
     ? getLegalMoves(game, game.currentPlayerId).map((move) => move.cardId)
     : [];
 
@@ -142,7 +150,7 @@ export function createLocalBiddingSession(): LocalBiddingSession {
     },
     dispatchCardPlay: (cardId, ikaDeclared = false) => {
       if (game === null) throw new Error("Playing has not started");
-      game = applyCardPlay(game, PLAYER_IDS[playerSeat], cardId, ikaDeclared);
+      game = applyCardPlay(game, PLAYER_BY_SEAT[playerSeat], cardId, ikaDeclared);
       return getSnapshot();
     },
   };
