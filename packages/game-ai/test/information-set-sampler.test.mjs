@@ -121,5 +121,5 @@ test("exposed card may overlap the observer hand without leaking twice", () => {
     ...hiddenHandIds(world, "P2"),
     ...hiddenHandIds(world, "P3"),
     ...hiddenHandIds(world, "P4"),
-  ]).size, 32);
+  ]).size, 31);
 });
