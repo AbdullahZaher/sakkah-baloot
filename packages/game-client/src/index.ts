@@ -122,11 +122,19 @@ function resolveRound(
   game: GameState,
   deal: DealState,
   bidding: BiddingState,
+  projects: readonly ProjectDeclaration[],
+  baloot: BalootDeclaration | null,
 ): RoundScoreBreakdown {
   const selected = bidding.selectedContract;
   if (selected === null) throw new Error("Cannot score without a selected contract");
   if (game.phase !== "ROUND_COMPLETE") throw new Error("Round is not complete");
 
+  const projectResolution = resolveProjects(projects, deal.dealerSeat);
+  const balootAbsorbed = baloot !== null && projectResolution.awardedProjectIds.some((id) => {
+    const declaration = projects.find((project) => project.candidate.id === id);
+    return declaration?.candidate.type === "HUNDRED" && baloot.cards.every((cardId) => declaration.candidate.cards.includes(cardId));
+  });
+  const balootQaid = baloot && !balootAbsorbed ? { [baloot.teamId]: 2 } : {};
   return scoreRound({
     contract: selected.contract,
     trumpSuit: selected.trumpSuit,
@@ -135,10 +143,10 @@ function resolveRound(
     buyerOriginallyHeldAce: buyerOriginallyHeldAce(deal, bidding),
     escalation: "NORMAL",
     tricks: game.completedTricks,
-    projectRaw: resolveProjects(projects, deal.dealerSeat).projectRaw,
-    projectQaid: resolveProjects(projects, deal.dealerSeat).projectQaid,
+    projectRaw: projectResolution.projectRaw,
+    projectQaid: projectResolution.projectQaid,
     balootRaw: { NORTH_SOUTH: 0, EAST_WEST: 0 },
-    balootQaid: { NORTH_SOUTH: 0, EAST_WEST: 0 },
+    balootQaid: { NORTH_SOUTH: balootQaid.NORTH_SOUTH ?? 0, EAST_WEST: balootQaid.EAST_WEST ?? 0 },
   });
 }
 
@@ -196,7 +204,9 @@ export function createLocalPreview(): LocalPreview {
     createBiddingState("ui-preview-round-1", dealerSeat),
     null,
     null,
-    { NORTH_SOUTH: 0, EAST_WEST: 0 },
+    [],
+    null,
+    createMatchState("ui-preview-match", dealerSeat).score,
     createMatchState("ui-preview-match", dealerSeat).end,
   );
 }
@@ -269,7 +279,11 @@ export function createLocalBiddingSession(): LocalBiddingSession {
         projects = [];
         for (const seat of Object.keys(PLAYER_BY_SEAT) as Seat[]) {
           for (const candidate of detectProjects(deal.hands[seat].map((id) => cardMap()[id]!), contract, trump, seat)) {
-            projects.push({ declarationId: candidate.id, candidate, lifecycle: "DECLARED", declaredBeforeCard: true, trickNumber: 1 });
+            try {
+              projects.push(declareProject(candidate, candidate.id, "PLAYING", 1, 0, projects));
+            } catch {
+              // Overlapping and excess projects are discarded by canonical declaration rules.
+            }
           }
         }
         baloot = null;
@@ -305,7 +319,7 @@ export function createLocalBiddingSession(): LocalBiddingSession {
       game = applyCardPlay(game, playerId, cardId, ikaDeclared);
 
       if (game.phase === "ROUND_COMPLETE") {
-        roundScore = resolveRound(game, deal, bidding);
+        roundScore = resolveRound(game, deal, bidding, projects, baloot);
         match = completeMatchRound(match, roundScore);
       }
 
