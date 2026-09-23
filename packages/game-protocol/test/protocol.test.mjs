@@ -131,3 +131,24 @@ test("protocol replay rejects skipped state versions and cross-match events", ()
     /another match/,
   );
 });
+
+
+test("protocol replay rejects invalid lifecycle transitions", () => {
+  assert.throws(
+    () => applyProtocolEvent(
+      initial,
+      {
+        matchId: initial.matchId,
+        eventId: "invalid-transition",
+        stateVersion: 1,
+        event: {
+          type: "ROUND_COMPLETE",
+          roundId: initial.roundId,
+          score: { NORTH_SOUTH: 0, EAST_WEST: 0 },
+          matchEnd: { status: "ONGOING", score: { NORTH_SOUTH: 0, EAST_WEST: 0 } },
+        },
+      },
+    ),
+    /Invalid protocol transition: DEAL -> ROUND_COMPLETE/,
+  );
+});
