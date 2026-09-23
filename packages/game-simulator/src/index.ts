@@ -29,6 +29,7 @@ import {
   type Seat,
   type Suit,
 } from "@sakkah-baloot/game-engine";
+import { createAISimulationPolicySet, type AISimulationPlayer } from "./ai-policy-adapter.js";
 
 const PLAYER_BY_SEAT: Readonly<Record<Seat, PlayerId>> = {
   NORTH: "NORTH_PLAYER",
@@ -75,6 +76,7 @@ export interface SimulationConfig {
   readonly maxRoundsPerGame?: number;
   readonly policy?: CardPolicy;
   readonly policies?: Readonly<Record<PlayerId, CardPolicy>>;
+  readonly aiPlayers?: readonly AISimulationPlayer[];
 }
 
 export interface MatchSimulationResult {
@@ -100,6 +102,7 @@ export function simulateMatch(
   let dealerSeat = getFirstDealer(seed);
   let end: MatchEndResult = { status: "ONGOING", score };
   let illegalActions = 0;
+  const aiPolicySet = policies || undefined;
   const roundDigests: string[] = [];
 
   for (let roundNumber = 1; roundNumber <= maxRounds; roundNumber += 1) {
@@ -130,6 +133,7 @@ export function simulateMatch(
 
     const initialGame = cloneGameState(game);
     const played: CardId[] = [];
+    const aiControllers = aiPlayersForSimulation(policies, undefined);
 
     while (game.phase === "PLAYING") {
       const playerId = game.currentPlayerId;
