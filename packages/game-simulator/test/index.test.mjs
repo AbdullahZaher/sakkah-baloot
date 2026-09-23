@@ -87,3 +87,19 @@ test("full-match batch is deterministic", () => {
   assert.equal(a.games, 4);
   assert.equal(a.illegalActions, 0);
 });
+
+test("1,000 full-match deterministic gate has zero illegal actions", () => {
+  const config = {
+    seed: "gate-1000",
+    games: 1000,
+    maxRoundsPerGame: 200,
+  };
+
+  const a = simulateMatchBatch(config);
+  const b = simulateMatchBatch(config);
+
+  assert.deepEqual(a, b);
+  assert.equal(a.games, 1000);
+  assert.equal(a.illegalActions, 0);
+  assert.equal(a.finishedMatches + a.maxRoundTerminations, 1000);
+});
