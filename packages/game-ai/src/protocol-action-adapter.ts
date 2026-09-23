@@ -1,11 +1,9 @@
+import type { BiddingAction } from "@sakkah-baloot/game-engine";
 import type { ClientActionEnvelope } from "@sakkah-baloot/game-protocol";
 import type { AIAction, AIRoundObservation } from "./index.js";
 
 export type AIClientAction =
-  | ClientActionEnvelope<{
-      readonly type: "BID";
-      readonly action: AIAction extends { type: "BID"; action: infer T } ? T : never;
-    }>
+  | ClientActionEnvelope<{ readonly type: "BID"; readonly action: BiddingAction }>
   | ClientActionEnvelope<{
       readonly type: "PLAY_CARD";
       readonly cardId: string;
@@ -28,11 +26,10 @@ export function toProtocolClientAction(
 ): AIClientAction {
   switch (action.type) {
     case "BID":
-      return envelope(observation, action.type, action.action);
+      return envelope(observation, "BID", action.action);
 
     case "PLAY_CARD":
       return envelope(observation, "PLAY_CARD", {
-        type: "PLAY_CARD",
         cardId: action.cardId,
         ikaDeclared: action.ikaDeclared ?? false,
         balootDeclared: false,
@@ -40,24 +37,22 @@ export function toProtocolClientAction(
 
     case "DECLARE_PROJECT":
       return envelope(observation, "PROJECT", {
-        type: "PROJECT",
         project: action.projectType,
         declarationId: action.declarationId,
       });
 
     case "DECLARE_BALOOT":
       return envelope(observation, "BALOOT", {
-        type: "BALOOT",
         declarationId: action.declarationId,
       });
   }
 }
 
-function envelope<TAction>(
+function envelope<TType extends string, TAction>(
   observation: AIRoundObservation,
-  type: string,
+  type: TType,
   action: TAction,
-): ClientActionEnvelope<TAction & { readonly type: string }> {
+): ClientActionEnvelope<TAction & { readonly type: TType }> {
   return {
     matchId: observation.matchId,
     actionId: `ai:${observation.matchId}:${observation.roundId}:v${observation.stateVersion}:${type}`,
@@ -65,7 +60,7 @@ function envelope<TAction>(
     expectedStateVersion: observation.stateVersion,
     action: {
       type,
-      ...action,
-    },
+      ...(typeof action === "object" && action !== null ? action : { value: action }),
+    } as TAction & { readonly type: TType },
   };
 }
