@@ -65,9 +65,10 @@ test("baseline policy prefers minimum sufficient winner over unnecessary stronge
   const observation = playingObservation({
     hand: ["HEARTS-J", "HEARTS-9", "CLUBS-7", "CLUBS-A"],
     legalCardIds: ["HEARTS-J", "HEARTS-9", "CLUBS-A"],
+    seat: "EAST",
     currentTrick: [
       { seat: "NORTH", card: card("CLUBS-K") },
-      { seat: "EAST", card: card("CLUBS-7") },
+      { seat: "SOUTH", card: card("CLUBS-7") },
     ],
   });
 
