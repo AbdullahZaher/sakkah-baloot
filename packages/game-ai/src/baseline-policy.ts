@@ -211,7 +211,9 @@ function scoreCard(
     } else if (winner && compareCards(card, winner.card, contract, trumpSuit, ledSuit) > 0) {
       score += 20;
       if (card.id === minimumWinningCard(legalCards, winner.card, ledSuit, contract, trumpSuit)?.id) {
-        score += 12;
+        score += 30;
+      } else {
+        score -= 5;
       }
     }
   } else {
