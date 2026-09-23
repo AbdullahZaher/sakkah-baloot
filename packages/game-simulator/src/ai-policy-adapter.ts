@@ -83,6 +83,7 @@ export function createAISimulationPolicySet(
         {
           ...player.config,
           seed: `${player.config.seed}:${current.roundNumber}:${state.trickNumber}:${state.currentTrick.length}`,
+          enableProjects: false,
         },
       );
 
