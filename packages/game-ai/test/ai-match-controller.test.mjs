@@ -8,11 +8,14 @@ function playingMatch() {
     return { id, suit, rank };
   });
 
+  const suits = ["CLUBS", "DIAMONDS", "HEARTS", "SPADES"];
+  const ranks = ["7", "8", "9", "10", "J", "Q", "K", "A"];
+  const fullDeck = suits.flatMap((suit) => ranks.map((rank) => `${suit}-${rank}`));
   const hands = {
-    NORTH: cards(["CLUBS-A"]),
-    EAST: cards(["DIAMONDS-7"]),
-    SOUTH: cards(["HEARTS-A"]),
-    WEST: cards(["SPADES-7"]),
+    NORTH: cards(fullDeck.slice(0, 8)),
+    EAST: cards(fullDeck.slice(8, 16)),
+    SOUTH: cards(fullDeck.slice(16, 24)),
+    WEST: cards(fullDeck.slice(24, 32)),
   };
 
   return {
@@ -34,13 +37,18 @@ function playingMatch() {
         roundId: "round-ai",
         dealerSeat: "WEST",
         hands: {
-          NORTH: ["CLUBS-A"],
-          EAST: ["DIAMONDS-7"],
-          SOUTH: ["HEARTS-A"],
-          WEST: ["SPADES-7"],
+          NORTH: fullDeck.slice(0, 8),
+          EAST: fullDeck.slice(8, 16),
+          SOUTH: fullDeck.slice(16, 24),
+          WEST: fullDeck.slice(24, 32),
         },
         exposedCardId: null,
-        transcript: { initialHands: { NORTH: ["CLUBS-A"], EAST: ["DIAMONDS-7"], SOUTH: ["HEARTS-A"], WEST: ["SPADES-7"] } },
+        transcript: { initialHands: {
+          NORTH: fullDeck.slice(0, 8),
+          EAST: fullDeck.slice(8, 16),
+          SOUTH: fullDeck.slice(16, 24),
+          WEST: fullDeck.slice(24, 32),
+        } },
       },
       bidding: { roundId: "round-ai", phase: "CONTRACT_SELECTED", history: [], selectedContract: { contract: "SUN", trumpSuit: null, purchaserSeat: "NORTH", exposedCardReceiverSeat: "EAST" } },
       game: {
