@@ -91,6 +91,8 @@ interface PlayerObservation {
 
 The exact type must be derived from existing engine/protocol types during implementation rather than duplicated blindly.
 
+The authoritative host must supply the legal action space before redaction. For example, bidding legality is computed with the complete authoritative hands, then only the resulting legal action types are exposed to the AI. Card-play legality is computed by `getLegalMoves()`, then only legal card IDs are exposed. The AI never receives the hidden inputs used to compute those sets.
+
 ## 4. Hidden Information
 
 The AI must not receive:
@@ -174,7 +176,13 @@ For every turn:
 6. Submit it to the engine.
 7. Re-observe the resulting state.
 
-## 10. Search Strategy
+## 10. Action Boundary
+
+`game-ai` is not a legality oracle. Its observation contains an authoritative, already-redacted action space. A future simulator/server integration layer owns the call to the engine, then constructs the AI observation.
+
+This boundary is required so the AI can be tested independently without accidentally becoming a second rules engine.
+
+## 11. Search Strategy
 
 The runtime search architecture is:
 
@@ -190,7 +198,7 @@ Exact or near-exact search when the remaining information/state space is suffici
 
 CFR/MCCFR or other extensive-form methods may be evaluated later for policy tuning, but they are not a Phase 18 runtime dependency.
 
-## 11. Search Budget
+## 12. Search Budget
 
 Search must be bounded by explicit configuration:
 
@@ -209,7 +217,7 @@ The AI must remain deterministic for the same:
 - configuration;
 - seed.
 
-## 12. Partner / Opponent Modeling
+## 13. Partner / Opponent Modeling
 
 The AI maintains beliefs about:
 
@@ -221,7 +229,7 @@ The AI maintains beliefs about:
 
 Models must represent uncertainty, not convert guesses into facts.
 
-## 13. Evaluation
+## 14. Evaluation
 
 The evaluation function should consider:
 
@@ -238,7 +246,7 @@ The evaluation function should consider:
 
 The authoritative score remains the engine's responsibility.
 
-## 14. Explainability
+## 15. Explainability
 
 Every selected action should optionally expose diagnostics:
 
@@ -258,7 +266,7 @@ interface AIDecisionTrace {
 
 This is a debugging and QA facility, not player-facing truth.
 
-## 15. Deterministic Simulation
+## 16. Deterministic Simulation
 
 All simulations must support a deterministic seed.
 
