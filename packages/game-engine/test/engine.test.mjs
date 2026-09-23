@@ -819,3 +819,89 @@ test("invalid client requests remain ordinary rejections, not integrity incident
   );
   assert.equal(state.phase, "FIRST_ROUND");
 });
+
+test("full trick lifecycle completes exactly eight tricks and enters ROUND_COMPLETE", () => {
+  const players = { pN: "NORTH", pW: "WEST", pS: "SOUTH", pE: "EAST" };
+  const hands = {
+    pN: hand(
+      "CLUBS-A","CLUBS-K","DIAMONDS-A","DIAMONDS-K",
+      "HEARTS-A","HEARTS-K","SPADES-A","SPADES-K",
+    ),
+    pW: hand(
+      "CLUBS-Q","CLUBS-J","DIAMONDS-Q","DIAMONDS-J",
+      "HEARTS-Q","HEARTS-J","SPADES-Q","SPADES-J",
+    ),
+    pS: hand(
+      "CLUBS-10","CLUBS-9","DIAMONDS-10","DIAMONDS-9",
+      "HEARTS-10","HEARTS-9","SPADES-10","SPADES-9",
+    ),
+    pE: hand(
+      "CLUBS-8","CLUBS-7","DIAMONDS-8","DIAMONDS-7",
+      "HEARTS-8","HEARTS-7","SPADES-8","SPADES-7",
+    ),
+  };
+
+  let state = legalState({
+    currentPlayerId: "pN",
+    players,
+    hands,
+    contract: "SUN",
+    trumpSuit: null,
+    dealerSeat: "EAST",
+  });
+
+  const suits = ["CLUBS", "DIAMONDS", "HEARTS", "SPADES"];
+  for (const suit of suits) {
+    for (const high of [true, false]) {
+      const ranks = high
+        ? ["A", "Q", "10", "8"]
+        : ["K", "J", "9", "7"];
+      const ids = ranks.map((rank) => `${suit}-${rank}`);
+      for (const [playerId, id] of [
+        ["pN", ids[0]],
+        ["pW", ids[1]],
+        ["pS", ids[2]],
+        ["pE", ids[3]],
+      ]) {
+        assert.equal(state.currentPlayerId, playerId);
+        state = applyCardPlay(state, playerId, id);
+      }
+      assert.equal(state.currentTrick.length, 0);
+      assert.equal(state.completedTricks.length, suits.indexOf(suit) * 2 + (high ? 1 : 2));
+      assert.equal(state.currentPlayerId, "pN");
+    }
+  }
+
+  assert.equal(state.phase, "ROUND_COMPLETE");
+  assert.equal(state.completedTricks.length, 8);
+  assert.equal(state.currentTrick.length, 0);
+  for (const playerId of Object.keys(players)) {
+    assert.equal(state.hands[playerId].length, 0);
+  }
+  assert.equal(state.currentPlayerId, "pN");
+  assert.deepEqual(
+    state.completedTricks.map((trick) => trick.trickNumber),
+    [1,2,3,4,5,6,7,8],
+  );
+  assert.ok(state.completedTricks.every((trick) => trick.winnerSeat === "NORTH"));
+});
+
+test("completed round rejects further card-play through the authoritative phase guard", () => {
+  const state = legalState({
+    phase: "ROUND_COMPLETE",
+    currentPlayerId: "pN",
+    hands: {
+      pN: hand("CLUBS-A"),
+      pE: [],
+      pS: [],
+      pW: [],
+    },
+    completedTricks: Array.from({ length: 8 }, (_, index) => ({
+      trickNumber: index + 1,
+      leaderSeat: "NORTH",
+      plays: [],
+      winnerSeat: "NORTH",
+    })),
+  });
+  assert.throws(() => applyCardPlay(state, "pN", "CLUBS-A"), /PLAYING phase/);
+});
