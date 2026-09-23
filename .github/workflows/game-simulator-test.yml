@@ -1,0 +1,28 @@
+name: game-simulator-test
+
+on:
+  push:
+    paths:
+      - "packages/game-simulator/**"
+      - "packages/game-engine/**"
+      - "package.json"
+      - "pnpm-workspace.yaml"
+  pull_request:
+    paths:
+      - "packages/game-simulator/**"
+      - "packages/game-engine/**"
+      - "package.json"
+      - "pnpm-workspace.yaml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: corepack enable
+      - run: pnpm install --no-frozen-lockfile
+      - run: pnpm --filter @sakkah-baloot/game-simulator typecheck
+      - run: pnpm --filter @sakkah-baloot/game-simulator test
