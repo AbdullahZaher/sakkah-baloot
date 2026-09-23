@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createHumanVsAIController } from "../dist/index.js";
+import { createHumanVsAIController } from "../src/index.ts";
 
 function config() {
   return {
