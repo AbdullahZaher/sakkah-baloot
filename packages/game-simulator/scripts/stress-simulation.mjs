@@ -1,4 +1,4 @@
-import { simulateMatchBatch } from "../dist/index.js";
+import { simulateMatchBatch } from "../src/index.ts";
 
 const games = Number(process.env.SIMULATION_GAMES ?? 1000);
 const result = simulateMatchBatch({
