@@ -2,6 +2,7 @@ import {
   applyBiddingAction,
   applyCardPlay,
   declareProject,
+  isProjectDeclarationWindow,
   isCardLegal,
   completeRoundState,
   completeMatchRound,
@@ -155,10 +156,20 @@ export interface AuthoritativeProjectResult {
 }
 
 export function applyAuthoritativeProject(
+  game: GameState,
   candidate: ProjectCandidate,
-  existing: readonly ReturnType<typeof declareProject>[],
+  existing: readonly ProjectDeclaration[],
   event: ProjectEvent,
 ): AuthoritativeProjectResult {
+  if (!isProjectDeclarationWindow(game)) {
+    throw new Error("Project declaration window is closed");
+  }
+  if (game.players[event.playerId] !== candidate.ownerSeat) {
+    throw new Error("Project does not belong to the declaring player");
+  }
+  if (candidate.type !== event.project) {
+    throw new Error("Project event does not match candidate");
+  }
   const project = declareProject(candidate, event.project, "PLAYING", 1, 0, existing);
   return { project, event };
 }
