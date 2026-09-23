@@ -401,3 +401,5 @@ export type { LocalPlayableConfig, LocalPlayablePreview, LocalPlayableSession } 
 
 export { createHumanVsAIController } from "./human-vs-ai.js";
 export type { HumanVsAIConfig, HumanVsAIDecision } from "./human-vs-ai.js";
+
+// Phase 18 CI synchronization: authoritative AI integration remains engine-owned.
