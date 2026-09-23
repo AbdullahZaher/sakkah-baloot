@@ -125,5 +125,6 @@ export function deterministicEventId(
   stateVersion: number,
   event: MatchProtocolEvent,
 ): string {
-  return `${matchId}:v${stateVersion}:${event.type}:${event.roundId}`;
+  const roundId = "roundId" in event ? event.roundId : "MATCH";
+  return `${matchId}:v${stateVersion}:${event.type}:${roundId}`;
 }
