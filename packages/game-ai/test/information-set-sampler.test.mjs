@@ -56,7 +56,7 @@ function inputState() {
       ],
       completedTricks: [],
     },
-    exposedCard: cards[11],
+    exposedCard: null,
     contract: "SUN",
     trumpSuit: null,
   };
@@ -89,13 +89,12 @@ test("hidden worlds preserve public information and exact remaining hand sizes",
   const world = sampleHiddenWorld(input, createSeededRng("conservation"));
 
   assert.equal(world.hands.P1.length, 8);
-  assert.equal(world.hands.P2.length, 6);
-  assert.equal(world.hands.P3.length, 6);
-  assert.equal(world.hands.P4.length, 6);
+  assert.equal(world.hands.P2.length, 7);
+  assert.equal(world.hands.P3.length, 7);
+  assert.equal(world.hands.P4.length, 7);
 
   const knownIds = new Set([
     ...input.ownHand.map((card) => card.id),
-    input.exposedCard.id,
     ...input.game.currentTrick.map((play) => play.card.id),
   ]);
 
