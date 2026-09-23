@@ -55,7 +55,7 @@ export interface AIRoundObservation {
 
 export type AIAction =
   | { readonly type: "BID"; readonly action: BiddingAction }
-  | { readonly type: "PLAY_CARD"; readonly cardId: CardId; readonly ikaDeclared?: boolean }
+  | { readonly type: "PLAY_CARD"; readonly cardId: CardId; readonly ikaDeclared?: boolean; readonly balootDeclared?: boolean }
   | { readonly type: "DECLARE_PROJECT"; readonly projectType: ProjectType; readonly declarationId: string }
   | { readonly type: "DECLARE_BALOOT"; readonly declarationId: string };
 
@@ -223,3 +223,6 @@ export type { EndgameDecision, EndgameSolverConfig } from "./endgame-solver.js";
 
 export { createAIPlayerController, isAIActionBiddingLegal, isAIActionCardLegal } from "./player-controller.js";
 export type { AIPlayerController, AIPlayerControllerConfig } from "./player-controller.js";
+
+export { chooseAuthoritativeAIAction } from "./ai-match-controller.js";
+export type { AIControllerConfig, AIControllerDecision, AIControllerMode } from "./ai-match-controller.js";
