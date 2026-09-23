@@ -10,7 +10,8 @@
     "test": "pnpm --filter @sakkah-baloot/game-engine build && npm run build && tsx --test test/*.test.mjs"
   },
   "dependencies": {
-    "@sakkah-baloot/game-engine": "workspace:*"
+    "@sakkah-baloot/game-engine": "workspace:*",
+    "@sakkah-baloot/game-protocol": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.0.0",
