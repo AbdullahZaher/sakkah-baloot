@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import type { BiddingAction, Card, CardId, Seat } from "@sakkah-baloot/game-engine";
+import type { BiddingAction, Card, Seat, Suit } from "@sakkah-baloot/game-engine";
 
 type BiddingActionType = BiddingAction["type"];
 
@@ -82,7 +82,13 @@ function CardView({ card, compact = false }: { card: Card | null; compact?: bool
   );
 }
 
-function Action({ action, onPress }: { action: BiddingActionType; onPress?: (action: BiddingActionType) => void }) {
+function Action({
+  action,
+  onPress,
+}: {
+  action: BiddingActionType;
+  onPress?: ((action: BiddingActionType) => void) | undefined;
+}) {
   return (
     <Pressable accessibilityRole="button" onPress={() => onPress?.(action)} style={styles.action}>
       <Text style={styles.actionText}>{actionLabel(action)}</Text>
@@ -101,8 +107,13 @@ function actionLabel(action: BiddingActionType): string {
   }
 }
 
-function suitSymbol(suit: Card["suit"]): string {
-  return { CLUBS: "♣", DIAMONDS: "♦", HEARTS: "♥", SPADES: "♠" }[suit];
+function suitSymbol(suit: Suit): string {
+  switch (suit) {
+    case "CLUBS": return "♣";
+    case "DIAMONDS": return "♦";
+    case "HEARTS": return "♥";
+    case "SPADES": return "♠";
+  }
 }
 
 function isRedSuit(card: Card): boolean {
