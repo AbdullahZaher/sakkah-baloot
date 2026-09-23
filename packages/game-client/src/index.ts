@@ -227,6 +227,7 @@ export function createLocalBiddingSession(): LocalBiddingSession {
   let projects: ProjectDeclaration[] = [];
   let baloot: BalootDeclaration | null = null;
 
+
   const getSnapshot = () => buildPreview(
     dealerSeat,
     roundNumber,
@@ -274,18 +275,7 @@ export function createLocalBiddingSession(): LocalBiddingSession {
       if (bidding.phase === "CONTRACT_SELECTED") {
         deal = completeDeal(deal, bidding.selectedContract!.exposedCardReceiverSeat);
         game = buildGameState(deal, bidding);
-        const contract = bidding.selectedContract!.contract;
-        const trump = bidding.selectedContract!.trumpSuit;
         projects = [];
-        for (const seat of Object.keys(PLAYER_BY_SEAT) as Seat[]) {
-          for (const candidate of detectProjects(deal.hands[seat].map((id) => cardMap()[id]!), contract, trump, seat)) {
-            try {
-              projects.push(declareProject(candidate, candidate.id, "PLAYING", 1, 0, projects));
-            } catch {
-              // Overlapping and excess projects are discarded by canonical declaration rules.
-            }
-          }
-        }
         baloot = null;
         roundScore = null;
       }
@@ -295,9 +285,12 @@ export function createLocalBiddingSession(): LocalBiddingSession {
 
     dispatchProject: (projectId) => {
       if (game === null || game.phase !== "PLAYING") throw new Error("Projects require an active playing round");
-      const project = projects.find((d) => d.declarationId === projectId);
-      if (!project) throw new Error("Unknown project declaration");
-      if (projects.some((d) => d.candidate.cards.some((id) => project.candidate.cards.includes(id)) && d.declarationId !== projectId)) throw new Error("Project card overlap");
+      const selected = bidding.selectedContract;
+      if (!selected) throw new Error("Cannot declare project without a contract");
+      const candidates = detectProjects(deal.hands[playerSeat].map((id) => cardMap()[id]!), selected.contract, selected.trumpSuit, playerSeat);
+      const candidate = candidates.find((item) => item.id === projectId);
+      if (!candidate) throw new Error("Unknown project candidate");
+      projects = [...projects, declareProject(candidate, projectId, "PLAYING", 1, 0, projects)];
       return getSnapshot();
     },
 
