@@ -60,7 +60,7 @@ function TrickView({ plays }: { plays: readonly GameState["currentTrick"][number
   return <View style={styles.trick}>{plays.map((play) => <View key={play.sequence} style={styles.trickCard}><Text style={styles.trickSeat}>{play.seat}</Text><CardView card={play.card} compact /></View>)}</View>;
 }
 
-function CardButton({ card, enabled, onPress }: { card: Card; enabled: boolean; onPress?: (cardId: CardId) => void }) {
+function CardButton({ card, enabled, onPress }: { card: Card; enabled: boolean; onPress?: ((cardId: CardId) => void) | undefined }) {
   return <Pressable accessibilityRole="button" disabled={!enabled} onPress={() => onPress?.(card.id)} style={[styles.cardButton, !enabled && styles.disabledCard]}><CardView card={card} /></Pressable>;
 }
 
