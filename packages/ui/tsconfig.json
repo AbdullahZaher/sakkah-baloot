@@ -4,7 +4,11 @@
     "jsx": "react-jsx",
     "module": "ES2022",
     "moduleResolution": "Bundler",
-    "noEmit": true
+    "outDir": "dist",
+    "declaration": true,
+    "declarationMap": true,
+    "rootDir": "src",
+    "noEmit": false
   },
   "include": ["src/**/*.ts", "src/**/*.tsx"]
 }
