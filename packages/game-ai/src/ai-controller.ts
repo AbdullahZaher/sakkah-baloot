@@ -29,8 +29,8 @@ export function decideAIAction(
   const result = chooseAuthoritativeAIAction(match, playerId, playerSeat, {
     mode: config.mode,
     seed: config.seed,
-    difficulty: config.baseline?.difficulty,
-    mctsIterations: config.mcts?.iterations,
+    ...(config.baseline?.difficulty !== undefined ? { difficulty: config.baseline.difficulty } : {}),
+    ...(config.mcts?.iterations !== undefined ? { mctsIterations: config.mcts.iterations } : {}),
   });
 
   return { action: result.action, mode: config.mode };
