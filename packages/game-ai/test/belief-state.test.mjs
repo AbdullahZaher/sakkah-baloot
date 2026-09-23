@@ -19,7 +19,6 @@ function inputState() {
     card("HEARTS-A"),
     card("HEARTS-K"),
     card("SPADES-A"),
-    card("SPADES-K"),
   ];
 
   return {
