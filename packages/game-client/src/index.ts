@@ -227,25 +227,51 @@ export function createLocalBiddingSession(): LocalBiddingSession {
     ikaDeclared = false,
   ): LocalPreview => {
     const round = match.round;
-    if (!round?.game) throw new Error("Playing has not started");
-    if (round.game.phase === "ROUND_COMPLETE") throw new Error("Round is already complete");
-    if (round.game.currentPlayerId !== playerId) throw new Error("Card play is not for the current player");
+    const game = round?.game;
+    if (!round || !game) throw new Error("Playing has not started");
+    if (game.phase === "ROUND_COMPLETE") throw new Error("Round is already complete");
+    if (game.currentPlayerId !== playerId) throw new Error("Card play is not for the current player");
 
     const selected = round.bidding.selectedContract;
-    const playerSeatForPlay = round.game.players[playerId];
+    const playerSeatForPlay = game.players[playerId];
+    if (!playerSeatForPlay) throw new Error("Player seat is missing");
+
     let nextRound = round;
 
     if (selected?.contract === "HOKUM" && selected.trumpSuit) {
-      const handBefore = round.game.hands[playerId] ?? [];
+      const handBefore = game.hands[playerId] ?? [];
       const card = handBefore.find((c) => c.id === cardId);
-      if (card && canDeclareBaloot(selected.contract, selected.trumpSuit, playerSeatForPlay, card, handBefore, true)) {
-        const king = handBefore.find((c) => c.rank === "K" && c.suit === selected.trumpSuit);
-        const queen = handBefore.find((c) => c.rank === "Q" && c.suit === selected.trumpSuit);
-        if (king && queen) {
+      const alreadyPlayedByPlayer = [
+        ...game.completedTricks.flatMap((trick) => trick.plays),
+        ...game.currentTrick,
+      ]
+        .filter((play) => play.playerId === playerId)
+        .map((play) => play.card);
+
+      if (
+        card &&
+        canDeclareBaloot(
+          selected.contract,
+          selected.trumpSuit,
+          playerSeatForPlay,
+          card,
+          alreadyPlayedByPlayer,
+          true,
+        )
+      ) {
+        const partner = alreadyPlayedByPlayer.find(
+          (played) =>
+            played.suit === selected.trumpSuit &&
+            ((played.rank === "K" && card.rank === "Q") ||
+              (played.rank === "Q" && card.rank === "K")),
+        );
+        if (partner) {
+          const king = card.rank === "K" ? card : partner;
+          const queen = card.rank === "Q" ? card : partner;
           nextRound = withRoundBaloot(
             nextRound,
             declareBaloot(
-              `baloot:${match.roundId}:${playerId}`,
+              `baloot:${match.roundId}:${playerId}:${cardId}`,
               playerSeatForPlay,
               selected.trumpSuit,
               king,
@@ -256,7 +282,7 @@ export function createLocalBiddingSession(): LocalBiddingSession {
       }
     }
 
-    const nextGame = applyCardPlay(nextRound.game, playerId, cardId, ikaDeclared);
+    const nextGame = applyCardPlay(game, playerId, cardId, ikaDeclared);
     nextRound = { ...nextRound, game: nextGame };
 
     if (nextGame.phase === "ROUND_COMPLETE") {
