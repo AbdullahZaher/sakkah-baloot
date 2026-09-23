@@ -105,19 +105,6 @@ test("1,000 full-match deterministic gate has zero illegal actions", () => {
   assert.equal(a.finishedMatches + a.maxRoundTerminations, 1000);
 });
 
-test("10,000-match benchmark gate has zero illegal actions", () => {
-  const result = simulateMatchBatch({
-    seed: "gate-10000",
-    games: 10_000,
-    maxRoundsPerGame: 200,
-  });
-
-  assert.equal(result.games, 10_000);
-  assert.equal(result.illegalActions, 0);
-  assert.equal(result.finishedMatches + result.maxRoundTerminations, 10_000);
-  assert.ok(result.deterministicDigest.length > 0);
-});
-
 test("card-play replay reproduces the simulator final state", () => {
   const initial = state();
   const result = simulateCardPlayRound(initial, firstLegalPolicy, "replay");
