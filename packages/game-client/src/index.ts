@@ -142,7 +142,12 @@ export function createLocalBiddingSession(): LocalBiddingSession {
   let deal = createInitialDeal("ui-preview", dealerSeat, createSeededRandom("ui-preview"));
   let bidding = createBiddingState("ui-preview", dealerSeat);
   let game: GameState | null = null;
-  const getSnapshot = () => buildPreview(dealerSeat, playerSeat, deal, bidding, game);
+  let roundScore: RoundScoreBreakdown | null = null;
+  let matchScore: MatchScore = { NORTH_SOUTH: 0, EAST_WEST: 0 };
+  let matchEnd: MatchEndResult = { status: "ONGOING", score: matchScore };
+  const getSnapshot = () => buildPreview(
+    dealerSeat, playerSeat, deal, bidding, game, roundScore, matchScore, matchEnd,
+  );
 
   return {
     getSnapshot,
