@@ -1,0 +1,12 @@
+{
+  "name": "sakkah-baloot",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@10.0.0",
+  "scripts": {
+    "typecheck": "pnpm -r typecheck",
+    "build": "pnpm -r build",
+    "test": "pnpm --filter @sakkah-baloot/game-engine test",
+    "mobile": "pnpm --filter @sakkah-baloot/mobile start"
+  }
+}
