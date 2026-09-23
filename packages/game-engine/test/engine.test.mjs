@@ -1111,12 +1111,14 @@ test("match state owns round completion, score accumulation, and dealer rotation
   };
   const completed = completeMatchRound(match, roundScore);
   assert.equal(completed.phase, "ROUND_COMPLETE");
+  assert.equal(completed.stateVersion, 1);
   assert.deepEqual(completed.score, { NORTH_SOUTH: 26, EAST_WEST: 0 });
   const next = startNextRound(completed);
   assert.equal(next.phase, "ROUND_ACTIVE");
   assert.equal(next.roundNumber, 2);
   assert.equal(next.dealerSeat, "WEST");
   assert.equal(next.roundId, "match-17:round:2");
+  assert.equal(next.stateVersion, 2);
   assert.deepEqual(next.score, { NORTH_SOUTH: 26, EAST_WEST: 0 });
 });
 
