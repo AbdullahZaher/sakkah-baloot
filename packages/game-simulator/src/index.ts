@@ -5,7 +5,7 @@ import {
   completeDeal,
   createBiddingState,
   createInitialDeal,
-  createSeededRandom,
+  createSeededRandom as createEngineRandom,
   declareBaloot,
   declareProject,
   detectProjects,
@@ -126,7 +126,6 @@ export function simulateMatch(
     );
     let baloot = null as ReturnType<typeof declareBaloot> | null;
 
-    const initialGame = game;
     const played: CardId[] = [];
 
     while (game.phase === "PLAYING") {
@@ -138,9 +137,7 @@ export function simulateMatch(
         state: game,
         playerId,
         legalCardIds,
-        random: createSeededRandom(`${roundSeed}:play:${played.length}`).next.bind(
-          createSeededRandom(`${roundSeed}:play:${played.length}`),
-        ),
+        random: seededRandom(`${roundSeed}:play:${played.length}`),
       });
 
       if (!legalCardIds.includes(selected)) {
@@ -251,7 +248,6 @@ export function simulateMatch(
     }
 
     dealerSeat = rotateDealer(dealerSeat);
-    void initialGame;
   }
 
   return {
@@ -512,27 +508,18 @@ function firstLegalCard({ legalCardIds }: SimulationPolicyContext): CardId {
   return legalCardIds[0]!;
 }
 
-function createSeededRandom(seed: string): () => number {
-  const source = createSeededRandomSource(seed);
+function seededRandom(seed: string): () => number {
+  const source = createEngineRandom(seed);
   return () => source.next();
 }
 
-function createSeededRandomSource(seed: string) {
-  return createSeededRandom as never;
-}
-
-function hashSeed(seed: string): number {
+function hashDigest(value: string): string {
   let hash = 2166136261;
-  for (let i = 0; i < seed.length; i += 1) {
-    hash ^= seed.charCodeAt(i);
+  for (let i = 0; i < value.length; i += 1) {
+    hash ^= value.charCodeAt(i);
     hash = Math.imul(hash, 16777619);
   }
-  return hash >>> 0;
-}
-
-function hashDigest(value: string): string {
-  let hash = hashSeed(value);
-  return hash.toString(16).padStart(8, "0");
+  return (hash >>> 0).toString(16).padStart(8, "0");
 }
 
 function cloneGameState(state: GameState): GameState {
