@@ -195,10 +195,3 @@ export function legalCardActions(observation: AIRoundObservation): readonly AIAc
   const ids = observation.playing?.game.legalCardIds ?? [];
   return ids.map((cardId) => ({ type: "PLAY_CARD", cardId }));
 }
-
-export function legalBidActions(observation: AIRoundObservation): readonly AIAction[] {
-  return (observation.bidding?.legalActions ?? []).map((type) => ({
-    type: "BID",
-    action: { type, actionId: `ai:${observation.matchId}:${observation.roundId}:${observation.playerId}:${type}` } as BiddingAction,
-  }));
-}
