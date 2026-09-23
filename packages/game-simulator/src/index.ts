@@ -407,7 +407,7 @@ function chooseBiddingAction(
   turn: number,
   seed: string,
 ): BiddingAction["type"] {
-  const preferred = turn % 2 === 0
+  const preferred: readonly BiddingAction["type"][] = turn % 2 === 0
     ? ["BUY_HOKUM_EXPOSED", "BUY_SUN", "BUY_ASHKAL", "BUY_HOKUM"]
     : ["BUY_SUN", "BUY_HOKUM", "BUY_HOKUM_EXPOSED", "BUY_ASHKAL"];
   return preferred.find((type) => legal.includes(type)) ?? legal[0]!;
@@ -431,12 +431,12 @@ function selectProjects(
   const declarations: ProjectDeclaration[] = [];
 
   for (const seat of ["NORTH", "EAST", "SOUTH", "WEST"] as const) {
-    const candidates = detectProjects(
+    const candidates = [...detectProjects(
       hands[seat].map((id) => CARD_BY_ID[id]!),
       contract,
       trumpSuit,
       seat,
-    ).sort((a, b) => b.qaydValue - a.qaydValue || b.rawValue - a.rawValue || a.id.localeCompare(b.id));
+    )].sort((a, b) => b.qaydValue - a.qaydValue || b.rawValue - a.rawValue || a.id.localeCompare(b.id));
 
     for (const candidate of candidates) {
       const overlaps = declarations.some((declaration) =>
