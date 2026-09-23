@@ -62,12 +62,30 @@ test("protocol replay is deterministic and duplicate event IDs are idempotent", 
     {
       matchId: initial.matchId,
       eventId: deterministicEventId(initial.matchId, 3, {
+        type: "PLAY_CARD",
+        roundId: initial.roundId,
+        playerId: "WEST_PLAYER",
+        cardId: "clubs-7",
+        ikaDeclared: false,
+      }),
+      stateVersion: 3,
+      event: {
+        type: "PLAY_CARD",
+        roundId: initial.roundId,
+        playerId: "WEST_PLAYER",
+        cardId: "clubs-7",
+        ikaDeclared: false,
+      },
+    },
+    {
+      matchId: initial.matchId,
+      eventId: deterministicEventId(initial.matchId, 4, {
         type: "ROUND_COMPLETE",
         roundId: initial.roundId,
         score: { NORTH_SOUTH: 26, EAST_WEST: 0 },
         matchEnd: { status: "ONGOING", score: { NORTH_SOUTH: 26, EAST_WEST: 0 } },
       }),
-      stateVersion: 3,
+      stateVersion: 4,
       event: {
         type: "ROUND_COMPLETE",
         roundId: initial.roundId,
@@ -82,7 +100,7 @@ test("protocol replay is deterministic and duplicate event IDs are idempotent", 
 
   assert.deepEqual(twice.state, once.state);
   assert.deepEqual(twice.appliedEventIds, once.appliedEventIds);
-  assert.equal(once.state.stateVersion, 3);
+  assert.equal(once.state.stateVersion, 4);
   assert.deepEqual(once.state.score, { NORTH_SOUTH: 26, EAST_WEST: 0 });
 });
 
