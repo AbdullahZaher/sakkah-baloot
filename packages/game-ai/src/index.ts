@@ -153,13 +153,15 @@ export function createAIObservation(input: AIObservationInput): AIRoundObservati
     ...game.currentTrick.map((play) => play.card),
   ];
 
+  const { hands: _hiddenHands, ...gameWithoutHands } = game;
+  void _hiddenHands;
+
   const publicGame: Omit<GameState, "hands"> & {
     readonly ownHand: readonly Card[];
     readonly knownPlayedCards: readonly Card[];
     readonly legalCardIds: readonly CardId[];
   } = {
-    ...game,
-    hands: undefined as never,
+    ...gameWithoutHands,
     ownHand,
     knownPlayedCards,
     legalCardIds: input.legalCardIds ?? [],
