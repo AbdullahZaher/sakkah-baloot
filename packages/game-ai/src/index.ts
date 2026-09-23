@@ -219,7 +219,9 @@ export type { BeliefState, BeliefObservation, BeliefWorldSample } from "./belief
 export { chooseISMCTSCard } from "./is-mcts.js";
 export type { ISMCTSConfig, ISMCTSDecision } from "./is-mcts.js";
 export { solveEndgame } from "./endgame-solver.js";
+export { decideAIAction } from "./ai-controller.js";
 export type { EndgameDecision, EndgameSolverConfig } from "./endgame-solver.js";
+export type { AIControllerConfig, AIControllerDecision, AIControllerMode } from "./ai-controller.js";
 
 export { createAIPlayerController, isAIActionBiddingLegal, isAIActionCardLegal } from "./player-controller.js";
 export type { AIPlayerController, AIPlayerControllerConfig } from "./player-controller.js";
