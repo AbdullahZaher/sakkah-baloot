@@ -11,7 +11,7 @@ export function GameTableScreen() {
     <View style={styles.root}>
       <GameTable
         dealerSeat={preview.dealerSeat}
-        actingSeat={preview.game ? preview.game.players[preview.game.currentPlayerId] : preview.bidding.actingSeat}
+        actingSeat={preview.game ? (preview.game.players[preview.game.currentPlayerId] ?? preview.playerSeat) : preview.bidding.actingSeat}
         phase={preview.bidding.phase}
         exposedCard={preview.exposedCard}
         hand={preview.playerHand}
