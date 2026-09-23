@@ -499,11 +499,33 @@ export function createLocalHumanVsAISession(
       }
 
       if (round.game && action.type === "PLAY_CARD") {
+        const selectedCard = round.game.hands[playerId]?.find(
+          (card) => card.id === action.cardId,
+        );
+        const priorPlayed = [
+          ...round.game.completedTricks.flatMap((trick) => trick.plays),
+          ...round.game.currentTrick,
+        ]
+          .filter((play) => play.playerId === playerId)
+          .map((play) => play.card);
+
+        const actualBaloot =
+          action.balootDeclared === true &&
+          selectedCard !== undefined &&
+          canDeclareBaloot(
+            round.game.contract,
+            round.game.trumpSuit,
+            actingSeat,
+            selectedCard,
+            priorPlayed,
+            true,
+          );
+
         commitCard(
           playerId,
           action.cardId,
           action.ikaDeclared ?? false,
-          action.balootDeclared ?? false,
+          actualBaloot,
         );
         continue;
       }
