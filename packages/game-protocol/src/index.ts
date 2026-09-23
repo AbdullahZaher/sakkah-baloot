@@ -118,7 +118,7 @@ export interface MatchProtocolState {
   readonly escalation: EscalationLevel;
 }
 
-export interface ProtocolReplayResult {
+export interface AuthoritativePlayResult {\n  readonly state: GameState;\n  readonly event: PlayCardEvent;\n}\n\n/** Apply a PLAY_CARD protocol event through the canonical game-engine rules. */\nexport function applyAuthoritativePlayCard(\n  game: GameState,\n  event: PlayCardEvent,\n): AuthoritativePlayResult {\n  if (game.phase !== "PLAYING") throw new Error("Game is not in PLAYING phase");\n  if (game.currentPlayerId !== event.playerId) throw new Error("Card play is not for the current player");\n  if (!isCardLegal(game, event.playerId, event.cardId)) {\n    throw new Error("Card play is illegal under game-engine rules");\n  }\n  return {\n    state: applyCardPlay(game, event.playerId, event.cardId, event.ikaDeclared),\n    event,\n  };\n}\n\nexport interface ProtocolReplayResult {
   readonly state: MatchProtocolState;
   readonly appliedEventIds: readonly string[];
 }
