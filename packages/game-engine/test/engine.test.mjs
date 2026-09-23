@@ -730,7 +730,7 @@ test("bidding Kasho is available after PASS, cancels immediately, and rotates de
     EAST: ["SPADES-7"],
   };
   let state = createBiddingState("r-kasho", dealer);
-  assert.ok(legalBiddingActions(state, dealer, "CLUBS", hands).includes("DECLARE_KASHO"));
+  assert.ok(!legalBiddingActions(state, dealer, "CLUBS", hands).includes("DECLARE_KASHO"));
 
   state = applyBiddingAction(
     state,

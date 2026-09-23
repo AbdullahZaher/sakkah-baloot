@@ -168,7 +168,7 @@ export function applyBiddingAction(
   action: BiddingAction,
   dealerSeat: Seat,
   exposedCardId: CardId | null,
-  cards: Readonly<Record<CardId, { readonly suit: Suit }>>,
+  cards: Readonly<Record<CardId, { readonly suit: Suit }>> | null,
   hands: BiddingHands = { NORTH: [], EAST: [], SOUTH: [], WEST: [] },
 ): BiddingState {
   if (hasProcessed(state, action.actionId)) return state;
@@ -176,7 +176,7 @@ export function applyBiddingAction(
     throw new Error("Bidding is not active");
   }
 
-  const exposedSuit = exposedCardId === null ? null : cards[exposedCardId]?.suit ?? null;
+  const exposedSuit = exposedCardId === null || cards === null ? null : cards[exposedCardId]?.suit ?? null;
   if (state.actingSeat === undefined) throw new Error("Missing acting seat");
 
   if (action.type === "DECLARE_KASHO") {
@@ -184,18 +184,19 @@ export function applyBiddingAction(
     const actingHand = hands[state.actingSeat] ?? [];
     const kashoCount = actingHand.filter((id) => /-(7|8|9)$/.test(id)).length;
     if (kashoCount < 5) throw new Error("Kasho requires five cards of ranks 7/8/9");
+    const historyRecord: BiddingActionRecord = {
+      actionId: action.actionId,
+      turnNumber: state.turnNumber,
+      seat: state.actingSeat,
+      phase: "FIRST_ROUND",
+      action: action.type,
+      stateVersion: state.stateVersion + 1,
+    };
     return {
       ...state,
       phase: "CANCELLED",
       stateVersion: state.stateVersion + 1,
-      history: [{
-        actionId: action.actionId,
-        turnNumber: state.turnNumber,
-        seat: state.actingSeat,
-        phase: "FIRST_ROUND",
-        action: action.type,
-        stateVersion: state.stateVersion + 1,
-      }, ...state.history].reverse(),
+      history: [...state.history, historyRecord],
       processedActionIds: [...state.processedActionIds, action.actionId],
       cancellationReason: "KASHO",
       nextDealerSeat: nextCounterClockwise(dealerSeat),
@@ -311,7 +312,7 @@ export function applyBiddingTimeout(
     { type: "PASS", actionId: timeoutActionId },
     dealerSeat,
     null,
-    {},
+    null,
   );
 }
 
