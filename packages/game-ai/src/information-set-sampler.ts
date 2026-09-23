@@ -1,16 +1,12 @@
 import type { Card, CardId, Contract, GameState, PlayerId, Suit } from "@sakkah-baloot/game-engine";
-import {
-  CARDS_PER_PLAYER,
-  DECK,
-  assertDeckConservation,
-  createEmptyConservationState,
-  moveCard,
-} from "@sakkah-baloot/game-engine";
+import { CARDS_PER_PLAYER, DECK } from "@sakkah-baloot/game-engine";
 
 export interface InformationSetInput {
   readonly playerId: PlayerId;
   readonly ownHand: readonly Card[];
-  readonly game: Pick<GameState, "players" | "currentTrick" | "completedTricks">;
+  readonly game: Pick<GameState, "players" | "currentTrick" | "completedTricks"> & {
+    readonly hands?: Readonly<Record<PlayerId, readonly Card[]>>;
+  };
   readonly exposedCard?: Card | null;
   readonly contract: Contract;
   readonly trumpSuit: Suit | null;
@@ -26,7 +22,6 @@ export interface SeededRng {
 
 export function createSeededRng(seed: string): SeededRng {
   let state = hashSeed(seed);
-
   return {
     next() {
       state = (state * 1664525 + 1013904223) >>> 0;
@@ -39,47 +34,47 @@ export function sampleHiddenWorld(
   input: InformationSetInput,
   rng: SeededRng,
 ): HiddenWorld {
-  const knownCards = collectKnownCards(input);
-  const knownIds = new Set<CardId>(knownCards.map((card) => card.id));
-  const deckById = new Map(DECK.map((card) => [card.id, card] as const));
+  const known = new Set<CardId>(input.ownHand.map((card) => card.id));
+  if (input.exposedCard) known.add(input.exposedCard.id);
 
-  for (const card of knownCards) {
-    if (!deckById.has(card.id)) {
-      throw new Error(`Information-set contains unknown card: ${card.id}`);
-    }
+  for (const trick of input.game.completedTricks) {
+    for (const play of trick.plays) known.add(play.card.id);
   }
+  for (const play of input.game.currentTrick) known.add(play.card.id);
 
-  const opponents = Object.keys(input.game.players).filter(
-    (playerId) => playerId !== input.playerId,
+  const unknown = DECK
+    .filter((card) => !known.has(card.id))
+    .map((card) => ({ ...card }));
+
+  const players = Object.keys(input.game.players).filter(
+    (id) => id !== input.playerId,
   );
-  const playedByPlayer = countPlayedCardsByPlayer(input);
 
-  const expectedOwnHandSize =
-    CARDS_PER_PLAYER - (playedByPlayer[input.playerId] ?? 0);
+  const targetSizes = players.map((playerId) => ({
+    playerId,
+    size:
+      input.game.hands?.[playerId]?.length ??
+      CARDS_PER_PLAYER - countPlayedCards(input, playerId),
+  }));
 
-  if (expectedOwnHandSize !== input.ownHand.length) {
+  const ownExpectedSize =
+    input.game.hands?.[input.playerId]?.length ??
+    CARDS_PER_PLAYER - countPlayedCards(input, input.playerId);
+
+  if (ownExpectedSize !== input.ownHand.length) {
     throw new Error(
-      `Own hand size does not match observed play history: expected ${expectedOwnHandSize}`,
+      `Observer hand size mismatch: expected ${ownExpectedSize}, received ${input.ownHand.length}`,
     );
   }
 
-  const targetSizes = opponents.map((playerId) => ({
-    playerId,
-    size: CARDS_PER_PLAYER - (playedByPlayer[playerId] ?? 0),
-  }));
-
-  const unknown = DECK
-    .filter((card) => !knownIds.has(card.id))
-    .map((card) => ({ ...card }));
-
-  const expectedUnknownCount = targetSizes.reduce(
+  const expectedUnknown = targetSizes.reduce(
     (sum, target) => sum + target.size,
     0,
   );
 
-  if (unknown.length !== expectedUnknownCount) {
+  if (expectedUnknown !== unknown.length) {
     throw new Error(
-      `Information-set card count mismatch: ${unknown.length} unknown cards for ${expectedUnknownCount} hidden hand slots`,
+      `Hidden-world size mismatch: expected ${unknown.length} unknown cards, but hand sizes require ${expectedUnknown}`,
     );
   }
 
@@ -95,79 +90,52 @@ export function sampleHiddenWorld(
   );
 
   let cursor = 0;
-
   for (const target of targetSizes) {
-    hands[target.playerId] = unknown.slice(cursor, cursor + target.size);
+    hands[target.playerId] = unknown
+      .slice(cursor, cursor + target.size)
+      .map((card) => ({ ...card }));
     cursor += target.size;
   }
 
-  if (cursor !== unknown.length) {
-    throw new Error("Hidden-world sample did not assign every unknown card");
-  }
-
-  assertSampleConservation(input, hands, knownIds, deckById);
+  assertWorldConservation(known, hands, input.playerId);
 
   return { hands };
 }
 
-function countPlayedCardsByPlayer(
+function countPlayedCards(
   input: InformationSetInput,
-): Readonly<Record<PlayerId, number>> {
-  const counts: Record<PlayerId, number> = Object.fromEntries(
-    Object.keys(input.game.players).map((playerId) => [playerId, 0]),
-  );
-
-  for (const trick of input.game.completedTricks) {
-    for (const play of trick.plays) {
-      counts[play.playerId] = (counts[play.playerId] ?? 0) + 1;
-    }
-  }
-
-  for (const play of input.game.currentTrick) {
-    counts[play.playerId] = (counts[play.playerId] ?? 0) + 1;
-  }
-
-  return counts;
+  playerId: PlayerId,
+): number {
+  const completed = input.game.completedTricks.flatMap((trick) => trick.plays);
+  return [...completed, ...input.game.currentTrick].filter(
+    (play) => play.playerId === playerId,
+  ).length;
 }
 
-function collectKnownCards(input: InformationSetInput): readonly Card[] {
-  return [
-    ...input.ownHand,
-    ...(input.exposedCard ? [input.exposedCard] : []),
-    ...input.game.completedTricks.flatMap((trick) =>
-      trick.plays.map((play) => play.card),
-    ),
-    ...input.game.currentTrick.map((play) => play.card),
-  ];
-}
-
-function assertSampleConservation(
-  input: InformationSetInput,
+function assertWorldConservation(
+  known: ReadonlySet<CardId>,
   hands: Readonly<Record<PlayerId, readonly Card[]>>,
-  knownIds: ReadonlySet<CardId>,
-  deckById: ReadonlyMap<CardId, Card>,
+  observerId: PlayerId,
 ): void {
-  let conservation = createEmptyConservationState();
+  const hiddenIds = Object.entries(hands)
+    .filter(([playerId]) => playerId !== observerId)
+    .flatMap(([, hand]) => hand.map((card) => card.id));
 
-  for (const cardId of knownIds) {
-    conservation = moveCard(conservation, cardId, "TABLE");
+  const partition = [...known, ...hiddenIds];
+  const deckIds = new Set(DECK.map((card) => card.id));
+
+  if (
+    partition.length !== DECK.length ||
+    new Set(partition).size !== DECK.length
+  ) {
+    throw new Error("Hidden-world sample does not partition the 32-card deck");
   }
 
-  for (const [playerId, hand] of Object.entries(hands)) {
-    if (playerId === input.playerId) continue;
-
-    for (const card of hand) {
-      if (knownIds.has(card.id)) {
-        throw new Error(`Sampled hidden hand contains known card: ${card.id}`);
-      }
-      if (!deckById.has(card.id)) {
-        throw new Error(`Sampled hidden hand contains unknown card: ${card.id}`);
-      }
-      conservation = moveCard(conservation, card.id, "UNDEALT");
+  for (const cardId of partition) {
+    if (!deckIds.has(cardId)) {
+      throw new Error(`Hidden-world sample contains unknown card id: ${cardId}`);
     }
   }
-
-  assertDeckConservation(conservation);
 }
 
 function shuffle(cards: Card[], rng: SeededRng): void {
