@@ -203,13 +203,16 @@ function scoreCard(
   if (currentTrick.length > 0) {
     const ledSuit = currentTrick[0]!.card.suit;
     const winner = currentWinner(currentTrick, contract, trumpSuit);
-    if (winner && compareCards(card, winner.card, contract, trumpSuit, ledSuit) > 0) {
+
+    if (partnerWinning) {
+      // Once the partner is already winning, overtrumping is normally wasted control.
+      // Preserve trump unless it is required by a future authoritative legality decision.
+      score -= isTrump(card, contract, trumpSuit) ? 25 : 0;
+    } else if (winner && compareCards(card, winner.card, contract, trumpSuit, ledSuit) > 0) {
       score += 20;
       if (card.id === minimumWinningCard(legalCards, winner.card, ledSuit, contract, trumpSuit)?.id) {
         score += 12;
       }
-    } else if (partnerWinning) {
-      score -= isTrump(card, contract, trumpSuit) ? 18 : 3;
     }
   } else {
     if (isTrump(card, contract, trumpSuit)) score -= 2;
