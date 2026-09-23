@@ -269,7 +269,7 @@ function compareCandidate(
   b: { readonly action: AIAction; readonly heuristicScore: number },
 ): number {
   if (b.heuristicScore !== a.heuristicScore) return b.heuristicScore - a.heuristicScore;
-  const aId = a.action.type === "PLAY_CARD" ? a.action.cardId : a.action.action.type;
-  const bId = b.action.type === "PLAY_CARD" ? b.action.cardId : b.action.action.type;
+  const aId = actionSortKey(a.action);
+  const bId = actionSortKey(b.action);
   return aId.localeCompare(bId);
 }
