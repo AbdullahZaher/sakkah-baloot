@@ -1,0 +1,19 @@
+{
+  "name": "@sakkah-baloot/game-simulator",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc",
+    "test": "npm run build && node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "@sakkah-baloot/game-engine": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "main": "src/index.ts",
+  "types": "src/index.ts"
+}
