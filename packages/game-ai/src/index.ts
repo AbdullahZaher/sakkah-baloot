@@ -208,3 +208,6 @@ export type { BaselineDecision, BaselinePolicyConfig } from "./baseline-policy.j
 
 export { createImmutableSimulation, cloneGameState } from "./immutable-simulation.js";
 export type { ImmutableSimulation, SimulationAction, SimulationState } from "./immutable-simulation.js";
+
+export { createSeededRng, sampleHiddenWorld } from "./information-set-sampler.js";
+export type { HiddenWorld, InformationSetInput, SeededRng } from "./information-set-sampler.js";
