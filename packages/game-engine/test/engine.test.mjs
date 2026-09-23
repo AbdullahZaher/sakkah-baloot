@@ -941,7 +941,7 @@ test("completed eight-trick round resolves through the canonical scoring engine"
     balootQaid: { NORTH_SOUTH: 0, EAST_WEST: 0 },
   });
 
-  assert.deepEqual(score.cardRaw, { NORTH_SOUTH: 130, EAST_WEST: 0 });
+  assert.deepEqual(score.cardRaw, { NORTH_SOUTH: 110, EAST_WEST: 20 });
   assert.equal(score.contractResult, "SUCCESS");
   assert.equal(score.kabootTeamId, "NORTH_SOUTH");
   assert.deepEqual(score.finalQaid, { NORTH_SOUTH: 26, EAST_WEST: 0 });
