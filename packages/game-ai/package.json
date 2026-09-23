@@ -1,0 +1,20 @@
+{
+  "name": "@sakkah-baloot/game-ai",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc",
+    "test": "pnpm --filter @sakkah-baloot/game-engine build && npm run build && node --import tsx --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "@sakkah-baloot/game-engine": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "tsx": "^4.20.6"
+  },
+  "main": "src/index.ts",
+  "types": "src/index.ts"
+}

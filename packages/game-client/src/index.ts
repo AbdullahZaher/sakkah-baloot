@@ -392,3 +392,6 @@ export function createLocalBiddingSession(): LocalBiddingSession {
     },
   };
 }
+
+export { createAIClientAction } from "./ai-controller.js";
+export type { AIClientActionEnvelope } from "./ai-controller.js";
