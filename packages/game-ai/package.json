@@ -7,7 +7,7 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "build": "tsc",
-    "test": "pnpm --filter @sakkah-baloot/game-engine build && npm run build && tsx --test test/*.test.mjs"
+    "test": "pnpm --filter @sakkah-baloot/game-engine build && npm run build && node --test test/*.test.mjs"
   },
   "dependencies": {
     "@sakkah-baloot/game-engine": "workspace:*",
