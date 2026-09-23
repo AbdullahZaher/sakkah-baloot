@@ -51,7 +51,7 @@ export function createBeliefState(input: InformationSetInput): BeliefState {
           (playerId) => !voidSuits[playerId]?.includes(card.suit),
         ),
       ]),
-  ) as Record<CardId, readonly PlayerId[]>;
+  ) as unknown as Record<CardId, readonly PlayerId[]>;
 
   return {
     playerId: input.playerId,
