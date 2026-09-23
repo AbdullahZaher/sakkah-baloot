@@ -13,6 +13,7 @@
   },
   "devDependencies": {
     "typescript": "^5.0.0",
+    "tsx": "^4.20.6",
     "tsx": "^4.20.6"
   },
   "main": "src/index.ts",
