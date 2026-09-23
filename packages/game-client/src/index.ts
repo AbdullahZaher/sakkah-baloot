@@ -9,9 +9,11 @@ import {
   legalBiddingActions,
   scoreRound,
   applyRoundToMatch,
-  evaluateMatchEnd,
   nextCounterClockwise,
-  rotateDealer,
+  createMatchState,
+  completeMatchRound,
+  startNextRound,
+  type MatchState,
   type BiddingAction,
   type BiddingHands,
   type BiddingState,
@@ -164,8 +166,8 @@ function buildPreview(
     game,
     legalCardIds,
     roundScore,
-    matchScore,
-    matchEnd,
+    match.score,
+    match.end,
   };
 }
 
@@ -181,7 +183,7 @@ export function createLocalPreview(): LocalPreview {
     null,
     null,
     { NORTH_SOUTH: 0, EAST_WEST: 0 },
-    { status: "ONGOING", score: { NORTH_SOUTH: 0, EAST_WEST: 0 } },
+    createMatchState("ui-preview-match", dealerSeat).end,
   );
 }
 
@@ -197,8 +199,7 @@ export function createLocalBiddingSession(): LocalBiddingSession {
   let bidding = createBiddingState("ui-preview-round-1", dealerSeat);
   let game: GameState | null = null;
   let roundScore: RoundScoreBreakdown | null = null;
-  let matchScore: MatchScore = { NORTH_SOUTH: 0, EAST_WEST: 0 };
-  let matchEnd: MatchEndResult = { status: "ONGOING", score: matchScore };
+  let match: MatchState = createMatchState("ui-preview-match", dealerSeat);
 
   const getSnapshot = () => buildPreview(
     dealerSeat,
@@ -259,8 +260,7 @@ export function createLocalBiddingSession(): LocalBiddingSession {
 
       if (game.phase === "ROUND_COMPLETE") {
         roundScore = resolveRound(game, deal, bidding);
-        matchScore = applyRoundToMatch(matchScore, roundScore);
-        matchEnd = evaluateMatchEnd(matchScore);
+        match = completeMatchRound(match, roundScore);
       }
 
       return getSnapshot();
@@ -270,13 +270,14 @@ export function createLocalBiddingSession(): LocalBiddingSession {
       if (game === null || game.phase !== "ROUND_COMPLETE") {
         throw new Error("Next round is only available after round completion");
       }
-      if (matchEnd.status === "FINISHED") {
+      if (match.end.status === "FINISHED") {
         throw new Error("Cannot start another round after match completion");
       }
 
-      dealerSeat = rotateDealer(dealerSeat);
-      roundNumber += 1;
-      const roundId = `ui-preview-round-${roundNumber}`;
+      match = startNextRound(match);
+      dealerSeat = match.dealerSeat;
+      roundNumber = match.roundNumber;
+      const roundId = match.roundId;
       deal = createInitialDeal(roundId, dealerSeat, createSeededRandom(roundId));
       bidding = createBiddingState(roundId, dealerSeat);
       game = null;
