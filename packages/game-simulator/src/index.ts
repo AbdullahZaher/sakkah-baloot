@@ -53,6 +53,15 @@ const CARD_BY_ID: Readonly<Record<CardId, Card>> = Object.fromEntries(
   ),
 ) as Readonly<Record<CardId, Card>>;
 
+import {
+  chooseBaselineAction,
+  chooseISMCTSCard,
+  createBeliefState,
+  solveEndgame,
+  type AIDifficulty,
+  type AIRoundObservation,
+} from "@sakkah-baloot/game-ai";
+
 export interface SimulationPolicyContext {
   readonly state: GameState;
   readonly playerId: PlayerId;
@@ -61,6 +70,118 @@ export interface SimulationPolicyContext {
 }
 
 export type CardPolicy = (context: SimulationPolicyContext) => CardId;
+
+export const firstLegalCard: CardPolicy = ({ legalCardIds }: SimulationPolicyContext): CardId => {
+  return legalCardIds[0]!;
+};
+
+export const randomCardPolicy: CardPolicy = ({ legalCardIds, random }: SimulationPolicyContext): CardId => {
+  const index = Math.floor(random() * legalCardIds.length);
+  return legalCardIds[index] ?? legalCardIds[0]!;
+};
+
+export function createBaselineCardPolicy(
+  difficulty: AIDifficulty = "NORMAL",
+  preferInformation = true,
+): CardPolicy {
+  return ({ state, playerId, legalCardIds }: SimulationPolicyContext): CardId => {
+    const observation = buildObservationFromState(state, playerId, legalCardIds);
+    const decision = chooseBaselineAction(observation, { difficulty, preferInformation });
+    if (decision.action.type !== "PLAY_CARD") {
+      throw new Error("Baseline policy did not return a card action during PLAYING phase");
+    }
+    return decision.action.cardId;
+  };
+}
+
+export function createISMCTSCardPolicy(config?: {
+  readonly iterations?: number;
+  readonly seed?: string;
+}): CardPolicy {
+  const iterations = config?.iterations ?? 32;
+  return ({ state, playerId, legalCardIds, random }: SimulationPolicyContext): CardId => {
+    const observation = buildObservationFromState(state, playerId, legalCardIds);
+    const input = {
+      playerId,
+      ownHand: state.hands[playerId] ?? [],
+      game: {
+        players: state.players,
+        currentTrick: state.currentTrick,
+        completedTricks: state.completedTricks,
+      },
+      contract: state.contract,
+      trumpSuit: state.trumpSuit,
+    };
+    const belief = createBeliefState(input);
+    const seed = config?.seed ?? `mcts:${Math.floor(random() * 1_000_000)}`;
+    const decision = chooseISMCTSCard(observation, belief, { iterations, seed });
+    return decision.cardId;
+  };
+}
+
+export function createEndgameEnhancedCardPolicy(config?: {
+  readonly maxRemainingCards?: number;
+  readonly maxNodes?: number;
+  readonly fallback?: CardPolicy;
+}): CardPolicy {
+  const maxRemainingCards = config?.maxRemainingCards ?? 6;
+  const maxNodes = config?.maxNodes ?? 2000;
+  const fallback = config?.fallback ?? createBaselineCardPolicy("HARD");
+
+  return (ctx: SimulationPolicyContext): CardId => {
+    const decision = solveEndgame(ctx.state, ctx.playerId, {
+      maxRemainingCards,
+      maxNodes,
+    });
+    if (decision !== null && ctx.legalCardIds.includes(decision.cardId)) {
+      return decision.cardId;
+    }
+    return fallback(ctx);
+  };
+}
+
+function buildObservationFromState(
+  state: GameState,
+  playerId: PlayerId,
+  legalCardIds: readonly CardId[],
+): AIRoundObservation {
+  const seat = state.players[playerId]!;
+  const teamId = teamOfSeat(seat);
+  const ownHand = state.hands[playerId] ?? [];
+  const knownPlayedCards = [
+    ...state.completedTricks.flatMap((t) => t.plays.map((p) => p.card)),
+    ...state.currentTrick.map((p) => p.card),
+  ];
+  const { hands: _hiddenHands, ...gameWithoutHands } = state;
+  void _hiddenHands;
+
+  return {
+    matchId: "sim-match",
+    roundId: "sim-round",
+    roundNumber: 1,
+    playerId,
+    seat,
+    teamId,
+    phase: "PLAYING",
+    score: { NORTH_SOUTH: 0, EAST_WEST: 0 },
+    bidding: null,
+    playing: {
+      phase: "PLAYING",
+      game: {
+        ...gameWithoutHands,
+        ownHand,
+        knownPlayedCards,
+        legalCardIds,
+      },
+      contract: state.contract,
+      trumpSuit: state.trumpSuit,
+    },
+    projects: [],
+    baloot: null,
+    stateVersion: 1,
+  };
+}
+
 
 export interface SimulationBatchResult {
   readonly games: number;
@@ -533,9 +654,6 @@ function createGameState(
   };
 }
 
-function firstLegalCard({ legalCardIds }: SimulationPolicyContext): CardId {
-  return legalCardIds[0]!;
-}
 
 function seededRandom(seed: string): () => number {
   const source = createEngineRandom(seed);
