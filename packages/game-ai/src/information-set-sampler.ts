@@ -1,4 +1,4 @@
-import type { Card, CardId, Contract, GameState, PlayerId, Suit } from "@sakkah-baloot/game-engine";
+import type { BiddingState, Card, CardId, Contract, GameState, PlayerId, Suit } from "@sakkah-baloot/game-engine";
 import { CARDS_PER_PLAYER, DECK } from "@sakkah-baloot/game-engine";
 
 export interface InformationSetInput {
@@ -7,7 +7,7 @@ export interface InformationSetInput {
   readonly game: Pick<GameState, "players" | "currentTrick" | "completedTricks"> & {
     readonly hands?: Readonly<Record<PlayerId, readonly Card[]>>;
   };
-  readonly exposedCard?: Card | null;
+  readonly exposedCard?: Card | null;\n  readonly bidding?: BiddingState;
   readonly contract: Contract;
   readonly trumpSuit: Suit | null;
 }
