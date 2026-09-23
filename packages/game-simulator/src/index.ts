@@ -334,6 +334,23 @@ export function simulateCardPlayRound(
   };
 }
 
+export function replayCardPlayRound(
+  initial: GameState,
+  playedCardIds: readonly CardId[],
+): GameState {
+  let state = cloneGameState(initial);
+
+  for (const cardId of playedCardIds) {
+    if (state.phase !== "PLAYING") {
+      throw new Error(`Replay has extra card after round completion: ${cardId}`);
+    }
+
+    state = applyCardPlay(state, state.currentPlayerId, cardId);
+  }
+
+  return state;
+}
+
 export function simulateBatch(
   initialFactory: (index: number) => GameState,
   config: SimulationConfig,
