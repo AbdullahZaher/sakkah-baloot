@@ -10,6 +10,8 @@ import {
   scoreRound,
   applyRoundToMatch,
   evaluateMatchEnd,
+  nextCounterClockwise,
+  rotateDealer,
   type BiddingAction,
   type BiddingHands,
   type BiddingState,
@@ -69,11 +71,6 @@ function cardMap(): Readonly<Record<CardId, Card>> {
 
 function cardsById(): Map<CardId, Card> {
   return new Map(DECK.map((card) => [card.id, card]));
-}
-
-function nextCounterClockwise(seat: Seat): Seat {
-  const order: readonly Seat[] = ["NORTH", "WEST", "SOUTH", "EAST"];
-  return order[(order.indexOf(seat) + 1) % order.length]!;
 }
 
 function buildGameState(deal: DealState, bidding: BiddingState): GameState {
@@ -277,7 +274,7 @@ export function createLocalBiddingSession(): LocalBiddingSession {
         throw new Error("Cannot start another round after match completion");
       }
 
-      dealerSeat = nextCounterClockwise(dealerSeat);
+      dealerSeat = rotateDealer(dealerSeat);
       roundNumber += 1;
       const roundId = `ui-preview-round-${roundNumber}`;
       deal = createInitialDeal(roundId, dealerSeat, createSeededRandom(roundId));
