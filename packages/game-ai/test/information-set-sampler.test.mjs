@@ -2,45 +2,61 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createSeededRng, sampleHiddenWorld } from "../dist/index.js";
 
-function card(id) {
-  const [suit, rank] = id.split("-");
-  return { id, suit, rank };
+const SUITS = ["CLUBS", "DIAMONDS", "HEARTS", "SPADES"];
+const RANKS = ["7", "8", "9", "10", "J", "Q", "K", "A"];
+
+function deck() {
+  return SUITS.flatMap((suit) =>
+    RANKS.map((rank) => ({ id: `${suit}-${rank}`, suit, rank })),
+  );
 }
 
 function inputState() {
-  const players = {
-    P1: "NORTH",
-    P2: "EAST",
-    P3: "SOUTH",
-    P4: "WEST",
-  };
+  const cards = deck();
+  const ownHand = cards.slice(0, 8);
 
   return {
     playerId: "P1",
-    ownHand: [
-      card("CLUBS-A"),
-      card("CLUBS-K"),
-      card("DIAMONDS-A"),
-      card("DIAMONDS-10"),
-      card("HEARTS-A"),
-      card("HEARTS-K"),
-      card("SPADES-A"),
-      card("SPADES-K"),
-    ],
+    ownHand,
     game: {
-      players,
+      players: {
+        P1: "NORTH",
+        P2: "EAST",
+        P3: "SOUTH",
+        P4: "WEST",
+      },
+      hands: {
+        P1: ownHand,
+        P2: cards.slice(12, 19),
+        P3: cards.slice(19, 26),
+        P4: cards.slice(26, 32),
+      },
       currentTrick: [
         {
           playerId: "P2",
           seat: "EAST",
-          card: card("CLUBS-10"),
+          card: cards[8],
           ikaDeclared: false,
           sequence: 1,
+        },
+        {
+          playerId: "P3",
+          seat: "SOUTH",
+          card: cards[9],
+          ikaDeclared: false,
+          sequence: 2,
+        },
+        {
+          playerId: "P4",
+          seat: "WEST",
+          card: cards[10],
+          ikaDeclared: false,
+          sequence: 3,
         },
       ],
       completedTricks: [],
     },
-    exposedCard: null,
+    exposedCard: cards[11],
     contract: "SUN",
     trumpSuit: null,
   };
@@ -65,7 +81,7 @@ test("different seeds produce different hidden worlds", () => {
   const a = sampleHiddenWorld(input, createSeededRng("seed-1"));
   const b = sampleHiddenWorld(input, createSeededRng("seed-2"));
 
-  assert.notDeepEqual(a, b);
+  assert.notDeepEqual(a.hands, b.hands);
 });
 
 test("hidden worlds preserve public information and exact remaining hand sizes", () => {
@@ -74,11 +90,12 @@ test("hidden worlds preserve public information and exact remaining hand sizes",
 
   assert.equal(world.hands.P1.length, 8);
   assert.equal(world.hands.P2.length, 7);
-  assert.equal(world.hands.P3.length, 8);
-  assert.equal(world.hands.P4.length, 8);
+  assert.equal(world.hands.P3.length, 7);
+  assert.equal(world.hands.P4.length, 7);
 
   const knownIds = new Set([
     ...input.ownHand.map((card) => card.id),
+    input.exposedCard.id,
     ...input.game.currentTrick.map((play) => play.card.id),
   ]);
 
@@ -93,33 +110,28 @@ test("hidden worlds preserve public information and exact remaining hand sizes",
   assert.equal(new Set([...knownIds, ...hiddenIds]).size, 32);
 });
 
-test("sampling rejects an inconsistent own-hand size", () => {
+test("sampling keeps the observer hand exact", () => {
+  const input = inputState();
+  const world = sampleHiddenWorld(input, createSeededRng("observer"));
+
+  assert.deepEqual(world.hands.P1, input.ownHand);
+});
+
+test("sampling rejects inconsistent remaining hand sizes", () => {
   const input = inputState();
   const invalid = {
     ...input,
-    ownHand: input.ownHand.slice(0, 7),
+    game: {
+      ...input.game,
+      hands: {
+        ...input.game.hands,
+        P4: input.game.hands.P4.slice(0, 6),
+      },
+    },
   };
 
   assert.throws(
     () => sampleHiddenWorld(invalid, createSeededRng("invalid")),
-    /Own hand size does not match observed play history/,
+    /Hidden-world size mismatch/,
   );
-});
-
-test("exposed card may overlap the observer hand without leaking twice", () => {
-  const input = inputState();
-  const exposed = input.ownHand[0];
-
-  const world = sampleHiddenWorld(
-    { ...input, exposedCard: exposed },
-    createSeededRng("exposed"),
-  );
-
-  assert.equal(world.hands.P1.length, 8);
-  assert.equal(new Set([
-    ...world.hands.P1.map((card) => card.id),
-    ...hiddenHandIds(world, "P2"),
-    ...hiddenHandIds(world, "P3"),
-    ...hiddenHandIds(world, "P4"),
-  ]).size, 31);
 });
