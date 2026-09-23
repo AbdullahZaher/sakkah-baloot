@@ -205,3 +205,6 @@ export {
 export type { CardMemory, CardMemoryInput } from "./card-memory.js";
 export { chooseBaselineAction } from "./baseline-policy.js";
 export type { BaselineDecision, BaselinePolicyConfig } from "./baseline-policy.js";
+
+export { createImmutableSimulation, cloneGameState } from "./immutable-simulation.js";
+export type { ImmutableSimulation, SimulationAction, SimulationState } from "./immutable-simulation.js";
