@@ -395,3 +395,6 @@ export function createLocalBiddingSession(): LocalBiddingSession {
 
 export { createAIClientAction } from "./ai-controller.js";
 export type { AIClientActionEnvelope } from "./ai-controller.js";
+
+export { createLocalHumanVsAISession } from "./local-human-vs-ai.js";
+export type { LocalPlayableConfig, LocalPlayablePreview, LocalPlayableSession } from "./local-human-vs-ai.js";
