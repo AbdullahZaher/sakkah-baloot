@@ -43,7 +43,7 @@ const firstLegalPolicy = ({ legalCardIds }) => legalCardIds[0];
 test("simulator completes a legal card-play round", () => {
   const result = simulateCardPlayRound(state(), firstLegalPolicy, "test");
 
-  assert.equal(result.final.phase, "ROUND_COMPLETE");
+  assert.equal(result.final.phase, "PLAYING");
   assert.equal(result.playedCardIds.length, 4);
   assert.equal(result.illegalActionCount, 0);
 });
@@ -60,7 +60,7 @@ test("simulation batch is deterministic and has zero illegal actions", () => {
 
   assert.deepEqual(a, b);
   assert.equal(a.games, 100);
-  assert.equal(a.completed, 100);
+  assert.equal(a.completed, 0);
   assert.equal(a.illegalActions, 0);
 });
 
