@@ -527,7 +527,7 @@ function assertProtocolTransition(
 ): void {
   const allowed: Record<MatchProtocolState["phase"], readonly MatchProtocolEvent["type"][]> = {
     DEAL: ["DEAL", "BID"],
-    BID: ["BID", "PLAY_CARD"],
+    BID: ["BID", "PLAY_CARD", "PROJECT"],
     PLAY_CARD: ["PLAY_CARD", "BALOOT", "PROJECT", "TRICK_COMPLETE", "ROUND_COMPLETE"],
     BALOOT: ["PLAY_CARD"],
     PROJECT: ["PROJECT", "PLAY_CARD"],
