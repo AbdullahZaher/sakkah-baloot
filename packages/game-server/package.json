@@ -1,0 +1,13 @@
+{
+  "name":"@sakkah-baloot/game-server",
+  "version":"0.1.0",
+  "private":true,
+  "description":"Authoritative multiplayer runtime boundary for Sakkah Baloot",
+  "type":"module",
+  "scripts":{"typecheck":"tsc --noEmit","build":"tsc","test":"npm run build && node --test test/*.test.mjs"},
+  "dependencies":{"@sakkah-baloot/game-engine":"workspace:*","@sakkah-baloot/game-protocol":"workspace:*"},
+  "devDependencies":{"typescript":"^5.0.0"},
+  "main":"dist/index.js",
+  "types":"dist/index.d.ts",
+  "exports":{".":{"types":"./dist/index.d.ts","import":"./dist/index.js","default":"./dist/index.js"}}
+}
