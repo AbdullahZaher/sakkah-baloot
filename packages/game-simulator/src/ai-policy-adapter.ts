@@ -6,7 +6,6 @@ import {
   withRoundProjects,
   type BiddingState,
   type CardId,
-  type CardPolicy as _Unused,
   type DealState,
   type GameState,
   type MatchScore,
