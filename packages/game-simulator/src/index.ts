@@ -132,6 +132,7 @@ export function simulateMatch(
     const played: CardId[] = [];
 
     while (game.phase === "PLAYING") {
+      assertGameConservation(game);
       const playerId = game.currentPlayerId;
       const legalCardIds = getLegalMoves(game, playerId).map((move) => move.cardId);
       if (legalCardIds.length === 0) throw new Error("Simulation reached a state with no legal moves");
@@ -197,6 +198,9 @@ export function simulateMatch(
     }
 
     assertReplayEquivalent(initialGame, played, game);
+
+    assertGameConservation(game);
+    if (game.completedTricks.length !== 8) throw new Error("Simulation did not complete exactly 8 tricks");
 
     const projectResolution = resolveProjects(projects, dealerSeat);
     const purchaserSeat = bidding.selectedContract.purchaserSeat;
@@ -545,6 +549,23 @@ function hashDigest(value: string): string {
     hash = Math.imul(hash, 16777619);
   }
   return (hash >>> 0).toString(16).padStart(8, "0");
+}
+
+function assertGameConservation(state: GameState): void {
+  const cards = [
+    ...Object.values(state.hands).flat(),
+    ...state.currentTrick.map((play) => play.card),
+    ...state.completedTricks.flatMap((trick) => trick.plays.map((play) => play.card)),
+  ];
+
+  const ids = cards.map((card) => card.id);
+  if (ids.length !== 32 || new Set(ids).size !== 32) {
+    throw new Error("Simulation card conservation invariant failed");
+  }
+
+  if (state.completedTricks.some((trick) => trick.plays.length !== 4)) {
+    throw new Error("Simulation trick invariant failed");
+  }
 }
 
 function cloneGameState(state: GameState): GameState {
