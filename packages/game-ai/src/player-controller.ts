@@ -1,4 +1,3 @@
-import type { BiddingAction } from "@sakkah-baloot/game-engine";
 import {
   chooseBaselineAction,
   createBeliefState,
@@ -83,4 +82,3 @@ export function isAIActionBiddingLegal(
   return observation.bidding?.legalActions.includes(action.action.type) ?? false;
 }
 
-void (null as unknown as BiddingAction);
