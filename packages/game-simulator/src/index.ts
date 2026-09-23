@@ -105,7 +105,7 @@ export function simulateMatch(
     const deal = createInitialDeal(
       `${seed}:round:${roundNumber}`,
       dealerSeat,
-      createSeededRandom(roundSeed),
+      createEngineRandom(roundSeed),
     );
 
     const bidding = runBidding(deal.dealerSeat, deal, roundSeed);
@@ -301,7 +301,7 @@ export function simulateCardPlayRound(
 ): { readonly initial: GameState; readonly final: GameState; readonly playedCardIds: readonly CardId[]; readonly illegalActionCount: number } {
   let state = cloneGameState(initial);
   const initialSnapshot = cloneGameState(initial);
-  const random = createSeededRandom(seed);
+  const random = createEngineRandom(seed);
   const playedCardIds: CardId[] = [];
   let illegalActionCount = 0;
 
