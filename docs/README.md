@@ -29,6 +29,7 @@
 - `docs/PHASE-18-AI-ARCHITECTURE.md` — AI architecture, observation model, belief model, IS-MCTS and endgame strategy.
 - `docs/PHASE-18-DECISION-LEDGER.md` — frozen Phase 18 architectural decisions.
 - `docs/PHASE-18-ACCEPTANCE-CRITERIA.md` — implementation and closure gates.
+- `docs/PHASE-18-BALOOT-STRATEGY-RESEARCH.md` — player strategy research adopted as probabilistic AI heuristics.
 
 ### Product
 - `docs/product/01-product-vision.md`
