@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { simulateMatch } from "../dist/index.js";
+import { simulateMatch } from "../src/index.ts";
 
 test("seat policy map is deterministic", () => {
   const first = ({ legalCardIds }) => legalCardIds[0];
