@@ -52,12 +52,12 @@ export function createAISimulationPolicySet(
         current = { ...current, game: state };
       }
 
-      const roundBase = withRoundGame(
-        withRoundProjects(
+      const roundBase = withRoundProjects(
+        withRoundGame(
           createRoundState(current.deal, current.bidding, current.roundNumber),
-          current.projects,
+          current.game,
         ),
-        current.game,
+        current.projects,
       );
       const round = current.baloot
         ? withRoundBaloot(roundBase, current.baloot)
