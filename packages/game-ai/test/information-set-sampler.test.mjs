@@ -29,7 +29,7 @@ function inputState() {
         P1: ownHand,
         P2: cards.slice(12, 19),
         P3: cards.slice(19, 26),
-        P4: cards.slice(26, 32),
+        P4: cards.slice(25, 32),
       },
       currentTrick: [
         {
