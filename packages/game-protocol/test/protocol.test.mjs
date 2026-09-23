@@ -152,4 +152,31 @@ test("protocol replay rejects invalid lifecycle transitions", () => {
     /Invalid protocol transition: DEAL -> ROUND_COMPLETE/,
   );
 });
-\n\ntest("authoritative card play delegates legality and mutation to game-engine", async () => {\n  const { applyAuthoritativePlayCard } = await import("../src/index.ts");\n  const { DECK } = await import("@sakkah-baloot/game-engine");\n  const card = DECK[0];\n  const game = {\n    phase: "PLAYING",\n    currentPlayerId: "WEST_PLAYER",\n    players: { NORTH_PLAYER: "NORTH", EAST_PLAYER: "EAST", SOUTH_PLAYER: "SOUTH", WEST_PLAYER: "WEST" },\n    hands: { NORTH_PLAYER: [], EAST_PLAYER: [], SOUTH_PLAYER: [], WEST_PLAYER: [card] },\n    contract: "SUN",\n    trumpSuit: null,\n    hokumPlayMode: "OPEN",\n    dealerSeat: "NORTH",\n    trickNumber: 1,\n    currentTrick: [],\n    completedTricks: [],\n  };\n  const result = applyAuthoritativePlayCard(game, {\n    type: "PLAY_CARD",\n    roundId: "authoritative-round",\n    playerId: "WEST_PLAYER",\n    cardId: card.id,\n    ikaDeclared: false,\n  });\n  assert.equal(result.state.hands.WEST_PLAYER.length, 0);\n});\n
+
+
+test("authoritative card play delegates legality and mutation to game-engine", async () => {
+  const { applyAuthoritativePlayCard } = await import("../src/index.ts");
+  const { DECK } = await import("@sakkah-baloot/game-engine");
+  const card = DECK[0];
+  const game = {
+    phase: "PLAYING",
+    currentPlayerId: "WEST_PLAYER",
+    players: { NORTH_PLAYER: "NORTH", EAST_PLAYER: "EAST", SOUTH_PLAYER: "SOUTH", WEST_PLAYER: "WEST" },
+    hands: { NORTH_PLAYER: [], EAST_PLAYER: [], SOUTH_PLAYER: [], WEST_PLAYER: [card] },
+    contract: "SUN",
+    trumpSuit: null,
+    hokumPlayMode: "OPEN",
+    dealerSeat: "NORTH",
+    trickNumber: 1,
+    currentTrick: [],
+    completedTricks: [],
+  };
+  const result = applyAuthoritativePlayCard(game, {
+    type: "PLAY_CARD",
+    roundId: "authoritative-round",
+    playerId: "WEST_PLAYER",
+    cardId: card.id,
+    ikaDeclared: false,
+  });
+  assert.equal(result.state.hands.WEST_PLAYER.length, 0);
+});
