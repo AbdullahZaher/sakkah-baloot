@@ -118,3 +118,12 @@ export interface MatchProtocolState {
   readonly score: MatchScore;
   readonly escalation: EscalationLevel;
 }
+
+
+export function deterministicEventId(
+  matchId: string,
+  stateVersion: number,
+  event: MatchProtocolEvent,
+): string {
+  return `${matchId}:v${stateVersion}:${event.type}:${event.roundId}`;
+}
