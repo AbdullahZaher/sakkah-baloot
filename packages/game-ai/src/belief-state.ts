@@ -204,5 +204,21 @@ function collectObservations(
     }
   }
 
+  for (const record of input.bidding?.history ?? []) {
+    const playerId = Object.entries(input.game.players).find(
+      ([, seat]) => seat === record.seat,
+    )?.[0];
+    if (!playerId || playerId === input.playerId) continue;
+
+    const strength =
+      record.action === "BUY_HOKUM" || record.action === "BUY_SUN"
+        ? 1
+        : record.action === "DECLARE_KASHO"
+          ? 1.25
+          : 0.25;
+
+    observations.push({ type: "BID_SIGNAL", playerId, strength });
+  }
+
   return observations;
 }
