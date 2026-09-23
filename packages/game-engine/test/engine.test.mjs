@@ -14,6 +14,7 @@ import {
   evaluateMatchEnd,
   projectMultiplier,
   scoreRound,
+  isReverseKabootEligible,
   teamOfSeat,
   nextCounterClockwise,
   createEscalationState,
