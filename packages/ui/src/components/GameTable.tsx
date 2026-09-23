@@ -20,7 +20,7 @@ interface GameTableProps {
   readonly matchEnd?: MatchEndResult;
 }
 
-export function GameTable({ dealerSeat, actingSeat, phase, exposedCard, hand, legalActions, legalCardIds = [], game = null, playerSeat = "SOUTH", onBiddingAction, onCardPlay }: GameTableProps) {
+export function GameTable({ dealerSeat, actingSeat, phase, exposedCard, hand, legalActions, legalCardIds = [], game = null, playerSeat = "SOUTH", onBiddingAction, onCardPlay, roundScore, matchScore, matchEnd }: GameTableProps) {
   const playerIsActing = actingSeat === playerSeat;
   const actions = playerIsActing ? legalActions : [];
   const hokumSuits = actions.includes("BUY_HOKUM") ? availableHokumSuits(exposedCard?.suit ?? null) : [];
