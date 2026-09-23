@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import {
   simulateCardPlayRound,
   simulateBatch,
+  simulateMatch,
+  simulateMatchBatch,
 } from "../dist/index.js";
 
 function card(id) {
@@ -59,5 +61,29 @@ test("simulation batch is deterministic and has zero illegal actions", () => {
   assert.deepEqual(a, b);
   assert.equal(a.games, 100);
   assert.equal(a.completed, 100);
+  assert.equal(a.illegalActions, 0);
+});
+
+test("full-match simulator reaches a stable bounded result", () => {
+  const result = simulateMatch("full-match", undefined, 50);
+
+  assert.ok(result.rounds <= 50);
+  assert.equal(result.illegalActions, 0);
+  assert.ok(["ONGOING", "FINISHED", "EXTRA_DEAL"].includes(result.end.status));
+  assert.ok(result.deterministicDigest.length > 0);
+});
+
+test("full-match batch is deterministic", () => {
+  const config = {
+    seed: "full-batch",
+    games: 4,
+    maxRoundsPerGame: 50,
+  };
+
+  const a = simulateMatchBatch(config);
+  const b = simulateMatchBatch(config);
+
+  assert.deepEqual(a, b);
+  assert.equal(a.games, 4);
   assert.equal(a.illegalActions, 0);
 });
