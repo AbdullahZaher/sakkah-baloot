@@ -166,8 +166,8 @@ function buildPreview(
     game,
     legalCardIds,
     roundScore,
-    match.score,
-    match.end,
+    matchScore,
+    matchEnd,
   };
 }
 
