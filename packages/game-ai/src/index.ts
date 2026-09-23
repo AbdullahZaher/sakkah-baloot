@@ -197,3 +197,9 @@ export function legalCardActions(observation: AIRoundObservation): readonly AIAc
 
 export { createAuthoritativeActionSpace } from "./authoritative-action-space.js";
 export type { AuthoritativeActionSpace } from "./authoritative-action-space.js";
+export {
+  createCardMemory,
+  highImpactCards,
+  cardStrategicValue,
+} from "./card-memory.js";
+export type { CardMemory, CardMemoryInput } from "./card-memory.js";
