@@ -137,3 +137,17 @@ test("1,000-match deterministic validation has zero illegal actions", () => {
   assert.equal(result.illegalActions, 0);
   assert.ok(result.deterministicDigest.length > 0);
 });
+
+
+test("10,000 full-match deterministic validation has zero illegal actions", () => {
+  const result = simulateMatchBatch({
+    seed: "validation-10000",
+    games: 10000,
+    maxRoundsPerGame: 30,
+  });
+
+  assert.equal(result.games, 10000);
+  assert.equal(result.illegalActions, 0);
+  assert.equal(result.finishedMatches + result.maxRoundTerminations, 10000);
+  assert.ok(result.deterministicDigest.length > 0);
+});
