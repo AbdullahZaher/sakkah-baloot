@@ -4,10 +4,6 @@ import { createLocalPreview } from "@sakkah-baloot/game-client";
 
 export function GameTableScreen() {
   const preview = createLocalPreview();
-  const cardsById = new Map(preview.playerHand.map((card) => [card.id, card]));
-  const exposedCard = preview.deal.exposedCardId === null
-    ? null
-    : cardsById.get(preview.deal.exposedCardId) ?? null;
 
   return (
     <View style={styles.root}>
@@ -15,7 +11,7 @@ export function GameTableScreen() {
         dealerSeat={preview.dealerSeat}
         actingSeat={preview.bidding.actingSeat}
         phase={preview.bidding.phase}
-        exposedCard={exposedCard}
+        exposedCard={preview.exposedCard}
         hand={preview.playerHand}
         legalActions={preview.legalActions}
       />
