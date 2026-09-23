@@ -211,3 +211,8 @@ export type { ImmutableSimulation, SimulationAction, SimulationState } from "./i
 
 export { createSeededRng, sampleHiddenWorld } from "./information-set-sampler.js";
 export type { HiddenWorld, InformationSetInput, SeededRng } from "./information-set-sampler.js";
+
+export { createBeliefState, sampleBeliefWorlds } from "./belief-state.js";
+export type { BeliefState, BeliefObservation, BeliefWorldSample } from "./belief-state.js";
+export { chooseISMCTSCard } from "./is-mcts.js";
+export type { ISMCTSConfig, ISMCTSDecision } from "./is-mcts.js";
