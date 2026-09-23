@@ -194,3 +194,151 @@ test("authoritative project rejects a closed declaration window", async () => {
   const candidate = { id:"SERA:WEST:cards", type:"SERA", cards:["clubs-7","clubs-8","clubs-9"], ownerSeat:"WEST", teamId:"EAST_WEST", contract:"SUN", subtype:"SEQUENCE_3", highRankIndex:2, rawValue:2, qaydValue:2 };
   assert.throws(() => applyAuthoritativeProject(game, candidate, [], { type:"PROJECT", roundId:"r", playerId:"WEST_PLAYER", project:"SERA", suit:"CLUBS" }), /window is closed/);
 });
+
+
+test("authoritative trick completion matches the canonical completed trick", async () => {
+  const { applyAuthoritativeTrickComplete } = await import("../src/index.ts");
+  const { DECK } = await import("@sakkah-baloot/game-engine");
+  const cards = DECK.slice(0, 4);
+  const round = {
+    roundId: "trick-round",
+    roundNumber: 1,
+    dealerSeat: "NORTH",
+    phase: "PLAYING",
+    deal: {},
+    bidding: {},
+    game: {
+      phase: "PLAYING",
+      currentPlayerId: "NORTH_PLAYER",
+      players: { NORTH_PLAYER: "NORTH", EAST_PLAYER: "EAST", SOUTH_PLAYER: "SOUTH", WEST_PLAYER: "WEST" },
+      hands: { NORTH_PLAYER: [], EAST_PLAYER: [], SOUTH_PLAYER: [], WEST_PLAYER: [] },
+      contract: "SUN",
+      trumpSuit: null,
+      hokumPlayMode: "OPEN",
+      dealerSeat: "NORTH",
+      trickNumber: 2,
+      currentTrick: [],
+      completedTricks: [{
+        trickNumber: 1,
+        leaderSeat: "NORTH",
+        plays: cards.map((card, index) => ({
+          playerId: ["NORTH_PLAYER", "EAST_PLAYER", "SOUTH_PLAYER", "WEST_PLAYER"][index],
+          seat: ["NORTH", "EAST", "SOUTH", "WEST"][index],
+          card,
+          ikaDeclared: false,
+          sequence: index + 1,
+        })),
+        winnerSeat: "WEST",
+      }],
+    },
+    projects: [],
+    baloot: null,
+    score: null,
+  };
+  const result = applyAuthoritativeTrickComplete(round, {
+    type: "TRICK_COMPLETE",
+    roundId: "trick-round",
+    trickNumber: 1,
+    winnerSeat: "WEST",
+  });
+  assert.equal(result.state.completedTricks.length, 1);
+});
+
+test("authoritative Baloot declaration is validated before the K/Q card commit", async () => {
+  const { applyAuthoritativePlayCard } = await import("../src/index.ts");
+  const { DECK } = await import("@sakkah-baloot/game-engine");
+  const king = DECK.find((card) => card.suit === "HEARTS" && card.rank === "K");
+  const queen = DECK.find((card) => card.suit === "HEARTS" && card.rank === "Q");
+  assert.ok(king);
+  assert.ok(queen);
+
+  const game = {
+    phase: "PLAYING",
+    currentPlayerId: "WEST_PLAYER",
+    players: { NORTH_PLAYER: "NORTH", EAST_PLAYER: "EAST", SOUTH_PLAYER: "SOUTH", WEST_PLAYER: "WEST" },
+    hands: { NORTH_PLAYER: [], EAST_PLAYER: [], SOUTH_PLAYER: [], WEST_PLAYER: [queen] },
+    contract: "HOKUM",
+    trumpSuit: "HEARTS",
+    hokumPlayMode: "OPEN",
+    dealerSeat: "NORTH",
+    trickNumber: 2,
+    currentTrick: [],
+    completedTricks: [{
+      trickNumber: 1,
+      leaderSeat: "WEST",
+      plays: [
+        { playerId: "WEST_PLAYER", seat: "WEST", card: king, ikaDeclared: false, sequence: 1 },
+        { playerId: "NORTH_PLAYER", seat: "NORTH", card: DECK[0], ikaDeclared: false, sequence: 2 },
+        { playerId: "EAST_PLAYER", seat: "EAST", card: DECK[1], ikaDeclared: false, sequence: 3 },
+        { playerId: "SOUTH_PLAYER", seat: "SOUTH", card: DECK[2], ikaDeclared: false, sequence: 4 },
+      ],
+      winnerSeat: "WEST",
+    }],
+  };
+
+  const result = applyAuthoritativePlayCard(game, {
+    type: "PLAY_CARD",
+    roundId: "baloot-round",
+    playerId: "WEST_PLAYER",
+    cardId: queen.id,
+    ikaDeclared: false,
+    balootDeclared: true,
+  });
+
+  assert.equal(result.baloot?.ownerSeat, "WEST");
+  assert.deepEqual(result.baloot?.cards, [king.id, queen.id]);
+  assert.equal(result.state.hands.WEST_PLAYER.length, 0);
+});
+
+test("authoritative match completion requires the canonical finished match state", async () => {
+  const { applyAuthoritativeMatchComplete } = await import("../src/index.ts");
+  const match = {
+    matchId: "finished-match",
+    roundId: "finished-match:round:7",
+    roundNumber: 7,
+    dealerSeat: "NORTH",
+    phase: "MATCH_COMPLETE",
+    stateVersion: 12,
+    score: { NORTH_SOUTH: 152, EAST_WEST: 140 },
+    lastRoundScore: null,
+    end: { status: "FINISHED", score: { NORTH_SOUTH: 152, EAST_WEST: 140 }, winnerTeamId: "NORTH_SOUTH" },
+    round: null,
+  };
+
+  const result = applyAuthoritativeMatchComplete(match, {
+    type: "MATCH_COMPLETE",
+    score: { NORTH_SOUTH: 152, EAST_WEST: 140 },
+    winnerTeamId: "NORTH_SOUTH",
+  });
+  assert.equal(result.state.phase, "MATCH_COMPLETE");
+
+  assert.throws(
+    () => applyAuthoritativeMatchComplete(match, {
+      type: "MATCH_COMPLETE",
+      score: { NORTH_SOUTH: 151, EAST_WEST: 140 },
+      winnerTeamId: "NORTH_SOUTH",
+    }),
+    /score does not match/,
+  );
+});
+
+test("protocol lifecycle no longer permits BID to PROJECT directly", () => {
+  assert.throws(
+    () => applyProtocolEvent(
+      { ...initial, phase: "BID", stateVersion: 2 },
+      {
+        matchId: initial.matchId,
+        eventId: "invalid-bid-project",
+        stateVersion: 3,
+        event: {
+          type: "PROJECT",
+          roundId: initial.roundId,
+          playerId: "WEST_PLAYER",
+          project: "SERA",
+          suit: "CLUBS",
+        },
+      },
+    ),
+    /Invalid protocol transition: BID -> PROJECT/,
+  );
+});
