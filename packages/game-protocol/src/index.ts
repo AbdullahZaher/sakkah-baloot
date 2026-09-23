@@ -1,7 +1,6 @@
 import type {
   BiddingAction,
   CardId,
-  Contract,
   EscalationLevel,
   MatchEndResult,
   MatchScore,
@@ -119,6 +118,10 @@ export interface MatchProtocolState {
   readonly escalation: EscalationLevel;
 }
 
+export interface ProtocolReplayResult {
+  readonly state: MatchProtocolState;
+  readonly appliedEventIds: readonly string[];
+}
 
 export function deterministicEventId(
   matchId: string,
@@ -127,4 +130,83 @@ export function deterministicEventId(
 ): string {
   const roundId = "roundId" in event ? event.roundId : "MATCH";
   return `${matchId}:v${stateVersion}:${event.type}:${roundId}`;
+}
+
+export function applyProtocolEvent(
+  state: MatchProtocolState,
+  envelope: ServerEventEnvelope<MatchProtocolEvent>,
+  processedEventIds: readonly string[] = [],
+): ProtocolReplayResult {
+  if (envelope.matchId !== state.matchId) {
+    throw new Error("Protocol event belongs to another match");
+  }
+
+  if (processedEventIds.includes(envelope.eventId)) {
+    return { state, appliedEventIds: processedEventIds };
+  }
+
+  if (envelope.stateVersion !== state.stateVersion + 1) {
+    throw new Error("Protocol event state version is not sequential");
+  }
+
+  const event = envelope.event;
+  if ("roundId" in event && event.roundId !== state.roundId && event.type !== "NEXT_ROUND") {
+    throw new Error("Protocol event belongs to another round");
+  }
+
+  const nextPhase = protocolPhaseForEvent(event);
+  const score = event.type === "ROUND_COMPLETE" || event.type === "MATCH_COMPLETE"
+    ? event.score
+    : state.score;
+
+  const next: MatchProtocolState = {
+    ...state,
+    stateVersion: envelope.stateVersion,
+    phase: nextPhase,
+    roundId: event.type === "NEXT_ROUND" ? event.roundId : state.roundId,
+    roundNumber: event.type === "NEXT_ROUND" ? event.nextRoundNumber : state.roundNumber,
+    dealerSeat: event.type === "DEAL"
+      ? event.dealerSeat
+      : event.type === "NEXT_ROUND"
+        ? event.dealerSeat
+        : state.dealerSeat,
+    score,
+  };
+
+  return {
+    state: next,
+    appliedEventIds: [...processedEventIds, envelope.eventId],
+  };
+}
+
+export function replayProtocol(
+  initialState: MatchProtocolState,
+  events: readonly ServerEventEnvelope<MatchProtocolEvent>[],
+): ProtocolReplayResult {
+  let result: ProtocolReplayResult = { state: initialState, appliedEventIds: [] };
+  for (const event of events) {
+    result = applyProtocolEvent(result.state, event, result.appliedEventIds);
+  }
+  return result;
+}
+
+function protocolPhaseForEvent(event: MatchProtocolEvent): MatchProtocolState["phase"] {
+  switch (event.type) {
+    case "DEAL":
+      return "DEAL";
+    case "BID":
+      return "BID";
+    case "PROJECT":
+      return "PROJECT";
+    case "PLAY_CARD":
+      return "PLAY_CARD";
+    case "TRICK_COMPLETE":
+      return "TRICK_COMPLETE";
+    case "ROUND_COMPLETE":
+      return "ROUND_COMPLETE";
+    case "NEXT_ROUND":
+      return "NEXT_ROUND";
+    case "MATCH_COMPLETE":
+      return "MATCH_COMPLETE";
+  }
 }
