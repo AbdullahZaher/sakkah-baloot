@@ -5,6 +5,7 @@ import {
   simulateBatch,
   simulateMatch,
   simulateMatchBatch,
+  replayCardPlayRound,
 } from "../dist/index.js";
 
 function card(id) {
@@ -115,4 +116,12 @@ test("10,000-match benchmark gate has zero illegal actions", () => {
   assert.equal(result.illegalActions, 0);
   assert.equal(result.finishedMatches + result.maxRoundTerminations, 10_000);
   assert.ok(result.deterministicDigest.length > 0);
+});
+
+test("card-play replay reproduces the simulator final state", () => {
+  const initial = state();
+  const result = simulateCardPlayRound(initial, firstLegalPolicy, "replay");
+  const replayed = replayCardPlayRound(initial, result.playedCardIds);
+
+  assert.deepEqual(replayed, result.final);
 });
