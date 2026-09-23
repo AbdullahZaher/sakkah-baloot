@@ -1,5 +1,6 @@
 import type { Card, CardId, Contract, GameState, PlayerId, Suit } from "@sakkah-baloot/game-engine";
 import {
+  CARDS_PER_PLAYER,
   DECK,
   assertDeckConservation,
   createEmptyConservationState,
@@ -9,7 +10,7 @@ import {
 export interface InformationSetInput {
   readonly playerId: PlayerId;
   readonly ownHand: readonly Card[];
-  readonly game: Pick<GameState, "hands" | "players" | "currentTrick" | "completedTricks">;
+  readonly game: Pick<GameState, "players" | "currentTrick" | "completedTricks">;
   readonly exposedCard?: Card | null;
   readonly contract: Contract;
   readonly trumpSuit: Suit | null;
@@ -48,18 +49,21 @@ export function sampleHiddenWorld(
     }
   }
 
-  const ownHandSize = input.game.hands[input.playerId]?.length;
-  if (ownHandSize !== undefined && ownHandSize !== input.ownHand.length) {
-    throw new Error("Own hand size does not match authoritative hand size");
-  }
-
   const opponents = Object.keys(input.game.players).filter(
     (playerId) => playerId !== input.playerId,
   );
 
+  const playedByPlayer = countPlayedCardsByPlayer(input);
+  const expectedOwnHandSize = CARDS_PER_PLAYER - (playedByPlayer[input.playerId] ?? 0);
+  if (expectedOwnHandSize !== input.ownHand.length) {
+    throw new Error(
+      `Own hand size does not match observed play history: expected ${expectedOwnHandSize}`,
+    );
+  }
+
   const targetSizes = opponents.map((playerId) => ({
     playerId,
-    size: input.game.hands[playerId]?.length ?? 0,
+    size: CARDS_PER_PLAYER - (playedByPlayer[playerId] ?? 0),
   }));
 
   const unknown = DECK
@@ -99,6 +103,24 @@ export function sampleHiddenWorld(
   assertSampleConservation(input, hands, knownIds, deckById);
 
   return { hands };
+}
+
+function countPlayedCardsByPlayer(input: InformationSetInput): Readonly<Record<PlayerId, number>> {
+  const counts: Record<PlayerId, number> = Object.fromEntries(
+    Object.keys(input.game.players).map((playerId) => [playerId, 0]),
+  );
+
+  for (const trick of input.game.completedTricks) {
+    for (const play of trick.plays) {
+      counts[play.playerId] = (counts[play.playerId] ?? 0) + 1;
+    }
+  }
+
+  for (const play of input.game.currentTrick) {
+    counts[play.playerId] = (counts[play.playerId] ?? 0) + 1;
+  }
+
+  return counts;
 }
 
 function collectKnownCards(input: InformationSetInput): readonly Card[] {
