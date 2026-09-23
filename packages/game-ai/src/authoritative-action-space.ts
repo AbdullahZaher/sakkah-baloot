@@ -4,7 +4,6 @@ import {
   detectProjects,
   getLegalMoves,
   legalBiddingActions,
-  teamOfSeat,
   type BiddingAction,
   type Card,
   type CardId,
@@ -12,7 +11,6 @@ import {
   type ProjectCandidate,
   type Seat,
 } from "@sakkah-baloot/game-engine";
-import type { AIRoundObservation, AIAction } from "./index.js";
 
 const CARD_BY_ID: Readonly<Record<CardId, Card>> = Object.fromEntries(
   DECK.map((card) => [card.id, card]),
@@ -39,11 +37,11 @@ function knownPlayedByPlayer(
 ): readonly Card[] {
   const game = match.round?.game;
   if (!game) return [];
-  const plays = [
+
+  return [
     ...game.completedTricks.flatMap((trick) => trick.plays),
     ...game.currentTrick,
-  ];
-  return plays
+  ]
     .filter((play) => play.playerId === playerId)
     .map((play) => play.card);
 }
@@ -83,14 +81,16 @@ export function createAuthoritativeActionSpace(
   }
 
   const cards = getLegalMoves(game, playerId).map((move) => move.cardId);
-  const projects = game.trickNumber === 1 && game.currentTrick.length === 0
-    ? detectProjects(ownHand, game.contract, game.trumpSuit, playerSeat)
-    : [];
+  const projects =
+    game.trickNumber === 1 && game.currentTrick.length === 0
+      ? detectProjects(ownHand, game.contract, game.trumpSuit, playerSeat)
+      : [];
 
   const alreadyPlayed = knownPlayedByPlayer(match, playerId);
   const baloot = cards.some((cardId) => {
     const card = CARD_BY_ID[cardId];
     if (!card) return false;
+
     return canDeclareBaloot(
       game.contract,
       game.trumpSuit,
@@ -103,56 +103,3 @@ export function createAuthoritativeActionSpace(
 
   return { bidding, cards, projects, baloot };
 }
-
-export function createAIObservationWithAuthoritativeActions(
-  match: MatchState,
-  playerId: string,
-  playerSeat: Seat,
-): AIRoundObservation {
-  const actionSpace = createAuthoritativeActionSpace(match, playerId, playerSeat);
-  const { createAIObservation } = requireObservationFactory();
-
-  return createAIObservation({
-    match,
-    playerId,
-    playerSeat,
-    legalBiddingActions: actionSpace.bidding,
-    legalCardIds: actionSpace.cards,
-  });
-}
-
-export function toAIActionSpace(
-  observation: AIRoundObservation,
-  actionSpace: AuthoritativeActionSpace,
-): readonly AIAction[] {
-  const actions: AIAction[] = [];
-
-  if (observation.bidding) {
-    for (const type of actionSpace.bidding) {
-      actions.push({
-        type: "BID",
-        action: {
-          type,
-          actionId: `ai-preview:${observation.roundId}:${observation.playerId}:${type}`,
-          ...(type === "BUY_HOKUM" ? { suit: observation.playing?.trumpSuit ?? "CLUBS" } : {}),
-        } as BiddingAction,
-      });
-    }
-  }
-
-  for (const cardId of actionSpace.cards) {
-    actions.push({ type: "PLAY_CARD", cardId });
-  }
-
-  return actions;
-}
-
-function requireObservationFactory(): {
-  createAIObservation: typeof import("./index.js").createAIObservation;
-} {
-  return {
-    createAIObservation: require("./index.js") as typeof import("./index.js"),
-  };
-}
-
-export { teamOfSeat };
