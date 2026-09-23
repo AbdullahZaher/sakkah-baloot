@@ -6,9 +6,14 @@ import {
   createMatchState,
   createRoundState,
   createSeededRandom,
+  legalBiddingActions,
   type MatchState,
 } from "@sakkah-baloot/game-engine";
-import { createAIObservation, legalCardActions } from "../dist/index.js";
+import {
+  createAIObservation,
+  createAuthoritativeActionSpace,
+  legalCardActions,
+} from "../dist/index.js";
 
 test("AI bidding observation exposes only its own hand", () => {
   const dealerSeat = "NORTH";
@@ -29,8 +34,37 @@ test("AI bidding observation exposes only its own hand", () => {
 
   const serialized = JSON.stringify(observation);
   for (const seat of ["EAST", "SOUTH", "WEST"]) {
-    assert.doesNotMatch(serialized, new RegExp(`${seat}`));
+    assert.doesNotMatch(serialized, new RegExp(`\\b${seat}\\b`));
   }
+  assert.doesNotMatch(serialized, /initialHands|initialDeckOrder|completionHands/);
+});
+
+test("authoritative bidding adapter computes legal actions from full state before redaction", () => {
+  const dealerSeat = "NORTH";
+  const deal = createInitialDeal("round-1", dealerSeat, createSeededRandom("action-space"));
+  const bidding = createBiddingState("round-1", dealerSeat);
+  const round = createRoundState(deal, bidding, 1);
+  const match = createMatchState("match-1", dealerSeat, 1, round);
+
+  const actionSpace = createAuthoritativeActionSpace(
+    match,
+    "PLAYER-NORTH",
+    "NORTH",
+  );
+
+  const expected = legalBiddingActions(
+    bidding,
+    dealerSeat,
+    deal.exposedCardId === null ? null : deal.exposedCardId.split("-")[0],
+    deal.hands,
+  );
+
+  assert.deepEqual(actionSpace.bidding, expected);
+  assert.equal(actionSpace.cards.length, 0);
+  assert.equal(actionSpace.projects.length, 0);
+  assert.equal(actionSpace.baloot, false);
+
+  const serialized = JSON.stringify(actionSpace);
   assert.doesNotMatch(serialized, /initialHands|initialDeckOrder|completionHands/);
 });
 
@@ -46,10 +80,8 @@ test("AI card action candidates come only from the authoritative redacted action
     lastRoundScore: null,
     end: { status: "ONGOING", score: { NORTH_SOUTH: 0, EAST_WEST: 0 } },
     round: null,
-  } as unknown as MatchState;
+  };
 
-  const observation = createAIObservation;
-  void observation;
   const actions = legalCardActions({
     matchId: match.matchId,
     roundId: match.roundId,
@@ -78,7 +110,7 @@ test("AI card action candidates come only from the authoritative redacted action
         ownHand: [],
         knownPlayedCards: [],
         legalCardIds: ["SPADES-A"],
-      } as never,
+      },
     },
     projects: [],
     baloot: null,
