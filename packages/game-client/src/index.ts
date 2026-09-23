@@ -235,10 +235,10 @@ export function createLocalBiddingSession(): LocalBiddingSession {
     bidding,
     game,
     roundScore,
-    match.score,
-    match.end,
     projects,
     baloot,
+    match.score,
+    match.end,
   );
 
   return {
@@ -246,7 +246,7 @@ export function createLocalBiddingSession(): LocalBiddingSession {
 
     dispatchBiddingAction: (type, suit) => {
       if (game !== null) throw new Error("Bidding is already complete");
-      if (matchEnd.status === "FINISHED") throw new Error("Match is already finished");
+      if (match.end.status === "FINISHED") throw new Error("Match is already finished");
 
       const snapshot = getSnapshot();
       if (!snapshot.legalActions.includes(type)) throw new Error(`Illegal bidding action: ${type}`);
