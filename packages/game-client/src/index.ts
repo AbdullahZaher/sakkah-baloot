@@ -7,6 +7,9 @@ import {
   createSeededRandom,
   getLegalMoves,
   legalBiddingActions,
+  scoreRound,
+  applyRoundToMatch,
+  evaluateMatchEnd,
   type BiddingAction,
   type BiddingHands,
   type BiddingState,
@@ -17,6 +20,9 @@ import {
   type PlayerId,
   type Seat,
   type Suit,
+  type MatchEndResult,
+  type MatchScore,
+  type RoundScoreBreakdown,
   DECK,
 } from "@sakkah-baloot/game-engine";
 
@@ -44,6 +50,9 @@ export interface LocalPreview {
   readonly legalActions: readonly BiddingAction["type"][];
   readonly game: GameState | null;
   readonly legalCardIds: readonly CardId[];
+  readonly roundScore: RoundScoreBreakdown | null;
+  readonly matchScore: MatchScore;
+  readonly matchEnd: MatchEndResult;
 }
 
 export interface LocalBiddingSession {
@@ -97,6 +106,9 @@ function buildPreview(
   deal: DealState,
   bidding: BiddingState,
   game: GameState | null,
+  roundScore: RoundScoreBreakdown | null,
+  matchScore: MatchScore,
+  matchEnd: MatchEndResult,
 ): LocalPreview {
   const cards = cardsById();
   const playerId = PLAYER_BY_SEAT[playerSeat];
@@ -109,7 +121,7 @@ function buildPreview(
     ? getLegalMoves(game, game.currentPlayerId).map((move) => move.cardId)
     : [];
 
-  return { dealerSeat, deal, bidding, playerSeat, playerHand, exposedCard, legalActions, game, legalCardIds };
+  return { dealerSeat, deal, bidding, playerSeat, playerHand, exposedCard, legalActions, game, legalCardIds, roundScore, matchScore, matchEnd };
 }
 
 export function createLocalPreview(): LocalPreview {
@@ -144,7 +156,7 @@ export function createLocalBiddingSession(): LocalBiddingSession {
       bidding = applyBiddingAction(bidding, action, dealerSeat, deal.exposedCardId, cardMap(), deal.hands as BiddingHands);
       if (bidding.phase === "CONTRACT_SELECTED") {
         deal = completeDeal(deal, bidding.selectedContract!.exposedCardReceiverSeat);
-        game = buildGameState(deal, bidding);
+        game = buildGameState(deal, bidding);\n        roundScore = null;
       }
       return getSnapshot();
     },
