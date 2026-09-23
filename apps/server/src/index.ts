@@ -69,9 +69,9 @@ export interface AuthoritativeMatchRoom {
   readonly matchId: string;
   readonly getSnapshot: (playerId: PlayerId) => PublicMatchSnapshot;
   readonly setConnection: (playerId: PlayerId, connected: boolean) => void;
-  readonly submitBid: (playerId: PlayerId, action: BiddingAction) => ServerActionResult;
-  readonly submitProject: (playerId: PlayerId, projectId: string) => ServerActionResult;
-  readonly submitCard: (playerId: PlayerId, cardId: CardId, ikaDeclared?: boolean) => ServerActionResult;
+  readonly submitBid: (playerId: PlayerId, expectedStateVersion: number, action: BiddingAction) => ServerActionResult;
+  readonly submitProject: (playerId: PlayerId, expectedStateVersion: number, projectId: string) => ServerActionResult;
+  readonly submitCard: (playerId: PlayerId, expectedStateVersion: number, cardId: CardId, ikaDeclared?: boolean) => ServerActionResult;
   readonly advanceRound: () => void;
 }
 
@@ -170,8 +170,9 @@ export function createAuthoritativeMatch(
     };
   };
 
-  const submitBid = (playerId: PlayerId, action: BiddingAction): ServerActionResult => {
+  const submitBid = (playerId: PlayerId, expectedStateVersion: number, action: BiddingAction): ServerActionResult => {
     const seat = requirePlayer(playerId);
+    requireVersion(expectedStateVersion);
     const round = match.round;
     if (!round || round.game) throw new Error("Bidding is not active");
     if (round.bidding.currentSeat !== seat) throw new Error("Not this player's bidding turn");
@@ -226,7 +227,7 @@ export function createAuthoritativeMatch(
     return { snapshot: getSnapshot(playerId), acceptedStateVersion: match.stateVersion };
   };
 
-  const submitProject = (playerId: PlayerId, projectId: string): ServerActionResult => {
+  const submitProject = (playerId: PlayerId, expectedStateVersion: number, projectId: string): ServerActionResult => {
     const seat = requirePlayer(playerId);
     const round = match.round;
     const game = round?.game;
@@ -262,8 +263,9 @@ export function createAuthoritativeMatch(
     return { snapshot: getSnapshot(playerId), acceptedStateVersion: match.stateVersion };
   };
 
-  const submitCard = (playerId: PlayerId, cardId: CardId, ikaDeclared = false): ServerActionResult => {
+  const submitCard = (playerId: PlayerId, expectedStateVersion: number, cardId: CardId, ikaDeclared = false): ServerActionResult => {
     const seat = requirePlayer(playerId);
+    requireVersion(expectedStateVersion);
     const round = match.round;
     const game = round?.game;
     if (!round || !game || game.phase !== "PLAYING") throw new Error("Card play is not active");
