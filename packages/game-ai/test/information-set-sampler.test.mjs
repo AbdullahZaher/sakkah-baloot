@@ -89,9 +89,9 @@ test("hidden worlds preserve public information and exact remaining hand sizes",
   const world = sampleHiddenWorld(input, createSeededRng("conservation"));
 
   assert.equal(world.hands.P1.length, 8);
-  assert.equal(world.hands.P2.length, 7);
-  assert.equal(world.hands.P3.length, 7);
-  assert.equal(world.hands.P4.length, 7);
+  assert.equal(world.hands.P2.length, 6);
+  assert.equal(world.hands.P3.length, 6);
+  assert.equal(world.hands.P4.length, 6);
 
   const knownIds = new Set([
     ...input.ownHand.map((card) => card.id),
@@ -125,7 +125,7 @@ test("sampling rejects inconsistent remaining hand sizes", () => {
       ...input.game,
       hands: {
         ...input.game.hands,
-        P4: input.game.hands.P4.slice(0, 6),
+        P4: input.game.hands.P4.slice(0, 5),
       },
     },
   };
