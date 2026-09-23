@@ -74,7 +74,7 @@ function RoundResult({
   score: RoundScoreBreakdown;
   matchScore: MatchScore;
   matchEnd: MatchEndResult;
-  onNextRound?: () => void;
+  onNextRound?: (() => void) | undefined;
 }) {
   const canContinue = matchEnd.status !== "FINISHED";
   return (
