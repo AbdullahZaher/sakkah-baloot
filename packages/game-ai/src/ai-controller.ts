@@ -1,64 +1,37 @@
-import type { AIRoundObservation, AIAction } from "./index.js";
-import { chooseBaselineAction, type BaselinePolicyConfig } from "./baseline-policy.js";
-import { chooseISMCTSCard, type ISMCTSConfig } from "./is-mcts.js";
-import { createBeliefState } from "./belief-state.js";
+import type { MatchState, PlayerId, Seat } from "@sakkah-baloot/game-engine";
+import { chooseAuthoritativeAIAction, type AIControllerConfig as MatchAIControllerConfig, type AIControllerDecision as MatchAIControllerDecision } from "./ai-match-controller.js";
 
 export type AIControllerMode = "BASELINE" | "IS_MCTS";
 
 export interface AIControllerConfig {
   readonly mode: AIControllerMode;
-  readonly baseline?: BaselinePolicyConfig;
-  readonly mcts?: ISMCTSConfig;
+  readonly baseline?: {
+    readonly difficulty?: "EASY" | "NORMAL" | "HARD";
+  };
+  readonly mcts?: {
+    readonly iterations: number;
+    readonly seed: string;
+  };
   readonly seed: string;
 }
 
 export interface AIControllerDecision {
-  readonly action: AIAction;
+  readonly action: MatchAIControllerDecision["action"];
   readonly mode: AIControllerMode;
 }
 
 export function decideAIAction(
-  observation: AIRoundObservation,
+  match: MatchState,
+  playerId: PlayerId,
+  playerSeat: Seat,
   config: AIControllerConfig,
 ): AIControllerDecision {
-  if (config.mode === "BASELINE") {
-    return {
-      action: chooseBaselineAction(observation, config.baseline),
-      mode: config.mode,
-    };
-  }
-
-  if (observation.playing) {
-    const belief = createBeliefState(
-      {
-        playerId: observation.playerId,
-        ownHand: observation.playing.game.ownHand,
-        game: {
-          players: observation.playing.game.players,
-          currentTrick: observation.playing.game.currentTrick,
-          completedTricks: observation.playing.game.completedTricks,
-        },
-        contract: observation.playing.contract,
-        trumpSuit: observation.playing.trumpSuit,
-      },
-      config.seed,
-      { sampleCount: config.mcts?.iterations ?? 32 },
-    );
-
-    const mcts = chooseISMCTSCard(
-      observation,
-      belief,
-      config.mcts ?? { iterations: 64, seed: config.seed },
-    );
-
-    return {
-      action: { type: "PLAY_CARD", cardId: mcts.cardId },
-      mode: config.mode,
-    };
-  }
-
-  return {
-    action: chooseBaselineAction(observation, config.baseline),
+  const result = chooseAuthoritativeAIAction(match, playerId, playerSeat, {
     mode: config.mode,
-  };
+    seed: config.seed,
+    difficulty: config.baseline?.difficulty,
+    mctsIterations: config.mcts?.iterations,
+  });
+
+  return { action: result.action, mode: config.mode };
 }
