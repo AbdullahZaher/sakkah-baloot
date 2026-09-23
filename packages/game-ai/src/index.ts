@@ -4,7 +4,6 @@ import type {
   BiddingState,
   Card,
   CardId,
-  CompletedTrick,
   Contract,
   GameState,
   MatchScore,
@@ -16,7 +15,6 @@ import type {
   Seat,
   Suit,
   TeamId,
-  TrickPlay,
 } from "@sakkah-baloot/game-engine";
 
 export type AIObservationPhase = "BIDDING" | "PLAYING" | "ROUND_COMPLETE" | "MATCH_COMPLETE";
@@ -26,6 +24,8 @@ export interface AIBiddingObservation {
   readonly bidding: BiddingState;
   readonly ownHand: readonly Card[];
   readonly exposedCard: Card | null;
+  /** Legal bidding action types computed by the authoritative host. */
+  readonly legalActions: readonly BiddingAction["type"][];
 }
 
 export interface AIPlayingObservation {
@@ -33,6 +33,8 @@ export interface AIPlayingObservation {
   readonly game: Omit<GameState, "hands"> & {
     readonly ownHand: readonly Card[];
     readonly knownPlayedCards: readonly Card[];
+    /** Legal card IDs computed by the authoritative engine before redaction. */
+    readonly legalCardIds: readonly CardId[];
   };
   readonly contract: Contract;
   readonly trumpSuit: Suit | null;
@@ -78,10 +80,8 @@ export interface AIDecisionTrace {
 
 function cardMap(): Readonly<Record<CardId, Card>> {
   return Object.fromEntries(
-    [
-      "CLUBS","DIAMONDS","HEARTS","SPADES",
-    ].flatMap((suit) =>
-      ["7","8","9","10","J","Q","K","A"].map((rank) => {
+    ["CLUBS", "DIAMONDS", "HEARTS", "SPADES"].flatMap((suit) =>
+      ["7", "8", "9", "10", "J", "Q", "K", "A"].map((rank) => {
         const id = `${suit}-${rank}` as CardId;
         return [id, { id, suit, rank }] as const;
       }),
@@ -99,17 +99,22 @@ function cardsFromIds(ids: readonly CardId[]): readonly Card[] {
   });
 }
 
-function roundFor(match: MatchState): RoundState {
-  if (!match.round) throw new Error("Match has no active round");
-  return match.round;
+function teamForSeat(seat: Seat): TeamId {
+  return seat === "NORTH" || seat === "SOUTH" ? "NORTH_SOUTH" : "EAST_WEST";
 }
 
-export function createAIObservation(match: MatchState, playerId: PlayerId): AIRoundObservation {
-  const round = roundFor(match);
-  const seat = round.game?.players[playerId]
-    ?? Object.entries(match.round?.game?.players ?? {}).find(([id]) => id === playerId)?.[1]
-    ?? seatForPlayerFromRound(round, playerId);
-  const teamId = teamForSeat(seat);
+export interface AIObservationInput {
+  readonly match: MatchState;
+  readonly playerId: PlayerId;
+  readonly playerSeat: Seat;
+  readonly legalBiddingActions?: readonly BiddingAction["type"][];
+  readonly legalCardIds?: readonly CardId[];
+}
+
+export function createAIObservation(input: AIObservationInput): AIRoundObservation {
+  const { match, playerId, playerSeat } = input;
+  const round = match.round;
+  if (!round) throw new Error("Match has no active round");
 
   if (round.phase === "BIDDING") {
     return {
@@ -117,15 +122,16 @@ export function createAIObservation(match: MatchState, playerId: PlayerId): AIRo
       roundId: round.roundId,
       roundNumber: round.roundNumber,
       playerId,
-      seat,
-      teamId,
+      seat: playerSeat,
+      teamId: teamForSeat(playerSeat),
       phase: "BIDDING",
       score: match.score,
       bidding: {
         phase: "BIDDING",
         bidding: round.bidding,
-        ownHand: cardsFromIds(round.deal.hands[seat] ?? []),
+        ownHand: cardsFromIds(round.deal.hands[playerSeat] ?? []),
         exposedCard: round.deal.exposedCardId ? CARDS[round.deal.exposedCardId] ?? null : null,
+        legalActions: input.legalBiddingActions ?? [],
       },
       playing: null,
       projects: round.projects,
@@ -134,80 +140,65 @@ export function createAIObservation(match: MatchState, playerId: PlayerId): AIRo
     };
   }
 
-  if (round.game) {
-    const game = round.game;
-    const ownHand = game.hands[playerId] ?? [];
-    const knownPlayedCards = [
-      ...game.completedTricks.flatMap((trick) => trick.plays.map((play) => play.card)),
-      ...game.currentTrick.map((play) => play.card),
-    ];
-    const publicGame: Omit<GameState, "hands"> & {
-      readonly ownHand: readonly Card[];
-      readonly knownPlayedCards: readonly Card[];
-    } = {
-      ...game,
-      hands: undefined as never,
-      ownHand,
-      knownPlayedCards,
-    };
-    return {
-      matchId: match.matchId,
-      roundId: round.roundId,
-      roundNumber: round.roundNumber,
-      playerId,
-      seat,
-      teamId,
-      phase: round.phase === "ROUND_COMPLETE" ? "ROUND_COMPLETE" : "PLAYING",
-      score: match.score,
-      bidding: null,
-      playing: round.phase === "ROUND_COMPLETE" ? null : {
-        phase: "PLAYING",
-        game: publicGame,
-        contract: game.contract,
-        trumpSuit: game.trumpSuit,
-      },
-      projects: round.projects,
-      baloot: round.baloot,
-      stateVersion: match.stateVersion,
-    };
+  if (!round.game) throw new Error("Match round has no game state");
+
+  const game = round.game;
+  if (game.players[playerId] !== playerSeat) {
+    throw new Error("Player-to-seat mapping does not match game state");
   }
 
-  throw new Error("Match round has no playable state");
+  const ownHand = game.hands[playerId] ?? [];
+  const knownPlayedCards = [
+    ...game.completedTricks.flatMap((trick) => trick.plays.map((play) => play.card)),
+    ...game.currentTrick.map((play) => play.card),
+  ];
+
+  const publicGame: Omit<GameState, "hands"> & {
+    readonly ownHand: readonly Card[];
+    readonly knownPlayedCards: readonly Card[];
+    readonly legalCardIds: readonly CardId[];
+  } = {
+    ...game,
+    hands: undefined as never,
+    ownHand,
+    knownPlayedCards,
+    legalCardIds: input.legalCardIds ?? [],
+  };
+
+  return {
+    matchId: match.matchId,
+    roundId: round.roundId,
+    roundNumber: round.roundNumber,
+    playerId,
+    seat: playerSeat,
+    teamId: teamForSeat(playerSeat),
+    phase: round.phase === "ROUND_COMPLETE"
+      ? "ROUND_COMPLETE"
+      : match.phase === "MATCH_COMPLETE"
+        ? "MATCH_COMPLETE"
+        : "PLAYING",
+    score: match.score,
+    bidding: null,
+    playing: round.phase === "ROUND_COMPLETE" ? null : {
+      phase: "PLAYING",
+      game: publicGame,
+      contract: game.contract,
+      trumpSuit: game.trumpSuit,
+    },
+    projects: round.projects,
+    baloot: round.baloot,
+    stateVersion: match.stateVersion,
+  };
 }
 
-function seatForPlayerFromRound(round: RoundState, playerId: PlayerId): Seat {
-  throw new Error(`Unable to resolve seat for player ${playerId}; player-to-seat mapping must be supplied by the match host`);
+export function legalCardActions(observation: AIRoundObservation): readonly AIAction[] {
+  const ids = observation.playing?.game.legalCardIds ?? [];
+  return ids.map((cardId) => ({ type: "PLAY_CARD", cardId }));
 }
 
-function teamForSeat(seat: Seat): TeamId {
-  return seat === "NORTH" || seat === "SOUTH" ? "NORTH_SOUTH" : "EAST_WEST";
-}
-
-export function listKnownPlayedCards(observation: AIRoundObservation): readonly Card[] {
-  return observation.playing?.game.knownPlayedCards ?? [];
-}
-
-export function legalActionCandidates(observation: AIRoundObservation): readonly AIAction[] {
-  if (observation.phase === "BIDDING" && observation.bidding) {
-    const b = observation.bidding;
-    const hands: Readonly<Record<Seat, readonly CardId[]>> = {
-      NORTH: observation.seat === "NORTH" ? b.ownHand.map((c) => c.id) : [],
-      EAST: observation.seat === "EAST" ? b.ownHand.map((c) => c.id) : [],
-      SOUTH: observation.seat === "SOUTH" ? b.ownHand.map((c) => c.id) : [],
-      WEST: observation.seat === "WEST" ? b.ownHand.map((c) => c.id) : [],
-    };
-    // The engine requires complete hands for bidding legality. This adapter is intentionally
-    // not a legality oracle yet; the match host must supply the complete authoritative
-    // bidding context without exposing it to the policy. See Phase 18 review R18-02.
-    void hands;
-    return [];
-  }
-
-  if (observation.phase === "PLAYING" && observation.playing) {
-    // Card legality is resolved by the engine at the integration boundary. The observation
-    // intentionally does not contain opponent hands.
-    return [];
-  }
-
-  return [];
+export function legalBidActions(observation: AIRoundObservation): readonly AIAction[] {
+  return (observation.bidding?.legalActions ?? []).map((type) => ({
+    type: "BID",
+    action: { type, actionId: `ai:${observation.matchId}:${observation.roundId}:${observation.playerId}:${type}` } as BiddingAction,
+  }));
 }
