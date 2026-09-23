@@ -6,7 +6,7 @@ export interface InformationSetInput {
   readonly ownHand: readonly Card[];
   readonly game: Pick<GameState, "hands" | "players" | "currentTrick" | "completedTricks">;
   readonly exposedCard?: Card | null;
-  readonly contract: Contract;
+  readonly contract: Contract;\n  readonly currentTrick: GameState["currentTrick"];\n  readonly completedTricks: GameState["completedTricks"];
   readonly trumpSuit: Suit | null;
 }
 
@@ -35,10 +35,10 @@ export function sampleHiddenWorld(
   const known = new Set<CardId>(input.ownHand.map((card) => card.id));
   if (input.exposedCard) known.add(input.exposedCard.id);
 
-  for (const trick of input.completedTricks ?? []) {
+  for (const trick of input.completedTricks) {
     for (const play of trick.plays) known.add(play.card.id);
   }
-  for (const play of input.currentTrick ?? []) known.add(play.card.id);
+  for (const play of input.currentTrick) known.add(play.card.id);
 
   const unknown = DECK.filter((card) => !known.has(card.id)).map((card) => ({ ...card }));
   shuffle(unknown, rng);
