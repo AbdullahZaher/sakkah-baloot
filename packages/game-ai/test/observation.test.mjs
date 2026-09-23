@@ -6,7 +6,7 @@ import {
   createMatchState,
   createRoundState,
   createSeededRandom,
-  legalBiddingActions ,
+  legalBiddingActions,
 } from "@sakkah-baloot/game-engine";
 import {
   createAIObservation,
