@@ -14,7 +14,10 @@ interface GameTableProps {
   readonly game?: GameState | null;
   readonly playerSeat?: Seat;
   readonly onBiddingAction?: (action: BiddingActionType, suit?: Suit) => void;
-  readonly onCardPlay?: (cardId: CardId) => void;\n  readonly roundScore?: RoundScoreBreakdown | null;\n  readonly matchScore?: MatchScore;\n  readonly matchEnd?: MatchEndResult;
+  readonly onCardPlay?: (cardId: CardId) => void;
+  readonly roundScore?: RoundScoreBreakdown | null;
+  readonly matchScore?: MatchScore;
+  readonly matchEnd?: MatchEndResult;
 }
 
 export function GameTable({ dealerSeat, actingSeat, phase, exposedCard, hand, legalActions, legalCardIds = [], game = null, playerSeat = "SOUTH", onBiddingAction, onCardPlay }: GameTableProps) {
@@ -22,7 +25,8 @@ export function GameTable({ dealerSeat, actingSeat, phase, exposedCard, hand, le
   const actions = playerIsActing ? legalActions : [];
   const hokumSuits = actions.includes("BUY_HOKUM") ? availableHokumSuits(exposedCard?.suit ?? null) : [];
   const cardMap = new Map(hand.map((card) => [card.id, card]));
-  const trickCards = game?.currentTrick ?? [];\n  const isRoundComplete = game?.phase === "ROUND_COMPLETE";
+  const trickCards = game?.currentTrick ?? [];
+  const isRoundComplete = game?.phase === "ROUND_COMPLETE";
 
   return (
     <View style={styles.screen}>
@@ -34,7 +38,8 @@ export function GameTable({ dealerSeat, actingSeat, phase, exposedCard, hand, le
           <Text style={styles.logo}>صكّة</Text>
           <Text style={styles.phase}>{game ? `الطقطقة ${game.trickNumber}` : formatPhase(phase)}</Text>
           {!game ? <><Text style={styles.meta}>Dealer: {dealerSeat}</Text><View style={styles.exposed}><Text style={styles.exposedLabel}>المكشوفة</Text><CardView card={exposedCard} compact /></View></> : null}
-          {game && !isRoundComplete ? <TrickView plays={trickCards} /> : null}\n          {isRoundComplete && roundScore ? <RoundResult score={roundScore} matchScore={matchScore ?? { NORTH_SOUTH: 0, EAST_WEST: 0 }} matchEnd={matchEnd ?? { status: "ONGOING", score: matchScore ?? { NORTH_SOUTH: 0, EAST_WEST: 0 } }} /> : null}
+          {game && !isRoundComplete ? <TrickView plays={trickCards} /> : null}
+          {isRoundComplete && roundScore ? <RoundResult score={roundScore} matchScore={matchScore ?? { NORTH_SOUTH: 0, EAST_WEST: 0 }} matchEnd={matchEnd ?? { status: "ONGOING", score: matchScore ?? { NORTH_SOUTH: 0, EAST_WEST: 0 } }} /> : null}
         </View>
         <View style={styles.south}>
           <SeatView label="SOUTH" active={game ? game.currentPlayerId === "SOUTH" : playerIsActing} />
