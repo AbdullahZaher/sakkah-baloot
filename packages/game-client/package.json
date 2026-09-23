@@ -9,6 +9,7 @@
     "@sakkah-baloot/game-engine": "workspace:*"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "node --test test/*.test.mjs"
   }
 }
