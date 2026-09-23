@@ -209,8 +209,8 @@ export function createLocalBiddingSession(): LocalBiddingSession {
     bidding,
     game,
     roundScore,
-    matchScore,
-    matchEnd,
+    match.score,
+    match.end,
   );
 
   return {
