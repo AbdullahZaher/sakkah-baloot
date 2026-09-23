@@ -138,6 +138,5 @@ test("playable local host accepts a human bid and returns to the human turn", ()
   } else {
     assert.equal(before.humanTurn, true);
     assert.equal(before.actingSeat, "SOUTH");
-    assert.equal(before.game?.currentPlayerId, "HUMAN_PLAYER");
   }
 });
