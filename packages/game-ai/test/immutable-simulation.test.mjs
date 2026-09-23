@@ -17,7 +17,7 @@ function gameState() {
   return {
     phase: "PLAYING",
     currentPlayerId: "SOUTH",
-    players: { SOUTH: "SOUTH" },
+    players: { NORTH: "NORTH", EAST: "EAST", SOUTH: "SOUTH", WEST: "WEST" },
     hands,
     contract: "SUN",
     trumpSuit: null,
