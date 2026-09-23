@@ -126,6 +126,7 @@ export function simulateMatch(
     );
     let baloot = null as ReturnType<typeof declareBaloot> | null;
 
+    const initialGame = cloneGameState(game);
     const played: CardId[] = [];
 
     while (game.phase === "PLAYING") {
@@ -188,8 +189,11 @@ export function simulateMatch(
       }
 
       game = applyCardPlay(game, playerId, selected);
+      assertGameStateConservation(game);
       played.push(selected);
     }
+
+    assertReplayEquivalent(initialGame, played, game);
 
     const projectResolution = resolveProjects(projects, dealerSeat);
     const purchaserSeat = bidding.selectedContract.purchaserSeat;
@@ -560,4 +564,41 @@ function cloneGameState(state: GameState): GameState {
       })),
     })),
   };
+}
+
+
+function assertGameStateConservation(state: GameState): void {
+  const ids = [
+    ...Object.values(state.hands).flat().map((card) => card.id),
+    ...state.currentTrick.map((play) => play.card.id),
+    ...state.completedTricks.flatMap((trick) => trick.plays.map((play) => play.card.id)),
+  ];
+  const unique = new Set(ids);
+  if (unique.size !== ids.length || ids.length !== 32) {
+    throw new Error("Simulation produced an impossible card partition");
+  }
+}
+
+function assertReplayEquivalent(
+  initial: GameState,
+  played: readonly CardId[],
+  expected: GameState,
+): void {
+  let replay = cloneGameState(initial);
+  for (const cardId of played) {
+    const playerId = replay.currentPlayerId;
+    if (!getLegalMoves(replay, playerId).some((move) => move.cardId === cardId)) {
+      throw new Error(`Replay divergence: illegal replay card ${cardId}`);
+    }
+    replay = applyCardPlay(replay, playerId, cardId);
+  }
+
+  if (
+    replay.currentPlayerId !== expected.currentPlayerId ||
+    replay.trickNumber !== expected.trickNumber ||
+    replay.completedTricks.length !== expected.completedTricks.length ||
+    JSON.stringify(replay.completedTricks) !== JSON.stringify(expected.completedTricks)
+  ) {
+    throw new Error("Replay divergence detected");
+  }
 }
