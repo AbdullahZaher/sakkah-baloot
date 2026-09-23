@@ -44,7 +44,7 @@ jobs:
               "branch": os.environ["GITHUB_REF_NAME"],
           }).encode()
           req = urllib.request.Request(
-              f"https://api.github.com/repos/{os.environ['GITHUB_REPOSITORY']}/contents/ci/typecheck-error.txt",
+              f"https://api.github.com/repos/{os.environ['GITHUB_REPOSITORY']}/contents/ci/typecheck-error-${GITHUB_SHA}.txt",
               data=payload,
               method="PUT",
               headers={
