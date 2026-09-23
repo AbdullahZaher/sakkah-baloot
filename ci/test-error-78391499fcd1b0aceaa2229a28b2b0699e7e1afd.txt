@@ -1,0 +1,286 @@
+Commit: 78391499fcd1b0aceaa2229a28b2b0699e7e1afd
+
+
+> @sakkah-baloot/game-engine@0.1.0 test
+> npm run build && node --test test/*.test.mjs
+
+
+> @sakkah-baloot/game-engine@0.1.0 build
+> tsc
+
+TAP version 13
+# Subtest: deck has exactly 32 unique cards
+ok 1 - deck has exactly 32 unique cards
+  ---
+  duration_ms: 1.214261
+  type: 'test'
+  ...
+# Subtest: canonical raw card values
+ok 2 - canonical raw card values
+  ---
+  duration_ms: 0.245319
+  type: 'test'
+  ...
+# Subtest: canonical Qaid conversion golden cases
+ok 3 - canonical Qaid conversion golden cases
+  ---
+  duration_ms: 0.767806
+  type: 'test'
+  ...
+# Subtest: seeded dealing is deterministic and conserves the deck
+ok 4 - seeded dealing is deterministic and conserves the deck
+  ---
+  duration_ms: 1.094977
+  type: 'test'
+  ...
+# Subtest: project detection recognizes sequence and four aces
+ok 5 - project detection recognizes sequence and four aces
+  ---
+  duration_ms: 0.69536
+  type: 'test'
+  ...
+# Subtest: project multipliers are canonical
+ok 6 - project multipliers are canonical
+  ---
+  duration_ms: 0.142065
+  type: 'test'
+  ...
+# Subtest: legal move generation follows led suit
+ok 7 - legal move generation follows led suit
+  ---
+  duration_ms: 0.469648
+  type: 'test'
+  ...
+# Subtest: Hokum requires trump when opponent wins and player has no led suit
+ok 8 - Hokum requires trump when opponent wins and player has no led suit
+  ---
+  duration_ms: 0.326751
+  type: 'test'
+  ...
+# Subtest: locked Hokum forbids leading trump while a non-trump exists
+ok 9 - locked Hokum forbids leading trump while a non-trump exists
+  ---
+  duration_ms: 0.404767
+  type: 'test'
+  ...
+# Subtest: match equal crossing target produces EXTRA_DEAL
+ok 10 - match equal crossing target produces EXTRA_DEAL
+  ---
+  duration_ms: 0.511096
+  type: 'test'
+  ...
+# Subtest: seat direction is canonical counter-clockwise
+ok 11 - seat direction is canonical counter-clockwise
+  ---
+  duration_ms: 0.173705
+  type: 'test'
+  ...
+# Subtest: Sun scoring conserves 130 raw points and converts to 26 Qaid
+ok 12 - Sun scoring conserves 130 raw points and converts to 26 Qaid
+  ---
+  duration_ms: 0.692966
+  type: 'test'
+  ...
+# Subtest: overtrump is mandatory when opponent trump is beatable
+ok 13 - overtrump is mandatory when opponent trump is beatable
+  ---
+  duration_ms: 0.20873
+  type: 'test'
+  ...
+# Subtest: valid Ika partner exemption allows any card for the third player
+ok 14 - valid Ika partner exemption allows any card for the third player
+  ---
+  duration_ms: 0.156583
+  type: 'test'
+  ...
+# Subtest: Ace without valid Ika does not grant partner exemption
+ok 15 - Ace without valid Ika does not grant partner exemption
+  ---
+  duration_ms: 0.148507
+  type: 'test'
+  ...
+# Subtest: Sun with no lead suit allows any card
+ok 16 - Sun with no lead suit allows any card
+  ---
+  duration_ms: 0.803873
+  type: 'test'
+  ...
+# Subtest: opponent winning trump with no higher trump allows any trump
+ok 17 - opponent winning trump with no higher trump allows any trump
+  ---
+  duration_ms: 0.162063
+  type: 'test'
+  ...
+# Subtest: third player with partner winning may play any trump when partner wins with trump
+ok 18 - third player with partner winning may play any trump when partner wins with trump
+  ---
+  duration_ms: 0.156252
+  type: 'test'
+  ...
+# Subtest: fourth player with partner winning and no lead suit may play any card
+ok 19 - fourth player with partner winning and no lead suit may play any card
+  ---
+  duration_ms: 0.265757
+  type: 'test'
+  ...
+# Subtest: fourth player with partner winning trump must follow trump when trump is led
+ok 20 - fourth player with partner winning trump must follow trump when trump is led
+  ---
+  duration_ms: 0.153758
+  type: 'test'
+  ...
+# Subtest: Ika requires the highest remaining non-trump card of the led suit
+ok 21 - Ika requires the highest remaining non-trump card of the led suit
+  ---
+  duration_ms: 0.704808
+  type: 'test'
+  ...
+# Subtest: Ika declaration has zero state mutation when invalid
+ok 22 - Ika declaration has zero state mutation when invalid
+  ---
+  duration_ms: 0.329466
+  type: 'test'
+  ...
+# Subtest: valid Ika is recorded on the committed lead play
+ok 23 - valid Ika is recorded on the committed lead play
+  ---
+  duration_ms: 0.210954
+  type: 'test'
+  ...
+# Subtest: locked Hokum allows leading trump when hand contains only trump
+ok 24 - locked Hokum allows leading trump when hand contains only trump
+  ---
+  duration_ms: 0.214351
+  type: 'test'
+  ...
+# Subtest: illegal card play is rejected without mutating state
+ok 25 - illegal card play is rejected without mutating state
+  ---
+  duration_ms: 0.35863
+  type: 'test'
+  ...
+# Subtest: trick resolution uses canonical counter-clockwise winner handoff
+ok 26 - trick resolution uses canonical counter-clockwise winner handoff
+  ---
+  duration_ms: 0.263283
+  type: 'test'
+  ...
+# Subtest: Kaboot uses the dedicated flat Hokum value at every ordinary level
+ok 27 - Kaboot uses the dedicated flat Hokum value at every ordinary level
+  ---
+  duration_ms: 0.473104
+  type: 'test'
+  ...
+# Subtest: Reverse Kaboot is 88 and is independent of ordinary escalation
+ok 28 - Reverse Kaboot is 88 and is independent of ordinary escalation
+  ---
+  duration_ms: 0.193171
+  type: 'test'
+  ...
+# Subtest: escalation follows the frozen NORMAL → DOUBLE → TRIPLE → FOUR → GAHWA chain
+ok 29 - escalation follows the frozen NORMAL → DOUBLE → TRIPLE → FOUR → GAHWA chain
+  ---
+  duration_ms: 0.226213
+  type: 'test'
+  ...
+# Subtest: Sun escalation rejects TRIPLE and FOUR
+ok 30 - Sun escalation rejects TRIPLE and FOUR
+  ---
+  duration_ms: 0.130664
+  type: 'test'
+  ...
+# Subtest: closing escalation freezes the final locked play mode
+ok 31 - closing escalation freezes the final locked play mode
+  ---
+  duration_ms: 0.115416
+  type: 'test'
+  ...
+# Subtest: project overlap is rejected and exact ties use dealer-relative counter-clockwise priority
+ok 32 - project overlap is rejected and exact ties use dealer-relative counter-clockwise priority
+  ---
+  duration_ms: 0.640588
+  type: 'test'
+  ...
+# Subtest: project resolution awards every eligible project owned by the winning team
+ok 33 - project resolution awards every eligible project owned by the winning team
+  ---
+  duration_ms: 0.367938
+  type: 'test'
+  ...
+# Subtest: raw-to-Qaid conversion remains independently canonical at threshold and rounding edges
+ok 34 - raw-to-Qaid conversion remains independently canonical at threshold and rounding edges
+  ---
+  duration_ms: 0.166451
+  type: 'test'
+  ...
+# Subtest: replay is deterministic and duplicate event IDs are idempotent
+ok 35 - replay is deterministic and duplicate event IDs are idempotent
+  ---
+  duration_ms: 0.496268
+  type: 'test'
+  ...
+# Subtest: second-round Sun is reserved for dealer-right with an Ace
+ok 36 - second-round Sun is reserved for dealer-right with an Ace
+  ---
+  duration_ms: 0.662098
+  type: 'test'
+  ...
+# Subtest: bidding timeout becomes an authoritative PASS after 8 seconds
+ok 37 - bidding timeout becomes an authoritative PASS after 8 seconds
+  ---
+  duration_ms: 0.207989
+  type: 'test'
+  ...
+# Subtest: Kasho qualifies on five 7/8/9 cards, is first-bidding only, and is idempotent
+ok 38 - Kasho qualifies on five 7/8/9 cards, is first-bidding only, and is idempotent
+  ---
+  duration_ms: 0.269604
+  type: 'test'
+  ...
+# Subtest: bidding Kasho is available after PASS, cancels immediately, and rotates dealer right
+not ok 39 - bidding Kasho is available after PASS, cancels immediately, and rotates dealer right
+  ---
+  duration_ms: 5.814783
+  type: 'test'
+  location: '/home/runner/work/sakkah-baloot/sakkah-baloot/packages/game-engine/test/engine.test.mjs:724:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    The expression evaluated to a falsy value:
+    
+      assert.ok(legalBiddingActions(state, dealer, "CLUBS", hands).includes("DECLARE_KASHO"))
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///home/runner/work/sakkah-baloot/sakkah-baloot/packages/game-engine/test/engine.test.mjs:733:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: integrity incidents follow the frozen authority matrix and cancel at 0-0
+ok 40 - integrity incidents follow the frozen authority matrix and cancel at 0-0
+  ---
+  duration_ms: 0.338763
+  type: 'test'
+  ...
+# Subtest: invalid client requests remain ordinary rejections, not integrity incidents
+ok 41 - invalid client requests remain ordinary rejections, not integrity incidents
+  ---
+  duration_ms: 0.17651
+  type: 'test'
+  ...
+1..41
+# tests 41
+# suites 0
+# pass 40
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 133.426625
