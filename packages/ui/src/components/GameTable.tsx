@@ -1,17 +1,32 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import type { BiddingAction, Card, CardId, Seat } from "@sakkah-baloot/game-engine";
 
-type Seat = "NORTH" | "EAST" | "SOUTH" | "WEST";
-type CardId = string;
+type BiddingActionType = BiddingAction["type"];
 
 interface GameTableProps {
   readonly dealerSeat: Seat;
   readonly actingSeat: Seat;
   readonly phase: string;
-  readonly exposedCardId: CardId | null;
-  readonly hand: readonly CardId[];
+  readonly exposedCard: Card | null;
+  readonly hand: readonly Card[];
+  readonly legalActions: readonly BiddingActionType[];
+  readonly playerSeat?: Seat;
+  readonly onBiddingAction?: (action: BiddingActionType) => void;
 }
 
-export function GameTable({ dealerSeat, actingSeat, phase, exposedCardId, hand }: GameTableProps) {
+export function GameTable({
+  dealerSeat,
+  actingSeat,
+  phase,
+  exposedCard,
+  hand,
+  legalActions,
+  playerSeat = "SOUTH",
+  onBiddingAction,
+}: GameTableProps) {
+  const playerIsActing = actingSeat === playerSeat;
+  const actions = playerIsActing ? legalActions : [];
+
   return (
     <View style={styles.screen}>
       <View style={styles.table}>
@@ -21,24 +36,24 @@ export function GameTable({ dealerSeat, actingSeat, phase, exposedCardId, hand }
 
         <View style={styles.center}>
           <Text style={styles.logo}>صكّة</Text>
-          <Text style={styles.phase}>{phase}</Text>
+          <Text style={styles.phase}>{formatPhase(phase)}</Text>
           <Text style={styles.meta}>Dealer: {dealerSeat}</Text>
           <View style={styles.exposed}>
             <Text style={styles.exposedLabel}>المكشوفة</Text>
-            <Text style={styles.exposedCard}>{formatCard(exposedCardId)}</Text>
+            <CardView card={exposedCard} compact />
           </View>
         </View>
 
         <View style={styles.south}>
-          <SeatView label="SOUTH" active={actingSeat === "SOUTH"} />
+          <SeatView label="SOUTH" active={playerIsActing} />
           <View style={styles.hand}>
-            {hand.map((cardId) => <CardView key={cardId} cardId={cardId} />)}
+            {hand.map((card) => <CardView key={card.id} card={card} />)}
           </View>
-          {phase === "FIRST_ROUND" || phase === "SECOND_ROUND" ? (
+          {actions.length > 0 ? (
             <View style={styles.actions}>
-              <Action label="Pass" />
-              <Action label="Sun" primary />
-              <Action label="Hokum" primary />
+              {actions.map((action) => (
+                <Action key={action} action={action} onPress={onBiddingAction} />
+              ))}
             </View>
           ) : null}
         </View>
@@ -56,27 +71,49 @@ function SeatView({ label, active, style }: { label: Seat; active: boolean; styl
   );
 }
 
-function CardView({ cardId }: { cardId: CardId }) {
+function CardView({ card, compact = false }: { card: Card | null; compact?: boolean }) {
   return (
-    <View style={styles.card}>
-      <Text style={styles.cardText}>{formatCard(cardId)}</Text>
+    <View style={[styles.card, compact && styles.compactCard]}>
+      <Text style={[styles.rank, compact && styles.compactRank]}>{card?.rank ?? "—"}</Text>
+      <Text style={[styles.suit, compact && styles.compactSuit, card && isRedSuit(card) && styles.redSuit]}>
+        {card ? suitSymbol(card.suit) : ""}
+      </Text>
     </View>
   );
 }
 
-function Action({ label, primary = false }: { label: string; primary?: boolean }) {
+function Action({ action, onPress }: { action: BiddingActionType; onPress?: (action: BiddingActionType) => void }) {
   return (
-    <Pressable style={[styles.action, primary && styles.primaryAction]}>
-      <Text style={styles.actionText}>{label}</Text>
+    <Pressable accessibilityRole="button" onPress={() => onPress?.(action)} style={styles.action}>
+      <Text style={styles.actionText}>{actionLabel(action)}</Text>
     </Pressable>
   );
 }
 
-function formatCard(cardId: string | null) {
-  if (!cardId) return "—";
-  const [suit, rank] = cardId.split("-");
-  const suits: Record<string, string> = { CLUBS: "♣", DIAMONDS: "♦", HEARTS: "♥", SPADES: "♠" };
-  return `${suits[suit ?? ""] ?? ""}${rank ?? ""}`;
+function actionLabel(action: BiddingActionType): string {
+  switch (action) {
+    case "PASS": return "بس";
+    case "DECLARE_KASHO": return "كاشو";
+    case "BUY_HOKUM_EXPOSED": return "حكم";
+    case "BUY_SUN": return "صن";
+    case "BUY_ASHKAL": return "أشكال";
+    case "BUY_HOKUM": return "حكم";
+  }
+}
+
+function suitSymbol(suit: Card["suit"]): string {
+  return { CLUBS: "♣", DIAMONDS: "♦", HEARTS: "♥", SPADES: "♠" }[suit];
+}
+
+function isRedSuit(card: Card): boolean {
+  return card.suit === "DIAMONDS" || card.suit === "HEARTS";
+}
+
+function formatPhase(phase: string): string {
+  if (phase === "FIRST_ROUND") return "الجولة الأولى";
+  if (phase === "SECOND_ROUND") return "الجولة الثانية";
+  if (phase === "CONTRACT_SELECTED") return "تم اختيار اللعب";
+  return phase;
 }
 
 const styles = StyleSheet.create({
@@ -93,11 +130,10 @@ const styles = StyleSheet.create({
   },
   center: { alignItems: "center", gap: 6 },
   logo: { color: "#F5E6BF", fontSize: 34, fontWeight: "800" },
-  phase: { color: "#FFFFFF", fontSize: 13, letterSpacing: 2 },
+  phase: { color: "#FFFFFF", fontSize: 13, letterSpacing: 1 },
   meta: { color: "#BFD2C9", fontSize: 12 },
-  exposed: { marginTop: 8, alignItems: "center" },
+  exposed: { marginTop: 8, alignItems: "center", gap: 4 },
   exposedLabel: { color: "#BFD2C9", fontSize: 10 },
-  exposedCard: { color: "#F7F2E8", fontSize: 22, fontWeight: "700" },
   seat: { position: "absolute", alignItems: "center", gap: 5 },
   north: { top: 14 },
   west: { left: 20, top: "44%" },
@@ -109,11 +145,15 @@ const styles = StyleSheet.create({
   hand: { flexDirection: "row", gap: 6, marginTop: 10 },
   card: {
     width: 52, height: 74, borderRadius: 7, backgroundColor: "#F7F2E8",
-    justifyContent: "center", alignItems: "center",
+    justifyContent: "center", alignItems: "center", paddingVertical: 7,
   },
-  cardText: { color: "#17231F", fontSize: 16, fontWeight: "700" },
+  compactCard: { width: 42, height: 58 },
+  rank: { color: "#17231F", fontSize: 18, fontWeight: "800" },
+  compactRank: { fontSize: 15 },
+  suit: { color: "#17231F", fontSize: 20, lineHeight: 20 },
+  compactSuit: { fontSize: 16, lineHeight: 16 },
+  redSuit: { color: "#B33A3A" },
   actions: { flexDirection: "row", gap: 8, marginTop: 10 },
-  action: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 18, backgroundColor: "#315C4E" },
-  primaryAction: { backgroundColor: "#9D7B3C" },
-  actionText: { color: "#FFFFFF", fontSize: 12, fontWeight: "700" },
+  action: { minWidth: 72, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 18, backgroundColor: "#9D7B3C" },
+  actionText: { color: "#FFFFFF", fontSize: 12, fontWeight: "800", textAlign: "center" },
 });
