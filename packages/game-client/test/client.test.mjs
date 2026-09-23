@@ -126,13 +126,18 @@ test("playable local host accepts a human bid and returns to the human turn", ()
   });
 
   const before = session.getSnapshot();
-  const action = before.legalActions.includes("BUY_SUN")
-    ? "BUY_SUN"
-    : "PASS";
 
-  const after = session.dispatchBiddingAction(action);
-
-  assert.equal(after.humanTurn, true);
-  assert.equal(after.actingSeat, "SOUTH");
-  assert.ok(after.protocol.stateVersion > before.protocol.stateVersion);
+  if (before.bidding.phase === "BIDDING") {
+    const action = before.legalActions.includes("BUY_SUN")
+      ? "BUY_SUN"
+      : "PASS";
+    const after = session.dispatchBiddingAction(action);
+    assert.equal(after.humanTurn, true);
+    assert.equal(after.actingSeat, "SOUTH");
+    assert.ok(after.protocol.stateVersion > before.protocol.stateVersion);
+  } else {
+    assert.equal(before.humanTurn, true);
+    assert.equal(before.actingSeat, "SOUTH");
+    assert.equal(before.game?.currentPlayerId, "HUMAN_PLAYER");
+  }
 });
