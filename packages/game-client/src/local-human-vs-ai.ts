@@ -497,8 +497,10 @@ export function createLocalHumanVsAISession(
             );
             continue;
           } catch {
-            // The authoritative engine rejected an overlapping/invalid project.
-            // Fall through to the card action so the AI cannot stall the match.
+            const fallback = getLegalMoves(round.game, playerId)[0];
+            if (!fallback) throw new Error("AI has no legal fallback card");
+            commitCard(playerId, fallback.cardId, false, false);
+            continue;
           }
         }
       }
