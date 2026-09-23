@@ -180,6 +180,36 @@ test("assertReplayEquivalent validates full canonical state equality", async () 
     assertReplayEquivalent(initial, result.playedCardIds, mutated);
   }, /Replay divergence/);
 
+  // Mutated dealerSeat is detected
+  assert.throws(() => {
+    const mutated = { ...result.final, dealerSeat: "EAST" };
+    assertReplayEquivalent(initial, result.playedCardIds, mutated);
+  }, /Replay divergence/);
+
+  // Mutated trumpSuit is detected
+  assert.throws(() => {
+    const mutated = { ...result.final, trumpSuit: "SPADES" };
+    assertReplayEquivalent(initial, result.playedCardIds, mutated);
+  }, /Replay divergence/);
+
+  // Mutated hokumPlayMode is detected
+  assert.throws(() => {
+    const mutated = { ...result.final, hokumPlayMode: "CLOSED" };
+    assertReplayEquivalent(initial, result.playedCardIds, mutated);
+  }, /Replay divergence/);
+
+  // Mutated hands is detected
+  assert.throws(() => {
+    const mutated = {
+      ...result.final,
+      hands: {
+        ...result.final.hands,
+        NORTH: [{ id: "S-7", suit: "SPADES", rank: "7" }],
+      },
+    };
+    assertReplayEquivalent(initial, result.playedCardIds, mutated);
+  }, /Replay divergence/);
+
   // Mutated completedTricks is detected
   assert.throws(() => {
     const mutated = { ...result.final, completedTricks: [] };
