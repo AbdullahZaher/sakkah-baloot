@@ -3,7 +3,6 @@ import { DECK } from "@sakkah-baloot/game-engine";
 import type {
   HiddenWorld,
   InformationSetInput,
-  SeededRng,
 } from "./information-set-sampler.js";
 import { createSeededRng, sampleHiddenWorld } from "./information-set-sampler.js";
 
