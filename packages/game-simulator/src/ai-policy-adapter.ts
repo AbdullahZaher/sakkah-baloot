@@ -92,11 +92,12 @@ export function createAISimulationPolicySet(
         );
       }
 
-      if (!current.game.hands[playerId]?.some((card) => card.id === decision.action.cardId)) {
+      const selectedCardId = decision.action.cardId;
+      if (!current.game.hands[playerId]?.some((card) => card.id === selectedCardId)) {
         throw new Error(`AI controller selected a card outside ${playerId}'s hand`);
       }
 
-      return decision.action.cardId;
+      return selectedCardId;
     };
   }
 
