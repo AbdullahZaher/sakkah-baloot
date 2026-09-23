@@ -134,7 +134,6 @@ export function simulateMatch(
 
     const initialGame = cloneGameState(game);
     const played: CardId[] = [];
-    const aiControllers = aiPlayersForSimulation(policies, undefined);
 
     while (game.phase === "PLAYING") {
       const playerId = game.currentPlayerId;
