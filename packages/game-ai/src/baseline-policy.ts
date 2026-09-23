@@ -255,7 +255,16 @@ function reasonCodes(
   return reasons.length ? reasons : ["BASELINE_VALUE"];
 }
 
-function actionSortKey(action: AIAction): string {\n  switch (action.type) {\n    case "PLAY_CARD": return action.cardId;\n    case "BID": return action.action.type;\n    case "DECLARE_PROJECT": return `PROJECT:${action.projectType}:${action.declarationId}`;\n    case "DECLARE_BALOOT": return `BALOOT:${action.declarationId}`;\n  }\n}\n\nfunction compareCandidate(
+function actionSortKey(action: AIAction): string {
+  switch (action.type) {
+    case "PLAY_CARD": return action.cardId;
+    case "BID": return action.action.type;
+    case "DECLARE_PROJECT": return `PROJECT:${action.projectType}:${action.declarationId}`;
+    case "DECLARE_BALOOT": return `BALOOT:${action.declarationId}`;
+  }
+}
+
+function compareCandidate(
   a: { readonly action: AIAction; readonly heuristicScore: number },
   b: { readonly action: AIAction; readonly heuristicScore: number },
 ): number {
