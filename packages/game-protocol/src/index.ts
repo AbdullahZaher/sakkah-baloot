@@ -338,10 +338,13 @@ export interface AuthoritativeTrickCompleteResult {
 }
 
 export function applyAuthoritativeTrickComplete(
-  game: GameState,
+  round: RoundState,
   event: TrickCompleteEvent,
 ): AuthoritativeTrickCompleteResult {
-  if (event.roundId.length === 0) throw new Error("Trick completion requires a round");
+  if (round.roundId !== event.roundId || round.phase !== "PLAYING" || round.game === null) {
+    throw new Error("Trick completion belongs to an inactive round");
+  }
+  const game = round.game;
   const lastTrick = game.completedTricks[game.completedTricks.length - 1];
   if (!lastTrick || lastTrick.trickNumber !== event.trickNumber || lastTrick.winnerSeat !== event.winnerSeat) {
     throw new Error("TRICK_COMPLETE does not match authoritative trick state");
