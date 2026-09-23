@@ -100,3 +100,39 @@ test("repeated snapshots are observationally idempotent", () => {
   assert.equal(second.bidding.turnNumber, first.bidding.turnNumber);
   assert.deepEqual(second.deal.hands, first.deal.hands);
 });
+
+
+test("playable local host exposes authoritative protocol state", () => {
+  const session = createLocalHumanVsAISession({
+    seed: "ui-playable-test",
+    humanSeat: "SOUTH",
+    aiMode: "BASELINE",
+    aiDifficulty: "NORMAL",
+  });
+
+  const snapshot = session.getSnapshot();
+
+  assert.equal(snapshot.playerSeat, "SOUTH");
+  assert.equal(snapshot.humanTurn, true);
+  assert.equal(snapshot.actingSeat, "SOUTH");
+  assert.equal(snapshot.protocol.phase, "BID");
+  assert.ok(snapshot.protocol.stateVersion >= 2);
+});
+
+test("playable local host accepts a human bid and returns to the human turn", () => {
+  const session = createLocalHumanVsAISession({
+    seed: "ui-playable-bid-test",
+    humanSeat: "SOUTH",
+  });
+
+  const before = session.getSnapshot();
+  const action = before.legalActions.includes("BUY_SUN")
+    ? "BUY_SUN"
+    : "PASS";
+
+  const after = session.dispatchBiddingAction(action);
+
+  assert.equal(after.humanTurn, true);
+  assert.equal(after.actingSeat, "SOUTH");
+  assert.ok(after.protocol.stateVersion > before.protocol.stateVersion);
+});
