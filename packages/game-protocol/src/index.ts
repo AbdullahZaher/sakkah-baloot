@@ -154,7 +154,7 @@ export function applyProtocolEvent(
     throw new Error("Protocol event belongs to another round");
   }
 
-  const nextPhase = protocolPhaseForEvent(event);
+  assertProtocolTransition(state.phase, event);\n\n  const nextPhase = protocolPhaseForEvent(event);
   const score = event.type === "ROUND_COMPLETE" || event.type === "MATCH_COMPLETE"
     ? event.score
     : state.score;
