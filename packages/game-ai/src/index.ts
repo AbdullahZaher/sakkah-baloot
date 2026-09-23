@@ -218,6 +218,8 @@ export { createBeliefState, sampleBeliefWorlds } from "./belief-state.js";
 export type { BeliefState, BeliefObservation, BeliefWorldSample } from "./belief-state.js";
 export { chooseISMCTSCard } from "./is-mcts.js";
 export type { ISMCTSConfig, ISMCTSDecision } from "./is-mcts.js";
+export { toProtocolClientAction } from "./protocol-action-adapter.js";
+export type { AIClientAction } from "./protocol-action-adapter.js";
 export { solveEndgame } from "./endgame-solver.js";
 export { decideAIAction } from "./ai-controller.js";
 export type { EndgameDecision, EndgameSolverConfig } from "./endgame-solver.js";
