@@ -15,7 +15,7 @@ interface GameTableProps {
   readonly playerSeat?: Seat;
   readonly onBiddingAction?: (action: BiddingActionType, suit?: Suit) => void;
   readonly onCardPlay?: (cardId: CardId) => void;
-  readonly onNextRound?: () => void;
+  readonly onNextRound?: (() => void) | undefined;
   readonly roundScore?: RoundScoreBreakdown | null;
   readonly matchScore?: MatchScore;
   readonly matchEnd?: MatchEndResult;
