@@ -1,6 +1,8 @@
 import {
   applyBiddingAction,
   applyCardPlay,
+  canDeclareBaloot,
+  declareBaloot,
   declareProject,
   isProjectDeclarationWindow,
   isCardLegal,
@@ -11,14 +13,25 @@ import {
   DECK,
 } from "@sakkah-baloot/game-engine";
 import type {
+  BiddingAction,
   BiddingHands,
   BiddingState,
   DealState,
   GameState,
+  MatchEndResult,
+  MatchScore,
   MatchState,
+  PlayerId,
   ProjectCandidate,
+  ProjectDeclaration,
   RoundScoreBreakdown,
   RoundState,
+  Seat,
+  Suit,
+  TeamId,
+  EscalationLevel,
+  CardId,
+  ProjectType,
 } from "@sakkah-baloot/game-engine";
 
 export interface ClientActionEnvelope<TAction = unknown> {
@@ -46,6 +59,7 @@ export type MatchProtocolEvent =
   | DealEvent
   | BidEvent
   | PlayCardEvent
+  | BalootEvent
   | ProjectEvent
   | TrickCompleteEvent
   | RoundCompleteEvent
@@ -72,6 +86,19 @@ export interface PlayCardEvent {
   readonly playerId: PlayerId;
   readonly cardId: CardId;
   readonly ikaDeclared: boolean;
+  /**
+   * Baloot is declared on the second K/Q play, before the card commit.
+   * The authoritative bridge validates this flag against the complete round history.
+   */
+  readonly balootDeclared?: boolean;
+}
+
+export interface BalootEvent {
+  readonly type: "BALOOT";
+  readonly roundId: string;
+  readonly playerId: PlayerId;
+  readonly cardId: CardId;
+  readonly trumpSuit: Suit;
 }
 
 export interface ProjectEvent {
@@ -119,6 +146,7 @@ export interface MatchProtocolState {
     | "DEAL"
     | "BID"
     | "PLAY_CARD"
+    | "BALOOT"
     | "PROJECT"
     | "TRICK_COMPLETE"
     | "ROUND_COMPLETE"
@@ -139,6 +167,13 @@ export function applyAuthoritativeBid(
   dealerSeat: Seat,
   event: BidEvent,
 ): AuthoritativeBidResult {
+  if (bidding.roundId !== event.roundId || deal.roundId !== event.roundId) {
+    throw new Error("Bid event belongs to another round");
+  }
+  if (bidding.actingSeat !== eventPlayerSeat(deal, event.playerId)) {
+    throw new Error("Bid event is not for the acting player");
+  }
+
   const state = applyBiddingAction(
     bidding,
     event.action,
@@ -148,6 +183,13 @@ export function applyAuthoritativeBid(
     deal.hands as BiddingHands,
   );
   return { state, event };
+}
+
+function eventPlayerSeat(deal: DealState, playerId: PlayerId): Seat {
+  const player = Object.entries(deal.hands).find(([seat]) => seat === playerId);
+  if (player) return player[0] as Seat;
+  if (playerId in deal.hands) return playerId as Seat;
+  throw new Error("Bid event player is not present in the deal");
 }
 
 export interface AuthoritativeProjectResult {
@@ -170,6 +212,13 @@ export function applyAuthoritativeProject(
   if (candidate.type !== event.project) {
     throw new Error("Project event does not match candidate");
   }
+  if (event.suit !== null && candidate.cards.length > 0) {
+    const candidateHasSuit = candidate.cards.some((cardId) => {
+      const card = DECK.find((entry) => entry.id === cardId);
+      return card?.suit === event.suit;
+    });
+    if (!candidateHasSuit) throw new Error("Project event suit does not match candidate");
+  }
   const project = declareProject(candidate, event.project, "PLAYING", 1, 0, existing);
   return { project, event };
 }
@@ -177,22 +226,140 @@ export function applyAuthoritativeProject(
 export interface AuthoritativePlayResult {
   readonly state: GameState;
   readonly event: PlayCardEvent;
+  readonly baloot: ReturnType<typeof declareBaloot> | null;
 }
 
-/** Apply a PLAY_CARD protocol event through the canonical game-engine rules. */
 export function applyAuthoritativePlayCard(
   game: GameState,
   event: PlayCardEvent,
+  existingBaloot: ReturnType<typeof declareBaloot> | null = null,
 ): AuthoritativePlayResult {
   if (game.phase !== "PLAYING") throw new Error("Game is not in PLAYING phase");
   if (game.currentPlayerId !== event.playerId) throw new Error("Card play is not for the current player");
+  if (event.balootDeclared && existingBaloot !== null) throw new Error("Baloot has already been declared");
+
+  let baloot: ReturnType<typeof declareBaloot> | null = existingBaloot;
+  if (event.balootDeclared) {
+    const card = game.hands[event.playerId]?.find((entry) => entry.id === event.cardId);
+    if (!card) throw new Error("Baloot card is not in the player's hand");
+
+    const alreadyPlayed = [
+      ...game.completedTricks.flatMap((trick) => trick.plays),
+      ...game.currentTrick,
+    ]
+      .filter((play) => play.playerId === event.playerId)
+      .map((play) => play.card);
+
+    const canDeclare = canDeclareBaloot(
+      game.contract,
+      game.trumpSuit,
+      game.players[event.playerId]!,
+      card,
+      alreadyPlayed,
+      true,
+    );
+    if (!canDeclare || game.trumpSuit === null) {
+      throw new Error("Invalid Baloot declaration");
+    }
+
+    const partner = alreadyPlayed.find((played) =>
+      ((played.rank === "K" && card.rank === "Q") || (played.rank === "Q" && card.rank === "K")) &&
+      played.suit === game.trumpSuit,
+    );
+    if (!partner) throw new Error("Baloot declaration is missing the K/Q partner");
+
+    const king = card.rank === "K" ? card : partner;
+    const queen = card.rank === "Q" ? card : partner;
+    baloot = declareBaloot(
+      `${event.roundId}:BALOOT:${event.playerId}:${event.cardId}`,
+      game.players[event.playerId]!,
+      game.trumpSuit,
+      king,
+      queen,
+    );
+  }
+
   if (!isCardLegal(game, event.playerId, event.cardId)) {
     throw new Error("Card play is illegal under game-engine rules");
   }
+
   return {
     state: applyCardPlay(game, event.playerId, event.cardId, event.ikaDeclared),
     event,
+    baloot,
   };
+}
+
+export interface AuthoritativeBalootResult {
+  readonly baloot: ReturnType<typeof declareBaloot>;
+  readonly event: BalootEvent;
+}
+
+export function applyAuthoritativeBaloot(
+  round: RoundState,
+  game: GameState,
+  event: BalootEvent,
+): AuthoritativeBalootResult {
+  if (round.roundId !== event.roundId || game.phase !== "PLAYING") {
+    throw new Error("Baloot declaration belongs to an inactive round");
+  }
+  if (round.baloot !== null) throw new Error("Baloot has already been declared");
+  if (game.currentPlayerId !== event.playerId) throw new Error("Baloot declaration is not for the current player");
+  if (game.trumpSuit !== event.trumpSuit || game.trumpSuit === null) {
+    throw new Error("Baloot trump suit does not match the game");
+  }
+
+  const card = game.hands[event.playerId]?.find((entry) => entry.id === event.cardId);
+  if (!card) throw new Error("Baloot card is not in the player's hand");
+
+  const alreadyPlayed = [
+    ...game.completedTricks.flatMap((trick) => trick.plays),
+    ...game.currentTrick,
+  ]
+    .filter((play) => play.playerId === event.playerId)
+    .map((play) => play.card);
+
+  if (!canDeclareBaloot(game.contract, game.trumpSuit, game.players[event.playerId]!, card, alreadyPlayed, true)) {
+    throw new Error("Invalid Baloot declaration");
+  }
+
+  const partner = alreadyPlayed.find((played) =>
+    ((played.rank === "K" && card.rank === "Q") || (played.rank === "Q" && card.rank === "K")) &&
+    played.suit === event.trumpSuit,
+  );
+  if (!partner) throw new Error("Baloot declaration is missing the K/Q partner");
+
+  const king = card.rank === "K" ? card : partner;
+  const queen = card.rank === "Q" ? card : partner;
+  return {
+    baloot: declareBaloot(
+      `${event.roundId}:BALOOT:${event.playerId}:${event.cardId}`,
+      game.players[event.playerId]!,
+      event.trumpSuit,
+      king,
+      queen,
+    ),
+    event,
+  };
+}
+
+export interface AuthoritativeTrickCompleteResult {
+  readonly state: GameState;
+  readonly event: TrickCompleteEvent;
+}
+
+export function applyAuthoritativeTrickComplete(
+  game: GameState,
+  event: TrickCompleteEvent,
+): AuthoritativeTrickCompleteResult {
+  if (event.roundId.length === 0) throw new Error("Trick completion requires a round");
+  const lastTrick = game.completedTricks[game.completedTricks.length - 1];
+  if (!lastTrick || lastTrick.trickNumber !== event.trickNumber || lastTrick.winnerSeat !== event.winnerSeat) {
+    throw new Error("TRICK_COMPLETE does not match authoritative trick state");
+  }
+  if (lastTrick.plays.length !== 4) throw new Error("Completed trick does not contain four plays");
+  if (game.currentTrick.length !== 0) throw new Error("Current trick must be empty after completion");
+  return { state: game, event };
 }
 
 export interface AuthoritativeRoundCompleteResult {
@@ -211,22 +378,22 @@ export function applyAuthoritativeRoundComplete(
   if (round.phase !== "PLAYING" || round.game?.phase !== "ROUND_COMPLETE") {
     throw new Error("Round cannot complete before all tricks are finished");
   }
+
   const completedRound = completeRoundState(round, roundScore);
   const next = completeMatchRound(match, roundScore, completedRound);
-  if (next.score.NORTH_SOUTH !== event.score.NORTH_SOUTH || next.score.EAST_WEST !== event.score.EAST_WEST) {
-    throw new Error("ROUND_COMPLETE score does not match authoritative engine state");
-  }
-  if (next.end.status !== event.matchEnd.status) throw new Error("ROUND_COMPLETE match-end status does not match engine state");
+  assertScoreEqual(next.score, event.score);
+  assertMatchEndEqual(next.end, event.matchEnd);
+
   return { state: next, event };
 }
 
 export interface AuthoritativeNextRoundResult {
-  readonly state: import("@sakkah-baloot/game-engine").MatchState;
+  readonly state: MatchState;
   readonly event: NextRoundEvent;
 }
 
 export function applyAuthoritativeNextRound(
-  match: import("@sakkah-baloot/game-engine").MatchState,
+  match: MatchState,
   nextRound: RoundState,
   event: NextRoundEvent,
 ): AuthoritativeNextRoundResult {
@@ -240,8 +407,42 @@ export function applyAuthoritativeNextRound(
   if (event.dealerSeat !== expectedDealer || nextRound.dealerSeat !== expectedDealer) {
     throw new Error("Next round dealer does not match engine rotation");
   }
-  const next = startNextRound(match, nextRound);
-  return { state: next, event };
+  return { state: startNextRound(match, nextRound), event };
+}
+
+export interface AuthoritativeMatchCompleteResult {
+  readonly state: MatchState;
+  readonly event: MatchCompleteEvent;
+}
+
+export function applyAuthoritativeMatchComplete(
+  match: MatchState,
+  event: MatchCompleteEvent,
+): AuthoritativeMatchCompleteResult {
+  if (match.phase !== "MATCH_COMPLETE" || match.end.status !== "FINISHED") {
+    throw new Error("Match is not complete");
+  }
+  assertScoreEqual(match.score, event.score);
+  if (match.end.winnerTeamId !== event.winnerTeamId) {
+    throw new Error("MATCH_COMPLETE winner does not match authoritative engine state");
+  }
+  return { state: match, event };
+}
+
+function assertScoreEqual(actual: MatchScore, expected: MatchScore): void {
+  if (actual.NORTH_SOUTH !== expected.NORTH_SOUTH || actual.EAST_WEST !== expected.EAST_WEST) {
+    throw new Error("Protocol score does not match authoritative engine state");
+  }
+}
+
+function assertMatchEndEqual(actual: MatchEndResult, expected: MatchEndResult): void {
+  if (actual.status !== expected.status) throw new Error("Protocol match-end status does not match authoritative engine state");
+  assertScoreEqual(actual.score, expected.score);
+  if (actual.status === "FINISHED") {
+    if (expected.status !== "FINISHED" || actual.winnerTeamId !== expected.winnerTeamId) {
+      throw new Error("Protocol match-end winner does not match authoritative engine state");
+    }
+  }
 }
 
 export interface ProtocolReplayResult {
@@ -263,17 +464,9 @@ export function applyProtocolEvent(
   envelope: ServerEventEnvelope<MatchProtocolEvent>,
   processedEventIds: readonly string[] = [],
 ): ProtocolReplayResult {
-  if (envelope.matchId !== state.matchId) {
-    throw new Error("Protocol event belongs to another match");
-  }
-
-  if (processedEventIds.includes(envelope.eventId)) {
-    return { state, appliedEventIds: processedEventIds };
-  }
-
-  if (envelope.stateVersion !== state.stateVersion + 1) {
-    throw new Error("Protocol event state version is not sequential");
-  }
+  if (envelope.matchId !== state.matchId) throw new Error("Protocol event belongs to another match");
+  if (processedEventIds.includes(envelope.eventId)) return { state, appliedEventIds: processedEventIds };
+  if (envelope.stateVersion !== state.stateVersion + 1) throw new Error("Protocol event state version is not sequential");
 
   const event = envelope.event;
   if ("roundId" in event && event.roundId !== state.roundId && event.type !== "NEXT_ROUND") {
@@ -281,11 +474,20 @@ export function applyProtocolEvent(
   }
 
   assertProtocolTransition(state.phase, event);
+  if (event.type === "DEAL") {
+    if (event.roundNumber !== state.roundNumber) throw new Error("DEAL round number does not match protocol state");
+  }
+  if (event.type === "ROUND_COMPLETE") {
+    assertScoreEqual(event.matchEnd.score, event.score);
+  }
+  if (event.type === "MATCH_COMPLETE") {
+    if (event.winnerTeamId !== "NORTH_SOUTH" && event.winnerTeamId !== "EAST_WEST") {
+      throw new Error("MATCH_COMPLETE winner is invalid");
+    }
+  }
 
   const nextPhase = protocolPhaseForEvent(event);
-  const score = event.type === "ROUND_COMPLETE" || event.type === "MATCH_COMPLETE"
-    ? event.score
-    : state.score;
+  const score = event.type === "ROUND_COMPLETE" || event.type === "MATCH_COMPLETE" ? event.score : state.score;
 
   const next: MatchProtocolState = {
     ...state,
@@ -293,11 +495,7 @@ export function applyProtocolEvent(
     phase: nextPhase,
     roundId: event.type === "NEXT_ROUND" ? event.roundId : state.roundId,
     roundNumber: event.type === "NEXT_ROUND" ? event.nextRoundNumber : state.roundNumber,
-    dealerSeat: event.type === "DEAL"
-      ? event.dealerSeat
-      : event.type === "NEXT_ROUND"
-        ? event.dealerSeat
-        : state.dealerSeat,
+    dealerSeat: event.type === "DEAL" || event.type === "NEXT_ROUND" ? event.dealerSeat : state.dealerSeat,
     score,
   };
 
@@ -312,29 +510,40 @@ export function replayProtocol(
   events: readonly ServerEventEnvelope<MatchProtocolEvent>[],
 ): ProtocolReplayResult {
   let result: ProtocolReplayResult = { state: initialState, appliedEventIds: [] };
-  for (const event of events) {
-    result = applyProtocolEvent(result.state, event, result.appliedEventIds);
-  }
+  for (const event of events) result = applyProtocolEvent(result.state, event, result.appliedEventIds);
   return result;
 }
 
 function protocolPhaseForEvent(event: MatchProtocolEvent): MatchProtocolState["phase"] {
   switch (event.type) {
-    case "DEAL":
-      return "DEAL";
-    case "BID":
-      return "BID";
-    case "PROJECT":
-      return "PROJECT";
-    case "PLAY_CARD":
-      return "PLAY_CARD";
-    case "TRICK_COMPLETE":
-      return "TRICK_COMPLETE";
-    case "ROUND_COMPLETE":
-      return "ROUND_COMPLETE";
-    case "NEXT_ROUND":
-      return "NEXT_ROUND";
-    case "MATCH_COMPLETE":
-      return "MATCH_COMPLETE";
+    case "DEAL": return "DEAL";
+    case "BID": return "BID";
+    case "PLAY_CARD": return "PLAY_CARD";
+    case "BALOOT": return "BALOOT";
+    case "PROJECT": return "PROJECT";
+    case "TRICK_COMPLETE": return "TRICK_COMPLETE";
+    case "ROUND_COMPLETE": return "ROUND_COMPLETE";
+    case "NEXT_ROUND": return "NEXT_ROUND";
+    case "MATCH_COMPLETE": return "MATCH_COMPLETE";
+  }
+}
+
+function assertProtocolTransition(
+  current: MatchProtocolState["phase"],
+  event: MatchProtocolEvent,
+): void {
+  const allowed: Record<MatchProtocolState["phase"], readonly MatchProtocolEvent["type"][]> = {
+    DEAL: ["DEAL", "BID"],
+    BID: ["BID", "PLAY_CARD"],
+    PLAY_CARD: ["PLAY_CARD", "BALOOT", "PROJECT", "TRICK_COMPLETE", "ROUND_COMPLETE"],
+    BALOOT: ["PLAY_CARD"],
+    PROJECT: ["PROJECT", "PLAY_CARD"],
+    TRICK_COMPLETE: ["PLAY_CARD", "ROUND_COMPLETE"],
+    ROUND_COMPLETE: ["NEXT_ROUND", "MATCH_COMPLETE"],
+    NEXT_ROUND: ["DEAL", "BID"],
+    MATCH_COMPLETE: [],
+  };
+  if (!allowed[current].includes(event.type)) {
+    throw new Error(`Invalid protocol transition: ${current} -> ${event.type}`);
   }
 }
