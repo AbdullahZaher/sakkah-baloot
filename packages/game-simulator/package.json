@@ -2,6 +2,7 @@
   "name": "@sakkah-baloot/game-simulator",
   "version": "0.1.0",
   "private": true,
+  "description": "Deterministic full-match simulation boundary for AI validation",
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit",
