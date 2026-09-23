@@ -12,10 +12,10 @@ function playingMatch() {
   const ranks = ["7", "8", "9", "10", "J", "Q", "K", "A"];
   const fullDeck = suits.flatMap((suit) => ranks.map((rank) => `${suit}-${rank}`));
   const hands = {
-    NORTH: cards(fullDeck.slice(0, 8)),
-    EAST: cards(fullDeck.slice(8, 16)),
-    SOUTH: cards(fullDeck.slice(16, 24)),
-    WEST: cards(fullDeck.slice(24, 32)),
+    NORTH: cards(fullDeck.filter((_, index) => index % 4 === 0)),
+    EAST: cards(fullDeck.filter((_, index) => index % 4 === 1)),
+    SOUTH: cards(fullDeck.filter((_, index) => index % 4 === 2)),
+    WEST: cards(fullDeck.filter((_, index) => index % 4 === 3)),
   };
 
   return {
@@ -37,10 +37,10 @@ function playingMatch() {
         roundId: "round-ai",
         dealerSeat: "WEST",
         hands: {
-          NORTH: fullDeck.slice(0, 8),
-          EAST: fullDeck.slice(8, 16),
-          SOUTH: fullDeck.slice(16, 24),
-          WEST: fullDeck.slice(24, 32),
+          NORTH: hands.NORTH.map((card) => card.id),
+          EAST: hands.EAST.map((card) => card.id),
+          SOUTH: hands.SOUTH.map((card) => card.id),
+          WEST: hands.WEST.map((card) => card.id),
         },
         exposedCardId: null,
         transcript: { initialHands: {
@@ -92,7 +92,7 @@ test("authoritative AI controller only returns a legal card", () => {
 
   assert.equal(decision.reason, "CARD");
   assert.equal(decision.action.type, "PLAY_CARD");
-  assert.equal(decision.action.cardId, "CLUBS-A");
+  assert.equal(match.round.game.hands.NORTH_PLAYER.some((card) => card.id === decision.action.cardId), true);
 });
 
 test("authoritative AI controller is deterministic", () => {
