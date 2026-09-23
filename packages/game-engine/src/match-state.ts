@@ -11,6 +11,7 @@ export interface MatchState {
   readonly roundNumber: number;
   readonly dealerSeat: Seat;
   readonly phase: MatchPhase;
+  readonly stateVersion: number;
   readonly score: MatchScore;
   readonly lastRoundScore: RoundScoreBreakdown | null;
   readonly end: MatchEndResult;
