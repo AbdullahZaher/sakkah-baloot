@@ -12,10 +12,10 @@ function playingMatch() {
   const ranks = ["7", "8", "9", "10", "J", "Q", "K", "A"];
   const fullDeck = suits.flatMap((suit) => ranks.map((rank) => `${suit}-${rank}`));
   const hands = {
-    NORTH: cards(fullDeck.filter((_, index) => index % 4 === 0)),
-    EAST: cards(fullDeck.filter((_, index) => index % 4 === 1)),
-    SOUTH: cards(fullDeck.filter((_, index) => index % 4 === 2)),
-    WEST: cards(fullDeck.filter((_, index) => index % 4 === 3)),
+    NORTH: cards(fullDeck.filter((_, index) => (Math.floor(index / 8) + index % 8) % 4 === 0)),
+    EAST: cards(fullDeck.filter((_, index) => (Math.floor(index / 8) + index % 8) % 4 === 1)),
+    SOUTH: cards(fullDeck.filter((_, index) => (Math.floor(index / 8) + index % 8) % 4 === 2)),
+    WEST: cards(fullDeck.filter((_, index) => (Math.floor(index / 8) + index % 8) % 4 === 3)),
   };
 
   return {
