@@ -227,4 +227,4 @@ export { createAIPlayerController, isAIActionBiddingLegal, isAIActionCardLegal }
 export type { AIPlayerController, AIPlayerControllerConfig } from "./player-controller.js";
 
 export { chooseAuthoritativeAIAction } from "./ai-match-controller.js";
-export type { AIControllerConfig, AIControllerDecision, AIControllerMode } from "./ai-match-controller.js";
+export type { AIControllerConfig as MatchAIControllerConfig, AIControllerDecision as MatchAIControllerDecision } from "./ai-match-controller.js";
