@@ -2,6 +2,7 @@
   "name": "@sakkah-baloot/game-ai",
   "version": "0.1.0",
   "private": true,
+  "description": "Competitive AI observation, belief, search, and policy layer",
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit",
