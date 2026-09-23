@@ -180,3 +180,17 @@ test("authoritative card play delegates legality and mutation to game-engine", a
   });
   assert.equal(result.state.hands.WEST_PLAYER.length, 0);
 });
+
+
+test("authoritative project rejects a closed declaration window", async () => {
+  const { applyAuthoritativeProject } = await import("../src/index.ts");
+  const game = {
+    phase: "PLAYING", currentPlayerId: "WEST_PLAYER",
+    players: { NORTH_PLAYER:"NORTH", EAST_PLAYER:"EAST", SOUTH_PLAYER:"SOUTH", WEST_PLAYER:"WEST" },
+    hands: { NORTH_PLAYER:[], EAST_PLAYER:[], SOUTH_PLAYER:[], WEST_PLAYER:[] },
+    contract:"SUN", trumpSuit:null, hokumPlayMode:"OPEN", dealerSeat:"NORTH", trickNumber:2,
+    currentTrick:[], completedTricks:[],
+  };
+  const candidate = { id:"SERA:WEST:cards", type:"SERA", cards:["clubs-7","clubs-8","clubs-9"], ownerSeat:"WEST", teamId:"EAST_WEST", contract:"SUN", subtype:"SEQUENCE_3", highRankIndex:2, rawValue:2, qaydValue:2 };
+  assert.throws(() => applyAuthoritativeProject(game, candidate, [], { type:"PROJECT", roundId:"r", playerId:"WEST_PLAYER", project:"SERA", suit:"CLUBS" }), /window is closed/);
+});
