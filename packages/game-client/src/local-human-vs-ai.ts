@@ -129,7 +129,7 @@ function playerIdForSeat(seat: Seat): PlayerId {
 }
 
 function seatForPlayer(playerId: PlayerId): Seat {
-  return PLAYERS[playerId];
+  return PLAYERS[playerId]!;
 }
 
 function buildGame(round: NonNullable<MatchState["round"]>): GameState {
@@ -363,7 +363,7 @@ export function createLocalHumanVsAISession(
       roundId: round.roundId,
       playerId,
       project: project.candidate.type,
-      suit: project.candidate.suit ?? null,
+      suit: null,
     };
 
     const authoritative = applyAuthoritativeProject(
@@ -406,7 +406,7 @@ export function createLocalHumanVsAISession(
       round.baloot,
     );
 
-    let nextRound = { ...round, game: authoritative.state };
+    let nextRound: NonNullable<MatchState["round"]> = { ...round, game: authoritative.state };
     if (authoritative.baloot && round.baloot === null) {
       nextRound = withRoundBaloot(nextRound, authoritative.baloot);
     }
@@ -524,7 +524,7 @@ export function createLocalHumanVsAISession(
     }
 
     const playerId = playerIdForSeat(humanSeat);
-    if (round.bidding.actingPlayerId !== playerId) {
+    if (playerIdForSeat(round.bidding.actingSeat) !== playerId) {
       throw new Error("It is not the human player's bidding turn");
     }
 
