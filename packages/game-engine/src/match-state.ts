@@ -20,7 +20,7 @@ export interface MatchState {
 export function createMatchState(matchId: MatchId, dealerSeat: Seat, roundNumber = 1): MatchState {
   if (roundNumber < 1 || !Number.isInteger(roundNumber)) throw new Error("Round number must be a positive integer");
   const score: MatchScore = { NORTH_SOUTH: 0, EAST_WEST: 0 };
-  return { matchId, roundId: createRoundId(matchId, roundNumber), roundNumber, dealerSeat, phase: "ROUND_ACTIVE", score, lastRoundScore: null, end: { status: "ONGOING", score } };
+  return { matchId, stateVersion: 0, roundId: createRoundId(matchId, roundNumber), roundNumber, dealerSeat, phase: "ROUND_ACTIVE", score, lastRoundScore: null, end: { status: "ONGOING", score } };
 }
 
 export function completeMatchRound(state: MatchState, roundScore: RoundScoreBreakdown): MatchState {
@@ -30,14 +30,14 @@ export function completeMatchRound(state: MatchState, roundScore: RoundScoreBrea
     EAST_WEST: state.score.EAST_WEST + roundScore.finalQaid.EAST_WEST,
   };
   const end = evaluateMatchEnd(score);
-  return { ...state, phase: end.status === "FINISHED" ? "MATCH_COMPLETE" : "ROUND_COMPLETE", score, lastRoundScore: roundScore, end };
+  return { ...state, stateVersion: state.stateVersion + 1, phase: end.status === "FINISHED" ? "MATCH_COMPLETE" : "ROUND_COMPLETE", score, lastRoundScore: roundScore, end };
 }
 
 export function startNextRound(state: MatchState): MatchState {
   if (state.phase !== "ROUND_COMPLETE") throw new Error("Next round requires a completed non-final round");
   const roundNumber = state.roundNumber + 1;
   const dealerSeat = rotateDealer(state.dealerSeat);
-  return { ...state, roundId: createRoundId(state.matchId, roundNumber), roundNumber, dealerSeat, phase: "ROUND_ACTIVE", lastRoundScore: null, end: { status: "ONGOING", score: state.score } };
+  return { ...state, stateVersion: state.stateVersion + 1, roundId: createRoundId(state.matchId, roundNumber), roundNumber, dealerSeat, phase: "ROUND_ACTIVE", lastRoundScore: null, end: { status: "ONGOING", score: state.score } };
 }
 
 export function isMatchFinished(state: MatchState): boolean {
