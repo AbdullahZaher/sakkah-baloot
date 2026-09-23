@@ -1,4 +1,26 @@
-import {\n  applyBiddingAction,\n  applyCardPlay,\n  declareProject,\n  isCardLegal,\n  completeRoundState,\n  completeMatchRound,\n  startNextRound,\n  rotateDealer,\n  DECK,\n} from "@sakkah-baloot/game-engine";\nimport type {\n  BiddingHands,\n  BiddingState,\n  DealState,\n  GameState,\n  MatchState,\n  ProjectCandidate,\n  RoundScoreBreakdown,\n  RoundState,\n} from "@sakkah-baloot/game-engine";\n\nexport interface ClientActionEnvelope<TAction = unknown> {
+import {
+  applyBiddingAction,
+  applyCardPlay,
+  declareProject,
+  isCardLegal,
+  completeRoundState,
+  completeMatchRound,
+  startNextRound,
+  rotateDealer,
+  DECK,
+} from "@sakkah-baloot/game-engine";
+import type {
+  BiddingHands,
+  BiddingState,
+  DealState,
+  GameState,
+  MatchState,
+  ProjectCandidate,
+  RoundScoreBreakdown,
+  RoundState,
+} from "@sakkah-baloot/game-engine";
+
+export interface ClientActionEnvelope<TAction = unknown> {
   readonly matchId: string;
   readonly actionId: string;
   readonly playerId: string;
@@ -105,7 +127,113 @@ export interface MatchProtocolState {
   readonly escalation: EscalationLevel;
 }
 
-export interface AuthoritativeBidResult {\n  readonly state: BiddingState;\n  readonly event: BidEvent;\n}\n\nexport function applyAuthoritativeBid(\n  bidding: BiddingState,\n  deal: DealState,\n  dealerSeat: Seat,\n  event: BidEvent,\n): AuthoritativeBidResult {\n  const state = applyBiddingAction(\n    bidding,\n    event.action,\n    dealerSeat,\n    deal.exposedCardId,\n    Object.fromEntries(DECK.map((card) => [card.id, card])),\n    deal.hands as BiddingHands,\n  );\n  return { state, event };\n}\n\nexport interface AuthoritativeProjectResult {\n  readonly project: ReturnType<typeof declareProject>;\n  readonly event: ProjectEvent;\n}\n\nexport function applyAuthoritativeProject(\n  candidate: ProjectCandidate,\n  existing: readonly ReturnType<typeof declareProject>[],\n  event: ProjectEvent,\n): AuthoritativeProjectResult {\n  const project = declareProject(candidate, event.project, "PLAYING", 1, 0, existing);\n  return { project, event };\n}\n\nexport interface AuthoritativePlayResult {\n  readonly state: GameState;\n  readonly event: PlayCardEvent;\n}\n\n/** Apply a PLAY_CARD protocol event through the canonical game-engine rules. */\nexport function applyAuthoritativePlayCard(\n  game: GameState,\n  event: PlayCardEvent,\n): AuthoritativePlayResult {\n  if (game.phase !== "PLAYING") throw new Error("Game is not in PLAYING phase");\n  if (game.currentPlayerId !== event.playerId) throw new Error("Card play is not for the current player");\n  if (!isCardLegal(game, event.playerId, event.cardId)) {\n    throw new Error("Card play is illegal under game-engine rules");\n  }\n  return {\n    state: applyCardPlay(game, event.playerId, event.cardId, event.ikaDeclared),\n    event,\n  };\n}\n\nexport interface AuthoritativeRoundCompleteResult {\n  readonly state: MatchState;\n  readonly event: RoundCompleteEvent;\n}\n\nexport function applyAuthoritativeRoundComplete(\n  match: MatchState,\n  round: RoundState,\n  roundScore: RoundScoreBreakdown,\n  event: RoundCompleteEvent,\n): AuthoritativeRoundCompleteResult {\n  if (match.phase !== "ROUND_ACTIVE") throw new Error("Match round is not active");\n  if (round.roundId !== event.roundId || round.roundId !== match.roundId) throw new Error("Round completion belongs to another round");\n  if (round.phase !== "PLAYING" || round.game?.phase !== "ROUND_COMPLETE") {\n    throw new Error("Round cannot complete before all tricks are finished");\n  }\n  const completedRound = completeRoundState(round, roundScore);\n  const next = completeMatchRound(match, roundScore, completedRound);\n  if (next.score.NORTH_SOUTH !== event.score.NORTH_SOUTH || next.score.EAST_WEST !== event.score.EAST_WEST) {\n    throw new Error("ROUND_COMPLETE score does not match authoritative engine state");\n  }\n  if (next.end.status !== event.matchEnd.status) throw new Error("ROUND_COMPLETE match-end status does not match engine state");\n  return { state: next, event };\n}\n\nexport interface AuthoritativeNextRoundResult {\n  readonly state: import("@sakkah-baloot/game-engine").MatchState;\n  readonly event: NextRoundEvent;\n}\n\nexport function applyAuthoritativeNextRound(\n  match: import("@sakkah-baloot/game-engine").MatchState,\n  nextRound: RoundState,\n  event: NextRoundEvent,\n): AuthoritativeNextRoundResult {\n  if (match.phase !== "ROUND_COMPLETE") throw new Error("Next round requires a completed round");\n  const expectedRoundNumber = match.roundNumber + 1;\n  if (event.nextRoundNumber !== expectedRoundNumber) throw new Error("Next round number is not sequential");\n  if (nextRound.roundNumber !== expectedRoundNumber || nextRound.roundId !== event.roundId) {\n    throw new Error("Next round state does not match protocol event");\n  }\n  const expectedDealer = rotateDealer(match.dealerSeat);\n  if (event.dealerSeat !== expectedDealer || nextRound.dealerSeat !== expectedDealer) {\n    throw new Error("Next round dealer does not match engine rotation");\n  }\n  const next = startNextRound(match, nextRound);\n  return { state: next, event };\n}\n\nexport interface ProtocolReplayResult {
+export interface AuthoritativeBidResult {
+  readonly state: BiddingState;
+  readonly event: BidEvent;
+}
+
+export function applyAuthoritativeBid(
+  bidding: BiddingState,
+  deal: DealState,
+  dealerSeat: Seat,
+  event: BidEvent,
+): AuthoritativeBidResult {
+  const state = applyBiddingAction(
+    bidding,
+    event.action,
+    dealerSeat,
+    deal.exposedCardId,
+    Object.fromEntries(DECK.map((card) => [card.id, card])),
+    deal.hands as BiddingHands,
+  );
+  return { state, event };
+}
+
+export interface AuthoritativeProjectResult {
+  readonly project: ReturnType<typeof declareProject>;
+  readonly event: ProjectEvent;
+}
+
+export function applyAuthoritativeProject(
+  candidate: ProjectCandidate,
+  existing: readonly ReturnType<typeof declareProject>[],
+  event: ProjectEvent,
+): AuthoritativeProjectResult {
+  const project = declareProject(candidate, event.project, "PLAYING", 1, 0, existing);
+  return { project, event };
+}
+
+export interface AuthoritativePlayResult {
+  readonly state: GameState;
+  readonly event: PlayCardEvent;
+}
+
+/** Apply a PLAY_CARD protocol event through the canonical game-engine rules. */
+export function applyAuthoritativePlayCard(
+  game: GameState,
+  event: PlayCardEvent,
+): AuthoritativePlayResult {
+  if (game.phase !== "PLAYING") throw new Error("Game is not in PLAYING phase");
+  if (game.currentPlayerId !== event.playerId) throw new Error("Card play is not for the current player");
+  if (!isCardLegal(game, event.playerId, event.cardId)) {
+    throw new Error("Card play is illegal under game-engine rules");
+  }
+  return {
+    state: applyCardPlay(game, event.playerId, event.cardId, event.ikaDeclared),
+    event,
+  };
+}
+
+export interface AuthoritativeRoundCompleteResult {
+  readonly state: MatchState;
+  readonly event: RoundCompleteEvent;
+}
+
+export function applyAuthoritativeRoundComplete(
+  match: MatchState,
+  round: RoundState,
+  roundScore: RoundScoreBreakdown,
+  event: RoundCompleteEvent,
+): AuthoritativeRoundCompleteResult {
+  if (match.phase !== "ROUND_ACTIVE") throw new Error("Match round is not active");
+  if (round.roundId !== event.roundId || round.roundId !== match.roundId) throw new Error("Round completion belongs to another round");
+  if (round.phase !== "PLAYING" || round.game?.phase !== "ROUND_COMPLETE") {
+    throw new Error("Round cannot complete before all tricks are finished");
+  }
+  const completedRound = completeRoundState(round, roundScore);
+  const next = completeMatchRound(match, roundScore, completedRound);
+  if (next.score.NORTH_SOUTH !== event.score.NORTH_SOUTH || next.score.EAST_WEST !== event.score.EAST_WEST) {
+    throw new Error("ROUND_COMPLETE score does not match authoritative engine state");
+  }
+  if (next.end.status !== event.matchEnd.status) throw new Error("ROUND_COMPLETE match-end status does not match engine state");
+  return { state: next, event };
+}
+
+export interface AuthoritativeNextRoundResult {
+  readonly state: import("@sakkah-baloot/game-engine").MatchState;
+  readonly event: NextRoundEvent;
+}
+
+export function applyAuthoritativeNextRound(
+  match: import("@sakkah-baloot/game-engine").MatchState,
+  nextRound: RoundState,
+  event: NextRoundEvent,
+): AuthoritativeNextRoundResult {
+  if (match.phase !== "ROUND_COMPLETE") throw new Error("Next round requires a completed round");
+  const expectedRoundNumber = match.roundNumber + 1;
+  if (event.nextRoundNumber !== expectedRoundNumber) throw new Error("Next round number is not sequential");
+  if (nextRound.roundNumber !== expectedRoundNumber || nextRound.roundId !== event.roundId) {
+    throw new Error("Next round state does not match protocol event");
+  }
+  const expectedDealer = rotateDealer(match.dealerSeat);
+  if (event.dealerSeat !== expectedDealer || nextRound.dealerSeat !== expectedDealer) {
+    throw new Error("Next round dealer does not match engine rotation");
+  }
+  const next = startNextRound(match, nextRound);
+  return { state: next, event };
+}
+
+export interface ProtocolReplayResult {
   readonly state: MatchProtocolState;
   readonly appliedEventIds: readonly string[];
 }
@@ -141,7 +269,9 @@ export function applyProtocolEvent(
     throw new Error("Protocol event belongs to another round");
   }
 
-  assertProtocolTransition(state.phase, event);\n\n  const nextPhase = protocolPhaseForEvent(event);
+  assertProtocolTransition(state.phase, event);
+
+  const nextPhase = protocolPhaseForEvent(event);
   const score = event.type === "ROUND_COMPLETE" || event.type === "MATCH_COMPLETE"
     ? event.score
     : state.score;
