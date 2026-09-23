@@ -11,7 +11,8 @@ import {
 } from "@sakkah-baloot/game-engine";
 import type { AIRoundObservation } from "./index.js";
 import type { BeliefState } from "./belief-state.js";
-import { createSeededRng, sampleHiddenWorld } from "./information-set-sampler.js";
+import { createSeededRng } from "./information-set-sampler.js";
+import { sampleBeliefWorlds } from "./belief-state.js";
 
 export interface ISMCTSConfig {
   readonly iterations: number;
@@ -38,7 +39,7 @@ export function chooseISMCTSCard(
   if (observation.playing.game.legalCardIds.length === 0) throw new Error("No legal card actions");
 
   const input = buildInformationSetInput(observation);
-  const rng = createSeededRng(config.seed);
+  const rng = createSeededRng(`${config.seed}:rollout`);
   const stats = new Map<CardId, RootStat>(
     observation.playing.game.legalCardIds.map((id) => [id, { visits: 0, value: 0 }]),
   );
