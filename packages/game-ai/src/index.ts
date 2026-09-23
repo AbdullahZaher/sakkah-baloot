@@ -11,7 +11,6 @@ import type {
   PlayerId,
   ProjectDeclaration,
   ProjectType,
-  RoundState,
   Seat,
   Suit,
   TeamId,
@@ -24,7 +23,6 @@ export interface AIBiddingObservation {
   readonly bidding: BiddingState;
   readonly ownHand: readonly Card[];
   readonly exposedCard: Card | null;
-  /** Legal bidding action types computed by the authoritative host. */
   readonly legalActions: readonly BiddingAction["type"][];
 }
 
@@ -33,7 +31,6 @@ export interface AIPlayingObservation {
   readonly game: Omit<GameState, "hands"> & {
     readonly ownHand: readonly Card[];
     readonly knownPlayedCards: readonly Card[];
-    /** Legal card IDs computed by the authoritative engine before redaction. */
     readonly legalCardIds: readonly CardId[];
   };
   readonly contract: Contract;
@@ -197,3 +194,6 @@ export function legalCardActions(observation: AIRoundObservation): readonly AIAc
   const ids = observation.playing?.game.legalCardIds ?? [];
   return ids.map((cardId) => ({ type: "PLAY_CARD", cardId }));
 }
+
+export { createAuthoritativeActionSpace } from "./authoritative-action-space.js";
+export type { AuthoritativeActionSpace } from "./authoritative-action-space.js";
