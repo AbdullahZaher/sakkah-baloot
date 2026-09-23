@@ -74,6 +74,7 @@ export interface SimulationConfig {
   readonly games: number;
   readonly maxRoundsPerGame?: number;
   readonly policy?: CardPolicy;
+  readonly policies?: Readonly<Record<PlayerId, CardPolicy>>;
 }
 
 export interface MatchSimulationResult {
