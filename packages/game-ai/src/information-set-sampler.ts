@@ -58,13 +58,10 @@ export function sampleHiddenWorld(
       CARDS_PER_PLAYER - countPlayedCards(input, playerId),
   }));
 
-  const ownExpectedSize =
-    input.game.hands?.[input.playerId]?.length ??
-    CARDS_PER_PLAYER - countPlayedCards(input, input.playerId);
-
-  if (ownExpectedSize !== input.ownHand.length) {
+  const expectedOwnSize = input.game.hands?.[input.playerId]?.length;
+  if (expectedOwnSize !== undefined && expectedOwnSize !== input.ownHand.length) {
     throw new Error(
-      `Observer hand size mismatch: expected ${ownExpectedSize}, received ${input.ownHand.length}`,
+      `Observer hand size mismatch: expected ${expectedOwnSize}, received ${input.ownHand.length}`,
     );
   }
 
