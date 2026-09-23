@@ -42,6 +42,7 @@ const PLAYERS: Readonly<Record<PlayerId, Seat>> = {
 
 export interface LocalPreview {
   readonly dealerSeat: Seat;
+  readonly roundNumber: number;
   readonly deal: DealState;
   readonly bidding: BiddingState;
   readonly playerSeat: Seat;
@@ -59,6 +60,7 @@ export interface LocalBiddingSession {
   readonly getSnapshot: () => LocalPreview;
   readonly dispatchBiddingAction: (type: BiddingAction["type"], suit?: Suit) => LocalPreview;
   readonly dispatchCardPlay: (cardId: CardId, ikaDeclared?: boolean) => LocalPreview;
+  readonly advanceRound: () => LocalPreview;
 }
 
 function cardMap(): Readonly<Record<CardId, Card>> {
@@ -67,6 +69,11 @@ function cardMap(): Readonly<Record<CardId, Card>> {
 
 function cardsById(): Map<CardId, Card> {
   return new Map(DECK.map((card) => [card.id, card]));
+}
+
+function nextCounterClockwise(seat: Seat): Seat {
+  const order: readonly Seat[] = ["NORTH", "WEST", "SOUTH", "EAST"];
+  return order[(order.indexOf(seat) + 1) % order.length]!;
 }
 
 function buildGameState(deal: DealState, bidding: BiddingState): GameState {
@@ -95,13 +102,40 @@ function buildGameState(deal: DealState, bidding: BiddingState): GameState {
   };
 }
 
-function nextCounterClockwise(seat: Seat): Seat {
-  const order: readonly Seat[] = ["NORTH", "WEST", "SOUTH", "EAST"];
-  return order[(order.indexOf(seat) + 1) % order.length]!;
+function buyerOriginallyHeldAce(deal: DealState, bidding: BiddingState): boolean {
+  const selected = bidding.selectedContract;
+  if (selected === null) return false;
+  const purchaserHand = deal.transcript.initialHands[selected.purchaserSeat];
+  return purchaserHand.some((id) => id.endsWith("-A"));
+}
+
+function resolveRound(
+  game: GameState,
+  deal: DealState,
+  bidding: BiddingState,
+): RoundScoreBreakdown {
+  const selected = bidding.selectedContract;
+  if (selected === null) throw new Error("Cannot score without a selected contract");
+  if (game.phase !== "ROUND_COMPLETE") throw new Error("Round is not complete");
+
+  return scoreRound({
+    contract: selected.contract,
+    trumpSuit: selected.trumpSuit,
+    purchaserSeat: selected.purchaserSeat,
+    dealerSeat: deal.dealerSeat,
+    buyerOriginallyHeldAce: buyerOriginallyHeldAce(deal, bidding),
+    escalation: "NORMAL",
+    tricks: game.completedTricks,
+    projectRaw: { NORTH_SOUTH: 0, EAST_WEST: 0 },
+    projectQaid: { NORTH_SOUTH: 0, EAST_WEST: 0 },
+    balootRaw: { NORTH_SOUTH: 0, EAST_WEST: 0 },
+    balootQaid: { NORTH_SOUTH: 0, EAST_WEST: 0 },
+  });
 }
 
 function buildPreview(
   dealerSeat: Seat,
+  roundNumber: number,
   playerSeat: Seat,
   deal: DealState,
   bidding: BiddingState,
@@ -121,7 +155,21 @@ function buildPreview(
     ? getLegalMoves(game, game.currentPlayerId).map((move) => move.cardId)
     : [];
 
-  return { dealerSeat, deal, bidding, playerSeat, playerHand, exposedCard, legalActions, game, legalCardIds, roundScore, matchScore, matchEnd };
+  return {
+    dealerSeat,
+    roundNumber,
+    deal,
+    bidding,
+    playerSeat,
+    playerHand,
+    exposedCard,
+    legalActions,
+    game,
+    legalCardIds,
+    roundScore,
+    matchScore,
+    matchEnd,
+  };
 }
 
 export function createLocalPreview(): LocalPreview {
@@ -129,9 +177,10 @@ export function createLocalPreview(): LocalPreview {
   const playerSeat: Seat = "SOUTH";
   return buildPreview(
     dealerSeat,
+    1,
     playerSeat,
-    createInitialDeal("ui-preview", dealerSeat, createSeededRandom("ui-preview")),
-    createBiddingState("ui-preview", dealerSeat),
+    createInitialDeal("ui-preview-round-1", dealerSeat, createSeededRandom("ui-preview-round-1")),
+    createBiddingState("ui-preview-round-1", dealerSeat),
     null,
     null,
     { NORTH_SOUTH: 0, EAST_WEST: 0 },
@@ -140,38 +189,101 @@ export function createLocalPreview(): LocalPreview {
 }
 
 export function createLocalBiddingSession(): LocalBiddingSession {
-  const dealerSeat: Seat = "NORTH";
+  let dealerSeat: Seat = "NORTH";
   const playerSeat: Seat = "WEST";
-  let deal = createInitialDeal("ui-preview", dealerSeat, createSeededRandom("ui-preview"));
-  let bidding = createBiddingState("ui-preview", dealerSeat);
+  let roundNumber = 1;
+  let deal = createInitialDeal(
+    "ui-preview-round-1",
+    dealerSeat,
+    createSeededRandom("ui-preview-round-1"),
+  );
+  let bidding = createBiddingState("ui-preview-round-1", dealerSeat);
   let game: GameState | null = null;
   let roundScore: RoundScoreBreakdown | null = null;
   let matchScore: MatchScore = { NORTH_SOUTH: 0, EAST_WEST: 0 };
   let matchEnd: MatchEndResult = { status: "ONGOING", score: matchScore };
+
   const getSnapshot = () => buildPreview(
-    dealerSeat, playerSeat, deal, bidding, game, roundScore, matchScore, matchEnd,
+    dealerSeat,
+    roundNumber,
+    playerSeat,
+    deal,
+    bidding,
+    game,
+    roundScore,
+    matchScore,
+    matchEnd,
   );
 
   return {
     getSnapshot,
+
     dispatchBiddingAction: (type, suit) => {
       if (game !== null) throw new Error("Bidding is already complete");
+      if (matchEnd.status === "FINISHED") throw new Error("Match is already finished");
+
       const snapshot = getSnapshot();
       if (!snapshot.legalActions.includes(type)) throw new Error(`Illegal bidding action: ${type}`);
+
       const action: BiddingAction = type === "BUY_HOKUM"
-        ? { type, actionId: `ui-${bidding.turnNumber + 1}-${type}-${suit ?? "NONE"}`, suit: suit ?? "CLUBS" }
-        : { type, actionId: `ui-${bidding.turnNumber + 1}-${type}` };
-      bidding = applyBiddingAction(bidding, action, dealerSeat, deal.exposedCardId, cardMap(), deal.hands as BiddingHands);
+        ? {
+            type,
+            actionId: `ui-${roundNumber}-${bidding.turnNumber + 1}-${type}-${suit ?? "NONE"}`,
+            suit: suit ?? "CLUBS",
+          }
+        : {
+            type,
+            actionId: `ui-${roundNumber}-${bidding.turnNumber + 1}-${type}`,
+          };
+
+      bidding = applyBiddingAction(
+        bidding,
+        action,
+        dealerSeat,
+        deal.exposedCardId,
+        cardMap(),
+        deal.hands as BiddingHands,
+      );
+
       if (bidding.phase === "CONTRACT_SELECTED") {
         deal = completeDeal(deal, bidding.selectedContract!.exposedCardReceiverSeat);
         game = buildGameState(deal, bidding);
         roundScore = null;
       }
+
       return getSnapshot();
     },
+
     dispatchCardPlay: (cardId, ikaDeclared = false) => {
       if (game === null) throw new Error("Playing has not started");
+      if (game.phase === "ROUND_COMPLETE") throw new Error("Round is already complete");
+
       game = applyCardPlay(game, PLAYER_BY_SEAT[playerSeat], cardId, ikaDeclared);
+
+      if (game.phase === "ROUND_COMPLETE") {
+        roundScore = resolveRound(game, deal, bidding);
+        matchScore = applyRoundToMatch(matchScore, roundScore);
+        matchEnd = evaluateMatchEnd(matchScore);
+      }
+
+      return getSnapshot();
+    },
+
+    advanceRound: () => {
+      if (game === null || game.phase !== "ROUND_COMPLETE") {
+        throw new Error("Next round is only available after round completion");
+      }
+      if (matchEnd.status === "FINISHED") {
+        throw new Error("Cannot start another round after match completion");
+      }
+
+      dealerSeat = nextCounterClockwise(dealerSeat);
+      roundNumber += 1;
+      const roundId = `ui-preview-round-${roundNumber}`;
+      deal = createInitialDeal(roundId, dealerSeat, createSeededRandom(roundId));
+      bidding = createBiddingState(roundId, dealerSeat);
+      game = null;
+      roundScore = null;
       return getSnapshot();
     },
   };
