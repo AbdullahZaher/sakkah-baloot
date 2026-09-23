@@ -1,5 +1,5 @@
 import { StatusBar } from "expo-status-bar";
-import { GameTableScreen } from "./src/screens/GameTableScreen.js";
+import { GameTableScreen } from "./src/screens/GameTableScreen";
 
 export default function App() {
   return (
