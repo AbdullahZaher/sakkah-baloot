@@ -56,8 +56,8 @@ const PLAYERS: Readonly<Record<PlayerId, Seat>> = {
 export interface LocalPreview {
   readonly dealerSeat: Seat;
   readonly roundNumber: number;
-  readonly deal: MatchState["round"]["deal"];
-  readonly bidding: MatchState["round"]["bidding"];
+  readonly deal: NonNullable<MatchState["round"]>["deal"];
+  readonly bidding: NonNullable<MatchState["round"]>["bidding"];
   readonly playerSeat: Seat;
   readonly playerHand: readonly Card[];
   readonly exposedCard: Card | null;
