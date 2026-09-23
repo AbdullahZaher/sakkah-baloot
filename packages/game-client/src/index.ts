@@ -14,6 +14,13 @@ import {
   completeMatchRound,
   startNextRound,
   type MatchState,
+  detectProjects,
+  declareProject,
+  resolveProjects,
+  canDeclareBaloot,
+  declareBaloot,
+  type ProjectDeclaration,
+  type BalootDeclaration,
   type BiddingAction,
   type BiddingHands,
   type BiddingState,
@@ -58,12 +65,15 @@ export interface LocalPreview {
   readonly roundScore: RoundScoreBreakdown | null;
   readonly matchScore: MatchScore;
   readonly matchEnd: MatchEndResult;
+  readonly projects: readonly ProjectDeclaration[];
+  readonly baloot: BalootDeclaration | null;
 }
 
 export interface LocalBiddingSession {
   readonly getSnapshot: () => LocalPreview;
   readonly dispatchBiddingAction: (type: BiddingAction["type"], suit?: Suit) => LocalPreview;
   readonly dispatchCardPlay: (cardId: CardId, ikaDeclared?: boolean) => LocalPreview;
+  readonly dispatchProject: (projectId: string) => LocalPreview;
   readonly advanceRound: () => LocalPreview;
 }
 
@@ -125,8 +135,8 @@ function resolveRound(
     buyerOriginallyHeldAce: buyerOriginallyHeldAce(deal, bidding),
     escalation: "NORMAL",
     tricks: game.completedTricks,
-    projectRaw: { NORTH_SOUTH: 0, EAST_WEST: 0 },
-    projectQaid: { NORTH_SOUTH: 0, EAST_WEST: 0 },
+    projectRaw: resolveProjects(projects, deal.dealerSeat).projectRaw,
+    projectQaid: resolveProjects(projects, deal.dealerSeat).projectQaid,
     balootRaw: { NORTH_SOUTH: 0, EAST_WEST: 0 },
     balootQaid: { NORTH_SOUTH: 0, EAST_WEST: 0 },
   });
@@ -140,6 +150,8 @@ function buildPreview(
   bidding: BiddingState,
   game: GameState | null,
   roundScore: RoundScoreBreakdown | null,
+  projects: readonly ProjectDeclaration[] = [],
+  baloot: BalootDeclaration | null = null,
   matchScore: MatchScore,
   matchEnd: MatchEndResult,
 ): LocalPreview {
@@ -168,6 +180,8 @@ function buildPreview(
     roundScore,
     matchScore,
     matchEnd,
+    projects,
+    baloot,
   };
 }
 
@@ -200,6 +214,8 @@ export function createLocalBiddingSession(): LocalBiddingSession {
   let game: GameState | null = null;
   let roundScore: RoundScoreBreakdown | null = null;
   let match: MatchState = createMatchState("ui-preview-match", dealerSeat);
+  let projects: ProjectDeclaration[] = [];
+  let baloot: BalootDeclaration | null = null;
 
   const getSnapshot = () => buildPreview(
     dealerSeat,
@@ -211,6 +227,8 @@ export function createLocalBiddingSession(): LocalBiddingSession {
     roundScore,
     match.score,
     match.end,
+    projects,
+    baloot,
   );
 
   return {
@@ -246,9 +264,26 @@ export function createLocalBiddingSession(): LocalBiddingSession {
       if (bidding.phase === "CONTRACT_SELECTED") {
         deal = completeDeal(deal, bidding.selectedContract!.exposedCardReceiverSeat);
         game = buildGameState(deal, bidding);
+        const contract = bidding.selectedContract!.contract;
+        const trump = bidding.selectedContract!.trumpSuit;
+        projects = [];
+        for (const seat of Object.keys(PLAYER_BY_SEAT) as Seat[]) {
+          for (const candidate of detectProjects(deal.hands[seat].map((id) => cardMap()[id]!), contract, trump, seat)) {
+            projects.push({ declarationId: candidate.id, candidate, lifecycle: "DECLARED", declaredBeforeCard: true, trickNumber: 1 });
+          }
+        }
+        baloot = null;
         roundScore = null;
       }
 
+      return getSnapshot();
+    },
+
+    dispatchProject: (projectId) => {
+      if (game === null || game.phase !== "PLAYING") throw new Error("Projects require an active playing round");
+      const project = projects.find((d) => d.declarationId === projectId);
+      if (!project) throw new Error("Unknown project declaration");
+      if (projects.some((d) => d.candidate.cards.some((id) => project.candidate.cards.includes(id)) && d.declarationId !== projectId)) throw new Error("Project card overlap");
       return getSnapshot();
     },
 
@@ -256,7 +291,18 @@ export function createLocalBiddingSession(): LocalBiddingSession {
       if (game === null) throw new Error("Playing has not started");
       if (game.phase === "ROUND_COMPLETE") throw new Error("Round is already complete");
 
-      game = applyCardPlay(game, PLAYER_BY_SEAT[playerSeat], cardId, ikaDeclared);
+      const playerId = PLAYER_BY_SEAT[playerSeat];
+      const selected = bidding.selectedContract;
+      if (selected?.contract === "HOKUM" && selected.trumpSuit) {
+        const handBefore = game.hands[playerId] ?? [];
+        const card = handBefore.find((c) => c.id === cardId);
+        if (card && canDeclareBaloot(selected.contract, selected.trumpSuit, playerSeat, card, handBefore, true)) {
+          const king = handBefore.find((c) => c.rank === "K" && c.suit === selected.trumpSuit);
+          const queen = handBefore.find((c) => c.rank === "Q" && c.suit === selected.trumpSuit);
+          if (king && queen) baloot = declareBaloot(`baloot:${match.roundId}:${playerId}`, playerSeat, selected.trumpSuit, king, queen);
+        }
+      }
+      game = applyCardPlay(game, playerId, cardId, ikaDeclared);
 
       if (game.phase === "ROUND_COMPLETE") {
         roundScore = resolveRound(game, deal, bidding);
@@ -282,6 +328,8 @@ export function createLocalBiddingSession(): LocalBiddingSession {
       bidding = createBiddingState(roundId, dealerSeat);
       game = null;
       roundScore = null;
+      projects = [];
+      baloot = null;
       return getSnapshot();
     },
   };
