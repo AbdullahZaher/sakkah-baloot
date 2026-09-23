@@ -170,10 +170,6 @@ export function applyAuthoritativeBid(
   if (bidding.roundId !== event.roundId || deal.roundId !== event.roundId) {
     throw new Error("Bid event belongs to another round");
   }
-  if (bidding.actingSeat !== eventPlayerSeat(deal, event.playerId)) {
-    throw new Error("Bid event is not for the acting player");
-  }
-
   const state = applyBiddingAction(
     bidding,
     event.action,
@@ -183,13 +179,6 @@ export function applyAuthoritativeBid(
     deal.hands as BiddingHands,
   );
   return { state, event };
-}
-
-function eventPlayerSeat(deal: DealState, playerId: PlayerId): Seat {
-  const player = Object.entries(deal.hands).find(([seat]) => seat === playerId);
-  if (player) return player[0] as Seat;
-  if (playerId in deal.hands) return playerId as Seat;
-  throw new Error("Bid event player is not present in the deal");
 }
 
 export interface AuthoritativeProjectResult {
