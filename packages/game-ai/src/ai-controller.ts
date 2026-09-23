@@ -55,14 +55,15 @@ export function decideAIAction(
 
   const match = matchOrObservation;
   const playerId = playerIdOrConfig as PlayerId;
+  const controllerConfig = config!;
   const result = chooseAuthoritativeAIAction(match, playerId, playerSeat!, {
-    mode: config.mode,
-    seed: config.seed,
-    ...(config.baseline?.difficulty !== undefined ? { difficulty: config.baseline.difficulty } : {}),
-    ...(config.mcts?.iterations !== undefined ? { mctsIterations: config.mcts.iterations } : {}),
+    mode: controllerConfig.mode,
+    seed: controllerConfig.seed,
+    ...(controllerConfig.baseline?.difficulty !== undefined ? { difficulty: controllerConfig.baseline.difficulty } : {}),
+    ...(controllerConfig.mcts?.iterations !== undefined ? { mctsIterations: controllerConfig.mcts.iterations } : {}),
   });
 
-  return { action: result.action, mode: config.mode };
+  return { action: result.action, mode: controllerConfig.mode };
 }
 
 function isObservation(value: MatchState | AIRoundObservation): value is AIRoundObservation {
