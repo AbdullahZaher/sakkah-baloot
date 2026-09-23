@@ -94,6 +94,7 @@ export function simulateMatch(
   seed: string,
   policy: CardPolicy = firstLegalCard,
   maxRounds = 200,
+  policies?: Readonly<Record<PlayerId, CardPolicy>>,
 ): MatchSimulationResult {
   let score: MatchScore = { NORTH_SOUTH: 0, EAST_WEST: 0 };
   let dealerSeat = getFirstDealer(seed);
@@ -135,7 +136,8 @@ export function simulateMatch(
       const legalCardIds = getLegalMoves(game, playerId).map((move) => move.cardId);
       if (legalCardIds.length === 0) throw new Error("Simulation reached a state with no legal moves");
 
-      const selected = policy({
+      const activePolicy = policies?.[playerId] ?? policy;
+      const selected = activePolicy({
         state: game,
         playerId,
         legalCardIds,
@@ -278,6 +280,7 @@ export function simulateMatchBatch(config: SimulationConfig): MatchBatchResult {
       `${config.seed}:match:${i}`,
       config.policy ?? firstLegalCard,
       maxRounds,
+      config.policies,
     );
     if (result.end.status === "FINISHED") {
       completed += 1;
