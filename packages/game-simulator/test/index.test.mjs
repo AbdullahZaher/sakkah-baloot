@@ -125,3 +125,15 @@ test("batch integrity gate", () => {
   assert.equal(result.illegalActions, 0);
   assert.ok(result.deterministicDigest.length > 0);
 });
+
+test("1,000-match deterministic validation has zero illegal actions", () => {
+  const result = simulateMatchBatch({
+    seed: "validation-1000",
+    games: 1000,
+    maxRoundsPerGame: 30,
+  });
+
+  assert.equal(result.games, 1000);
+  assert.equal(result.illegalActions, 0);
+  assert.ok(result.deterministicDigest.length > 0);
+});
