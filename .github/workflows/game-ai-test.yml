@@ -24,5 +24,6 @@ jobs:
           node-version: 22
       - run: corepack enable
       - run: pnpm install --no-frozen-lockfile
+      - run: pnpm --filter @sakkah-baloot/game-engine build
       - run: pnpm --filter @sakkah-baloot/game-ai typecheck
       - run: pnpm --filter @sakkah-baloot/game-ai test
