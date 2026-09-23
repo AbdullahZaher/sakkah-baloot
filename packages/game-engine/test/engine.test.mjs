@@ -886,6 +886,67 @@ test("full trick lifecycle completes exactly eight tricks and enters ROUND_COMPL
   assert.ok(state.completedTricks.every((trick) => trick.winnerSeat === "NORTH"));
 });
 
+test("completed eight-trick round resolves through the canonical scoring engine", () => {
+  const players = { pN: "NORTH", pW: "WEST", pS: "SOUTH", pE: "EAST" };
+  const hands = {
+    pN: hand(
+      "CLUBS-A","CLUBS-K","DIAMONDS-A","DIAMONDS-K",
+      "HEARTS-A","HEARTS-K","SPADES-A","SPADES-K",
+    ),
+    pW: hand(
+      "CLUBS-Q","CLUBS-J","DIAMONDS-Q","DIAMONDS-J",
+      "HEARTS-Q","HEARTS-J","SPADES-Q","SPADES-J",
+    ),
+    pS: hand(
+      "CLUBS-10","CLUBS-9","DIAMONDS-10","DIAMONDS-9",
+      "HEARTS-10","HEARTS-9","SPADES-10","SPADES-9",
+    ),
+    pE: hand(
+      "CLUBS-8","CLUBS-7","DIAMONDS-8","DIAMONDS-7",
+      "HEARTS-8","HEARTS-7","SPADES-8","SPADES-7",
+    ),
+  };
+
+  let state = legalState({
+    currentPlayerId: "pN",
+    players,
+    hands,
+    contract: "SUN",
+    trumpSuit: null,
+    dealerSeat: "EAST",
+  });
+
+  for (const suit of ["CLUBS", "DIAMONDS", "HEARTS", "SPADES"]) {
+    for (const high of [true, false]) {
+      const ranks = high ? ["A", "Q", "10", "8"] : ["K", "J", "9", "7"];
+      const ids = ranks.map((rank) => `${suit}-${rank}`);
+      for (const [playerId, id] of [["pN", ids[0]], ["pW", ids[1]], ["pS", ids[2]], ["pE", ids[3]]]) {
+        state = applyCardPlay(state, playerId, id);
+      }
+    }
+  }
+
+  assert.equal(state.phase, "ROUND_COMPLETE");
+  const score = scoreRound({
+    contract: "SUN",
+    trumpSuit: null,
+    purchaserSeat: "NORTH",
+    dealerSeat: "EAST",
+    buyerOriginallyHeldAce: true,
+    escalation: "NORMAL",
+    tricks: state.completedTricks,
+    projectRaw: { NORTH_SOUTH: 0, EAST_WEST: 0 },
+    projectQaid: { NORTH_SOUTH: 0, EAST_WEST: 0 },
+    balootRaw: { NORTH_SOUTH: 0, EAST_WEST: 0 },
+    balootQaid: { NORTH_SOUTH: 0, EAST_WEST: 0 },
+  });
+
+  assert.deepEqual(score.cardRaw, { NORTH_SOUTH: 130, EAST_WEST: 0 });
+  assert.equal(score.contractResult, "SUCCESS");
+  assert.equal(score.kabootTeamId, "NORTH_SOUTH");
+  assert.deepEqual(score.finalQaid, { NORTH_SOUTH: 26, EAST_WEST: 0 });
+});
+
 test("completed round rejects further card-play through the authoritative phase guard", () => {
   const state = legalState({
     phase: "ROUND_COMPLETE",
