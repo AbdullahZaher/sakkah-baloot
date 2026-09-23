@@ -1,0 +1,11 @@
+Commit: 6c8dfcb9b3ced4e20dd6eff0bef3f0039b87fd12\n\n
+> @sakkah-baloot/game-engine@0.1.0 typecheck
+> tsc --noEmit
+
+src/bidding/bidding-engine.ts(191,7): error TS2322: Type '(BiddingActionRecord | { actionId: string; turnNumber: number; seat: "NORTH" | "EAST" | "SOUTH" | "WEST"; phase: string; action: "DECLARE_KASHO"; stateVersion: number; })[]' is not assignable to type 'readonly BiddingActionRecord[]'.
+  Type 'BiddingActionRecord | { actionId: string; turnNumber: number; seat: "NORTH" | "EAST" | "SOUTH" | "WEST"; phase: string; action: "DECLARE_KASHO"; stateVersion: number; }' is not assignable to type 'BiddingActionRecord'.
+    Type '{ actionId: string; turnNumber: number; seat: "NORTH" | "EAST" | "SOUTH" | "WEST"; phase: string; action: "DECLARE_KASHO"; stateVersion: number; }' is not assignable to type 'BiddingActionRecord'.
+      Types of property 'phase' are incompatible.
+        Type 'string' is not assignable to type '"FIRST_ROUND" | "SECOND_ROUND"'.
+src/bidding/bidding-engine.ts(314,5): error TS2345: Argument of type '{}' is not assignable to parameter of type 'Readonly<Record<"CLUBS-7" | "CLUBS-8" | "CLUBS-9" | "CLUBS-10" | "CLUBS-J" | "CLUBS-Q" | "CLUBS-K" | "CLUBS-A" | "DIAMONDS-7" | "DIAMONDS-8" | "DIAMONDS-9" | "DIAMONDS-10" | "DIAMONDS-J" | ... 18 more ... | "SPADES-A", { ...; }>>'.
+  Type '{}' is missing the following properties from type 'Readonly<Record<"CLUBS-7" | "CLUBS-8" | "CLUBS-9" | "CLUBS-10" | "CLUBS-J" | "CLUBS-Q" | "CLUBS-K" | "CLUBS-A" | "DIAMONDS-7" | "DIAMONDS-8" | "DIAMONDS-9" | "DIAMONDS-10" | "DIAMONDS-J" | ... 18 more ... | "SPADES-A", { ...; }>>': "CLUBS-7", "CLUBS-8", "CLUBS-9", "CLUBS-10", and 28 more.
