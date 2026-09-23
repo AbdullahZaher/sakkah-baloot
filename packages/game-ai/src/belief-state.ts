@@ -1,4 +1,4 @@
-import type { CardId, PlayerId, Suit } from "@sakkah-baloot/game-engine";
+import type { BiddingState, CardId, PlayerId, Suit } from "@sakkah-baloot/game-engine";
 import { DECK } from "@sakkah-baloot/game-engine";
 import type {
   HiddenWorld,
@@ -79,15 +79,50 @@ export function sampleBeliefWorlds(
   for (let attempt = 0; attempt < maxAttempts && worlds.length < count; attempt += 1) {
     const world = sampleHiddenWorld(input, rng);
     if (!worldSatisfiesBelief(world, belief)) continue;
-    worlds.push({ world, weight: 1 });
+    worlds.push({ world, weight: beliefWorldWeight(input, world) });
   }
 
   if (worlds.length === 0) {
     throw new Error("Unable to sample a hidden world consistent with belief constraints");
   }
 
-  const weight = 1 / worlds.length;
-  return worlds.map((sample) => ({ ...sample, weight }));
+  const totalWeight = worlds.reduce((sum, sample) => sum + sample.weight, 0);
+  if (totalWeight <= 0) throw new Error("Belief world weights are not positive");
+  return worlds.map((sample) => ({ ...sample, weight: sample.weight / totalWeight }));
+}
+
+function beliefWorldWeight(
+  input: InformationSetInput,
+  world: HiddenWorld,
+): number {
+  let weight = 1;
+
+  for (const record of input.bidding?.history ?? []) {
+    const playerId = Object.entries(input.game.players).find(
+      ([, seat]) => seat === record.seat,
+    )?.[0];
+
+    if (!playerId || playerId === input.playerId) continue;
+
+    const hand = world.hands[playerId] ?? [];
+
+    if (record.action === "BUY_HOKUM") {
+      const suit = input.trumpSuit;
+      if (suit !== null) weight *= hand.some((card) => card.suit === suit) ? 1.35 : 0.35;
+    }
+
+    if (record.action === "BUY_SUN") {
+      const aceCount = hand.filter((card) => card.rank === "A").length;
+      weight *= aceCount > 0 ? 1.2 : 0.8;
+    }
+
+    if (record.action === "DECLARE_KASHO") {
+      const lowCards = hand.filter((card) => card.rank === "7" || card.rank === "8" || card.rank === "9").length;
+      weight *= lowCards >= 5 ? 1.5 : 0.25;
+    }
+  }
+
+  return weight;
 }
 
 function worldSatisfiesBelief(
