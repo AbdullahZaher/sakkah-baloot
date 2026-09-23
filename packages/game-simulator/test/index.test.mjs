@@ -112,3 +112,16 @@ test("card-play replay reproduces the simulator final state", () => {
 
   assert.deepEqual(replayed, result.final);
 });
+
+
+test("batch integrity gate", () => {
+  const result = simulateMatchBatch({
+    seed: "integrity-gate",
+    games: 100,
+    maxRoundsPerGame: 50,
+  });
+
+  assert.equal(result.games, 100);
+  assert.equal(result.illegalActions, 0);
+  assert.ok(result.deterministicDigest.length > 0);
+});
