@@ -167,6 +167,50 @@ test("local human can declare a legal project during trick one", () => {
   assert.equal(snapshot.humanTurn, true);
 });
 
+test("human-vs-AI UI host completes a full round through the public dispatch path", () => {
+  const session = createLocalHumanVsAISession({
+    seed: "ui-full-round-test",
+    humanSeat: "SOUTH",
+    aiMode: "BASELINE",
+    aiDifficulty: "NORMAL",
+  });
+
+  let snapshot = session.getSnapshot();
+  let guard = 0;
+
+  while (snapshot.bidding.phase === "BIDDING" && guard++ < 32) {
+    assert.equal(snapshot.humanTurn, true);
+    if (snapshot.legalActions.includes("BUY_SUN")) {
+      snapshot = session.dispatchBiddingAction("BUY_SUN");
+    } else if (snapshot.legalActions.includes("BUY_HOKUM")) {
+      const exposedSuit = snapshot.exposedCard?.suit;
+      const suit = SUITS.find((candidate) => candidate !== exposedSuit);
+      assert.ok(suit);
+      snapshot = session.dispatchBiddingAction("BUY_HOKUM", suit);
+    } else {
+      assert.ok(snapshot.legalActions.includes("PASS"));
+      snapshot = session.dispatchBiddingAction("PASS");
+    }
+  }
+
+  assert.equal(snapshot.bidding.phase, "CONTRACT_SELECTED");
+  assert.equal(snapshot.game?.phase, "PLAYING");
+
+  while (snapshot.game?.phase === "PLAYING" && guard++ < 256) {
+    if (snapshot.humanTurn) {
+      assert.ok(snapshot.legalCardIds.length > 0);
+      snapshot = session.dispatchCardPlay(snapshot.legalCardIds[0]);
+    } else {
+      throw new Error("dispatch path must advance AI turns back to the human");
+    }
+  }
+
+  assert.equal(snapshot.game?.phase, "ROUND_COMPLETE");
+  assert.equal(snapshot.game?.completedTricks.length, 8);
+  assert.ok(snapshot.roundScore);
+  assert.ok(snapshot.protocol.stateVersion > 2);
+});
+
 test("human card play automatically carries a legal Baloot declaration", () => {
   const session = createLocalHumanVsAISession({
     seed: "ui-baloot-test",
