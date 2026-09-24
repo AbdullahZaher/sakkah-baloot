@@ -203,13 +203,7 @@ export class AuthoritativeMatchHostImpl implements AuthoritativeMatchHost {
       );
     }
 
-    // 1. Idempotency Check: return cached result without advancing stateVersion
-    const cached = this.idempotencyLedger.get(command.actionId);
-    if (cached) {
-      return cached;
-    }
-
-    // 2. Identity & Match validation
+    // 1. Identity & Match validation
     if (command.matchId !== this.matchId) {
       throw new ServerBoundaryError(
         ServerErrorCode.INVALID_MATCH,
@@ -222,6 +216,14 @@ export class AuthoritativeMatchHostImpl implements AuthoritativeMatchHost {
         ServerErrorCode.UNKNOWN_PLAYER,
         `Player ${command.playerId} is not recognized in match ${this.matchId}`,
       );
+    }
+
+    const scopedActionId = `${command.playerId}:${command.actionId}`;
+
+    // 2. Idempotency Check: return cached result without advancing stateVersion
+    const cached = this.idempotencyLedger.get(scopedActionId);
+    if (cached) {
+      return cached;
     }
 
     const playerSeat = this.seatRouter.getSeat(command.playerId);
@@ -334,7 +336,7 @@ export class AuthoritativeMatchHostImpl implements AuthoritativeMatchHost {
     };
 
     // 9. Cache in Idempotency Ledger
-    this.idempotencyLedger.record(command.actionId, result);
+    this.idempotencyLedger.record(scopedActionId, result);
 
     return result;
   }

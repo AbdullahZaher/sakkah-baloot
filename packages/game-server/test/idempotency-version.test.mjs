@@ -228,3 +228,61 @@ test("match and round identity validation rejects mismatched envelopes", async (
       err.code === ServerErrorCode.INVALID_ACTION_ID,
   );
 });
+
+test("actionId is scoped to player and match preventing cross-player and cross-match collisions", async () => {
+  const hostA = createAuthoritativeMatchHost({
+    matchId: "match-A",
+    initialDealerSeat: "NORTH",
+    playerBindings: PLAYER_BINDINGS,
+  });
+
+  const hostB = createAuthoritativeMatchHost({
+    matchId: "match-B",
+    initialDealerSeat: "NORTH",
+    playerBindings: PLAYER_BINDINGS,
+  });
+
+  // Player WEST on host A submits action "shared-action-id"
+  const resA = await hostA.submitCommand({
+    matchId: "match-A",
+    playerId: "player-west",
+    actionId: "shared-action-id",
+    expectedStateVersion: 0,
+    payload: {
+      type: "BID",
+      action: { type: "PASS", actionId: "pass-A" },
+    },
+  });
+  assert.equal(resA.success, true);
+  assert.equal(resA.cached, undefined);
+
+  // Player WEST on host B submits action "shared-action-id" -> independent match, not cached
+  const resB = await hostB.submitCommand({
+    matchId: "match-B",
+    playerId: "player-west",
+    actionId: "shared-action-id",
+    expectedStateVersion: 0,
+    payload: {
+      type: "BID",
+      action: { type: "PASS", actionId: "pass-B" },
+    },
+  });
+  assert.equal(resB.success, true);
+  assert.equal(resB.cached, undefined);
+
+  // In match A, next player SOUTH submits action "shared-action-id" -> different player, not cached
+  const resSouth = await hostA.submitCommand({
+    matchId: "match-A",
+    playerId: "player-south",
+    actionId: "shared-action-id",
+    expectedStateVersion: 1,
+    payload: {
+      type: "BID",
+      action: { type: "PASS", actionId: "pass-south" },
+    },
+  });
+  assert.equal(resSouth.success, true);
+  assert.equal(resSouth.cached, undefined);
+  assert.equal(hostA.getStateVersion(), 2);
+});
+
