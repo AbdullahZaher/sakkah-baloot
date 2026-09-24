@@ -487,29 +487,34 @@ export function createLocalHumanVsAISession(
     if (pendingRoundComplete) {
       pendingRoundComplete = false;
       const round = match.round;
-      if (round && round.game?.phase === "ROUND_COMPLETE") {
-        const score = calculateRoundScore(round);
-        const completedRound = completeRoundState(round, score);
-        const completedMatch = completeMatchRound(match, score, completedRound);
-
-        const roundCompleteEvent: MatchProtocolEvent = {
-          type: "ROUND_COMPLETE",
-          roundId: round.roundId,
-          score: completedMatch.score,
-          matchEnd: completedMatch.end,
-        };
-
-        applyAuthoritativeRoundComplete(
-          match,
-          round,
-          score,
-          roundCompleteEvent,
-        );
-
-        match = completedMatch;
-        protocol = applyProtocol(protocol, roundCompleteEvent);
-        lastProtocolEvent = roundCompleteEvent.type;
+      if (!round) {
+        throw new Error("Cannot complete a trick without an active round");
       }
+      if (round.game?.phase !== "ROUND_COMPLETE") {
+        throw new Error("Final trick presentation ended before the engine marked the round complete");
+      }
+
+      const score = calculateRoundScore(round);
+      const completedRound = completeRoundState(round, score);
+      const completedMatch = completeMatchRound(match, score, completedRound);
+
+      const roundCompleteEvent: MatchProtocolEvent = {
+        type: "ROUND_COMPLETE",
+        roundId: round.roundId,
+        score: completedMatch.score,
+        matchEnd: completedMatch.end,
+      };
+
+      applyAuthoritativeRoundComplete(
+        match,
+        round,
+        score,
+        roundCompleteEvent,
+      );
+
+      match = completedMatch;
+      protocol = applyProtocol(protocol, roundCompleteEvent);
+      lastProtocolEvent = roundCompleteEvent.type;
     } else {
       if (
         match.round?.phase === "PLAYING" &&
