@@ -330,12 +330,16 @@ function formatActionFeedback(value: string): string {
     .replace("EAST", "الشرق")
     .replace("SOUTH", "الجنوب")
     .replace("WEST", "الغرب")
+    .replace("BUY_HOKUM_EXPOSED", "حكم المكشوف")
+    .replace("BUY_ASHKAL", "أشكال")
     .replace("BUY_SUN", "صن")
     .replace("BUY_HOKUM", "حكم")
-    .replace("BUY_HOKUM_EXPOSED", "حكم")
-    .replace("BUY_ASHKAL", "أشكال")
+    .replace("DECLARE_KASHO", "كاشو")
     .replace("PASS", "بس")
-    .replace("DECLARE_KASHO", "كاشو");
+    .replace("CLUBS", "كلوب")
+    .replace("DIAMONDS", "ديمن")
+    .replace("HEARTS", "هارت")
+    .replace("SPADES", "سبيد");
 }
 
 function BidHistory({
@@ -860,8 +864,12 @@ function RoundResult({
         </Text>
       </View>
 
-      {matchEnd.status === "FINISHED" ? <Text style={styles.finishedStatus}>انتهت الصكّة</Text> : null}
-      {matchEnd.status === "EXTRA_DEAL" ? <Text style={styles.extraDealStatus}>تعادل فوق 152 — توزيع إضافي</Text> : null}
+      {matchEnd.status === "FINISHED" ? (
+        <Text style={styles.finishedStatus}>
+          انتهت الصكّة · الفائز: {matchEnd.winnerTeamId === "NORTH_SOUTH" ? "لنا" : "لهم"}
+        </Text>
+      ) : null}
+      {matchEnd.status === "EXTRA_DEAL" ? <Text style={styles.extraDealStatus}>تعادل — توزيع إضافي</Text> : null}
 
       {canContinue ? (
         <Pressable accessibilityRole="button" onPress={onNextRound} style={styles.nextRoundBtn}>
