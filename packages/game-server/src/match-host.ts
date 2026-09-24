@@ -424,6 +424,14 @@ export class AuthoritativeMatchHostImpl implements AuthoritativeMatchHost {
         deal: completedDeal,
       };
       nextRound = withRoundGame(nextRound, gameState);
+
+      producedEvents.push({
+        type: "DEAL",
+        roundId: round.roundId,
+        roundNumber: this.matchState.roundNumber,
+        dealerSeat: round.dealerSeat,
+        dealType: "COMPLETION",
+      });
     } else if (nextBidding.phase === "CANCELLED") {
       // Re-deal for cancelled bidding (e.g. ALL_PASS or KASHO)
       const nextDealer = nextCounterClockwise(round.dealerSeat);
@@ -441,6 +449,21 @@ export class AuthoritativeMatchHostImpl implements AuthoritativeMatchHost {
         dealerSeat: nextDealer,
         round: nextRound,
       };
+
+      producedEvents.push({
+        type: "NEXT_ROUND",
+        roundId: newRoundId,
+        nextRoundNumber,
+        dealerSeat: nextDealer,
+      });
+
+      producedEvents.push({
+        type: "DEAL",
+        roundId: newRoundId,
+        roundNumber: nextRoundNumber,
+        dealerSeat: nextDealer,
+        dealType: "REDEAL",
+      });
       return;
     }
 
@@ -754,6 +777,7 @@ export class AuthoritativeMatchHostImpl implements AuthoritativeMatchHost {
       roundId: newRoundId,
       roundNumber: nextRoundNumber,
       dealerSeat: nextDealerSeat,
+      dealType: "INITIAL",
     });
   }
 }

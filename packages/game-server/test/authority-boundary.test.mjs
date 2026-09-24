@@ -101,7 +101,7 @@ test("authority boundary: Baloot declaration validity and construction delegates
           matchId: "match-baloot-boundary",
           playerId: "player-west",
           actionId: "invalid-baloot-decl",
-          expectedStateVersion: 1,
+          expectedStateVersion: host.getStateVersion(),
           payload: {
             type: "DECLARE_BALOOT",
             cardId: nonTrumpCard.id,
@@ -132,7 +132,7 @@ test("authority boundary: round score matches canonical game-engine scoreComplet
   });
 
   // Play 8 complete tricks (32 cards)
-  let expectedVersion = 1;
+  let expectedVersion = host.getStateVersion();
   const seats = ["WEST", "NORTH", "EAST", "SOUTH"];
   const playerBySeat = {
     NORTH: "player-north",

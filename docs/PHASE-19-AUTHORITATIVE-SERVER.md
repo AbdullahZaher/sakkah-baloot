@@ -165,7 +165,27 @@ The host encapsulates the authoritative `MatchState`, `SeatRouter`, `Idempotency
 
 ---
 
-## 10. Persistence Boundary
+## 10. Protocol Events, Deal Semantics, and Replay Guarantees
+
+### Event Authority & Completeness
+`@sakkah-baloot/game-protocol` defines the canonical schema for every state transition in the match:
+- `DEAL`: Emitted on round start (`dealType: "INITIAL"`), contract completion (`dealType: "COMPLETION"`), and cancelled bidding redeals (`dealType: "REDEAL"`).
+- `BID`: Emitted on every legal bidding action.
+- `PROJECT`: Emitted when a valid project is declared during trick 1.
+- `BALOOT`: Emitted when Baloot is declared on the second trump K/Q play in Hokum.
+- `PLAY_CARD`: Emitted on every authoritative card play.
+- `TRICK_COMPLETE`: Emitted when 4 cards complete a trick with the authoritative winner.
+- `ROUND_COMPLETE`: Emitted upon the 8th trick with authoritative scores from `scoreCompletedRound()`.
+- `NEXT_ROUND`: Emitted on round advancement or cancelled bidding rotation.
+- `MATCH_COMPLETE`: Emitted when a team reaches the target match score.
+
+### Replay Guarantee
+- `replayProtocol(initialState, events)` guarantees 100% deterministic reconstruction of the public protocol state machine: active `roundId`, sequential `roundNumber`, rotated `dealerSeat`, lifecycle `phase`, team `score`, and monotonic `stateVersion`.
+- **Private State Boundary**: Protocol replay reconstructs public game lifecycle progression without leaking hidden cards, private deal transcripts, or unrevealed opponent hands. Full internal `MatchState` reconstruction remains strictly server-authoritative, while clients receive redacted `PlayerScopedSnapshot` views.
+
+---
+
+## 11. Persistence Boundary
 
 `MatchPersistence` defines an asynchronous storage contract:
 
@@ -182,13 +202,13 @@ The package provides `InMemoryMatchPersistence` for tests and local runtime, dec
 
 ---
 
-## 11. Transport Boundary
+## 12. Transport Boundary
 
 `@sakkah-baloot/game-server` is entirely transport-neutral. It exposes pure TypeScript interfaces for `submitCommand`, `getSnapshot`, and `reconnect`, allowing WebSocket, Socket.IO, gRPC, HTTP, or direct in-memory adapters to be mounted without coupling the core package to any specific networking library.
 
 ---
 
-## 12. Human / AI Unified Command Path
+## 13. Human / AI Unified Command Path
 
 Human players and AI seats share the identical server command boundary:
 
@@ -202,9 +222,9 @@ The AI bridge (`executeAITurn`) converts the player's sanitized snapshot to an `
 
 ---
 
-## 13. Testing Matrix
+## 14. Testing Matrix
 
-The package includes a comprehensive suite of 29 unit and integration tests across 13 test files:
+The package includes a comprehensive suite of 34 unit and integration tests across 14 test files:
 
 - `test/match-creation.test.mjs`: Initial stateVersion 0, deterministic initial deal, seat router binding validation.
 - `test/idempotency-version.test.mjs`: Action idempotency caching, interleaved duplicate actions, stale/future version fencing, envelope validation.
@@ -215,6 +235,7 @@ The package includes a comprehensive suite of 29 unit and integration tests acro
 - `test/security-snapshot.test.mjs`: Adversarial JSON inspection for opponent hand and deck isolation.
 - `test/reconnect-replay.test.mjs`: Disconnect tracking, resume from version, missed events delivery.
 - `test/replay-equivalence.test.mjs`: Event store replay equivalence with `game-protocol`.
+- `test/protocol-completeness.test.mjs`: Contract completion deal events, second-round cancellation redeals, round completion advance events, arbitrary resume version replays, and multi-event atomicity.
 - `test/ai-unified-path.test.mjs`: End-to-end multi-AI match simulation through unified command interface.
 - `test/determinism.test.mjs`: Seeded match determinism across independent hosts.
 - `test/invariants.test.mjs`: Strict stateVersion monotonicity and 32-card conservation.
@@ -222,7 +243,7 @@ The package includes a comprehensive suite of 29 unit and integration tests acro
 
 ---
 
-## 14. Non-Goals
+## 15. Non-Goals
 
 The following items are intentionally excluded from Phase 19:
 - PostgreSQL / Redis / Supabase database drivers.
