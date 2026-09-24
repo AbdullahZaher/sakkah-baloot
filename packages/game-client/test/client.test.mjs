@@ -180,38 +180,63 @@ test("human-vs-AI path actually declares RD-08 Baloot on the second trump K/Q", 
 
     let snapshot = session.getSnapshot();
     let guard = 0;
-    let firstTrumpCard = null;
+
+    while (snapshot.bidding.phase === "BIDDING" && guard++ < 32) {
+      assert.equal(snapshot.humanTurn, true);
+
+      const pairSuits = SUITS.filter((suit) =>
+        snapshot.playerHand.some((card) => card.suit === suit && card.rank === "K") &&
+        snapshot.playerHand.some((card) => card.suit === suit && card.rank === "Q"),
+      );
+
+      const exposedSuit = snapshot.exposedCard?.suit;
+      const preferredTrump = pairSuits.find((suit) => suit !== exposedSuit);
+
+      if (preferredTrump && snapshot.legalActions.includes("BUY_HOKUM")) {
+        snapshot = session.dispatchBiddingAction("BUY_HOKUM", preferredTrump);
+      } else if (snapshot.legalActions.includes("PASS")) {
+        snapshot = session.dispatchBiddingAction("PASS");
+      } else {
+        break;
+      }
+    }
+
+    if (snapshot.bidding.selectedContract?.contract !== "HOKUM") continue;
+
+    const selectedTrump = snapshot.bidding.selectedContract.trumpSuit;
+    const hasPair = snapshot.playerHand.some(
+      (card) => card.suit === selectedTrump && card.rank === "K",
+    ) && snapshot.playerHand.some(
+      (card) => card.suit === selectedTrump && card.rank === "Q",
+    );
+    if (!hasPair) continue;
+
+    let firstPlayed = false;
+    guard = 0;
 
     while (snapshot.game?.phase === "PLAYING" && guard++ < 96) {
-      if (!snapshot.humanTurn) {
-        assert.fail("Local UI dispatch must return control to the human after AI turns");
+      assert.equal(snapshot.humanTurn, true);
+
+      const pair = snapshot.playerHand.filter(
+        (card) =>
+          card.suit === selectedTrump &&
+          (card.rank === "K" || card.rank === "Q"),
+      );
+      const playablePair = pair.find((card) => snapshot.legalCardIds.includes(card.id));
+
+      if (!firstPlayed && playablePair) {
+        snapshot = session.dispatchCardPlay(playablePair.id);
+        assert.equal(snapshot.baloot, null);
+        firstPlayed = true;
+        continue;
       }
 
-      const selected = snapshot.bidding.selectedContract;
-      assert.ok(selected);
-
-      const trumpPair = selected.contract === "HOKUM"
-        ? snapshot.playerHand.filter(
-            (card) =>
-              card.suit === selected.trumpSuit &&
-              (card.rank === "K" || card.rank === "Q"),
-          )
-        : [];
-
-      if (selected.contract === "HOKUM" && trumpPair.length === 2) {
-        const pairIds = new Set(trumpPair.map((card) => card.id));
-        const playablePair = snapshot.legalCardIds.filter((id) => pairIds.has(id));
-
-        if (playablePair.length > 0) {
-          const cardId = playablePair[0];
-          snapshot = session.dispatchCardPlay(cardId);
-
-          if (snapshot.baloot !== null) {
-            assert.fail("Baloot cannot be declared on the first K/Q play");
-          }
-
-          firstTrumpCard = cardId;
-          break;
+      if (firstPlayed) {
+        const remaining = pair.find((card) => snapshot.legalCardIds.includes(card.id));
+        if (remaining) {
+          snapshot = session.dispatchCardPlay(remaining.id);
+          if (snapshot.baloot !== null) break;
+          continue;
         }
       }
 
@@ -220,31 +245,9 @@ test("human-vs-AI path actually declares RD-08 Baloot on the second trump K/Q", 
       snapshot = session.dispatchCardPlay(fallback);
     }
 
-    if (!firstTrumpCard || !snapshot.game || snapshot.baloot !== null) continue;
-
-    let secondGuard = 0;
-    while (snapshot.game?.phase === "PLAYING" && secondGuard++ < 96 && snapshot.baloot === null) {
-      assert.equal(snapshot.humanTurn, true);
-
-      const selected = snapshot.bidding.selectedContract;
-      assert.equal(selected?.contract, "HOKUM");
-
-      const remainingPair = snapshot.playerHand.filter(
-        (card) =>
-          card.suit === selected.trumpSuit &&
-          (card.rank === "K" || card.rank === "Q"),
-      );
-
-      const second = remainingPair.find((card) => snapshot.legalCardIds.includes(card.id));
-      const cardId = second?.id ?? snapshot.legalCardIds[0];
-      assert.ok(cardId);
-
-      snapshot = session.dispatchCardPlay(cardId);
-    }
-
     if (snapshot.baloot !== null) {
       observed = true;
-      assert.equal(snapshot.baloot.trumpSuit, snapshot.bidding.selectedContract?.trumpSuit);
+      assert.equal(snapshot.baloot.trumpSuit, selectedTrump);
       assert.equal(snapshot.baloot.qaydValue, 2);
       assert.equal(snapshot.baloot.seat, "SOUTH");
       assert.equal(snapshot.baloot.teamId, "NORTH_SOUTH");
