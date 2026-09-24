@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import {
   createLocalHumanVsAISession,
@@ -27,6 +27,16 @@ export function GameTableScreen() {
     }
   };
 
+  // Orchestrate the 2000ms completed trick presentation boundary
+  useEffect(() => {
+    if (preview.completedTrickPresentation) {
+      const timer = setTimeout(() => {
+        run(() => session.acknowledgeCompletedTrick());
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [preview.completedTrickPresentation, session]);
+
   const matchScore = preview.matchScore ?? { NORTH_SOUTH: 0, EAST_WEST: 0 };
 
   return (
@@ -52,10 +62,32 @@ export function GameTableScreen() {
 
         {/* Turn & Status Indicator */}
         <View style={styles.status}>
-          <View style={[styles.turnBadge, preview.humanTurn ? styles.turnBadgeHuman : styles.turnBadgeAi]}>
-            <View style={[styles.turnDot, preview.humanTurn ? styles.turnDotHuman : styles.turnDotAi]} />
+          <View
+            style={[
+              styles.turnBadge,
+              preview.completedTrickPresentation
+                ? styles.turnBadgeFrozen
+                : preview.humanTurn
+                  ? styles.turnBadgeHuman
+                  : styles.turnBadgeAi,
+            ]}
+          >
+            <View
+              style={[
+                styles.turnDot,
+                preview.completedTrickPresentation
+                  ? styles.turnDotFrozen
+                  : preview.humanTurn
+                    ? styles.turnDotHuman
+                    : styles.turnDotAi,
+              ]}
+            />
             <Text style={styles.turnBadgeText}>
-              {preview.humanTurn ? "دورك" : `دور ${seatLabel(preview.actingSeat)}`}
+              {preview.completedTrickPresentation
+                ? `فاز ${seatLabel(preview.completedTrickPresentation.winnerSeat)}`
+                : preview.humanTurn
+                  ? "دورك"
+                  : `دور ${seatLabel(preview.actingSeat)}`}
             </Text>
           </View>
         </View>
@@ -89,10 +121,12 @@ export function GameTableScreen() {
         matchEnd={preview.matchEnd}
         contract={preview.game?.contract ?? null}
         trumpSuit={preview.game?.trumpSuit ?? null}
+        selectedContract={preview.bidding.selectedContract}
         projectCandidates={preview.projectCandidates}
         declaredProjects={preview.projects}
         baloot={preview.baloot}
         onProject={(projectId) => run(() => session.dispatchProject(projectId))}
+        completedTrickPresentation={preview.completedTrickPresentation}
       />
     </View>
   );
@@ -198,6 +232,10 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255, 255, 255, 0.08)",
     borderColor: "rgba(255, 255, 255, 0.15)",
   },
+  turnBadgeFrozen: {
+    backgroundColor: "rgba(245, 158, 11, 0.25)",
+    borderColor: "#F59E0B",
+  },
   turnDot: {
     width: 6,
     height: 6,
@@ -208,6 +246,9 @@ const styles = StyleSheet.create({
   },
   turnDotAi: {
     backgroundColor: "#94A3B8",
+  },
+  turnDotFrozen: {
+    backgroundColor: "#F59E0B",
   },
   turnBadgeText: {
     color: "#F5E6BF",

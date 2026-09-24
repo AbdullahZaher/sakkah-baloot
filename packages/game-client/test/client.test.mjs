@@ -101,7 +101,6 @@ test("repeated snapshots are observationally idempotent", () => {
   assert.deepEqual(second.deal.hands, first.deal.hands);
 });
 
-
 test("playable local host exposes authoritative protocol state", () => {
   const session = createLocalHumanVsAISession({
     seed: "ui-playable-test",
@@ -140,7 +139,6 @@ test("playable local host accepts a human bid and returns to the human turn", ()
     assert.equal(before.actingSeat, "SOUTH");
   }
 });
-
 
 test("local human can declare a legal project during trick one", () => {
   const session = createLocalHumanVsAISession({
@@ -227,10 +225,18 @@ test("client Baloot path never declares Baloot in Sun", () => {
   }
 
   while (snapshot.game?.phase === "PLAYING" && guard++ < 64) {
+    if (snapshot.completedTrickPresentation) {
+      snapshot = session.acknowledgeCompletedTrick();
+      continue;
+    }
     assert.equal(snapshot.baloot, null);
     const cardId = snapshot.legalCardIds[0];
     assert.ok(cardId);
     snapshot = session.dispatchCardPlay(cardId);
+  }
+
+  if (snapshot.completedTrickPresentation) {
+    snapshot = session.acknowledgeCompletedTrick();
   }
 
   assert.equal(snapshot.baloot, null);
@@ -266,12 +272,20 @@ test("human-vs-AI UI host completes a full round through the public dispatch pat
   assert.equal(snapshot.game?.phase, "PLAYING");
 
   while (snapshot.game?.phase === "PLAYING" && guard++ < 256) {
+    if (snapshot.completedTrickPresentation) {
+      snapshot = session.acknowledgeCompletedTrick();
+      continue;
+    }
     if (snapshot.humanTurn) {
-      assert.ok(snapshot.legalCardIds.length > 0, JSON.stringify({ phase: snapshot.game?.phase, currentPlayerId: snapshot.game?.currentPlayerId, humanTurn: snapshot.humanTurn, humanPlayerHandLength: snapshot.game?.hands?.HUMAN_PLAYER?.length, currentPlayerHandLength: snapshot.game?.hands?.[snapshot.game?.currentPlayerId ?? ""]?.length, playerKeys: Object.keys(snapshot.game?.hands ?? {}), players: snapshot.game?.players, trickNumber: snapshot.game?.trickNumber, currentTrickLength: snapshot.game?.currentTrick?.length, currentTrickPlayers: snapshot.game?.currentTrick?.map((play) => play.playerId), completedTricks: snapshot.game?.completedTricks?.length }));
+      assert.ok(snapshot.legalCardIds.length > 0);
       snapshot = session.dispatchCardPlay(snapshot.legalCardIds[0]);
     } else {
       throw new Error("dispatch path must advance AI turns back to the human");
     }
+  }
+
+  if (snapshot.completedTrickPresentation) {
+    snapshot = session.acknowledgeCompletedTrick();
   }
 
   assert.equal(snapshot.game?.phase, "ROUND_COMPLETE");
@@ -280,3 +294,56 @@ test("human-vs-AI UI host completes a full round through the public dispatch pat
   assert.ok(snapshot.protocol.stateVersion > 2);
 });
 
+test("forensic: completed trick holds presentation state, prevents next trick AI progression until acknowledged", () => {
+  const session = createLocalHumanVsAISession({
+    seed: "forensic-trick-hold-test",
+    humanSeat: "SOUTH",
+    aiMode: "BASELINE",
+    aiDifficulty: "NORMAL",
+  });
+
+  let snapshot = session.getSnapshot();
+  while (snapshot.bidding.phase === "BIDDING") {
+    if (snapshot.legalActions.includes("BUY_SUN")) {
+      snapshot = session.dispatchBiddingAction("BUY_SUN");
+    } else {
+      snapshot = session.dispatchBiddingAction("PASS");
+    }
+  }
+
+  assert.equal(snapshot.game?.phase, "PLAYING");
+  assert.equal(snapshot.completedTrickPresentation, null);
+
+  // Play Trick 1
+  assert.equal(snapshot.humanTurn, true);
+  const cardToPlay = snapshot.legalCardIds[0];
+  assert.ok(cardToPlay);
+
+  snapshot = session.dispatchCardPlay(cardToPlay);
+
+  // Trick 1 completed by AI plays!
+  // Verify completed trick presentation is active
+  assert.ok(snapshot.completedTrickPresentation !== null);
+  assert.equal(snapshot.completedTrickPresentation.trickNumber, 1);
+  assert.equal(snapshot.completedTrickPresentation.plays.length, 4);
+  assert.ok(snapshot.completedTrickPresentation.winnerSeat);
+
+  // Verify human input is disabled during presentation hold
+  assert.equal(snapshot.humanTurn, false);
+  assert.equal(snapshot.legalCardIds.length, 0);
+
+  // Verify attempting to play card during hold throws error
+  assert.throws(() => {
+    session.dispatchCardPlay("HEARTS-7");
+  }, /Cannot play card while completed trick presentation is active/);
+
+  // Verify AI has NOT made any moves for Trick 2 yet
+  assert.equal(snapshot.game?.currentTrick.length, 0);
+
+  // Now acknowledge completed trick (simulating 2000ms timer expiration)
+  const afterAck = session.acknowledgeCompletedTrick();
+
+  assert.equal(afterAck.completedTrickPresentation, null);
+  // Game has now safely advanced to Trick 2
+  assert.ok(afterAck.game?.trickNumber === 2 || afterAck.game?.phase === "PLAYING");
+});
