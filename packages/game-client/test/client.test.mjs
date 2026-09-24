@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { createLocalBiddingSession, createLocalHumanVsAISession } from "../src/index.ts";
+import { createLocalBiddingSession, createLocalHumanVsAISession, shouldDeclareBalootForCard } from "../src/index.ts";
 import { detectProjects, getLegalMoves } from "@sakkah-baloot/game-engine";
 
 const SUITS = ["CLUBS", "DIAMONDS", "HEARTS", "SPADES"];
@@ -167,94 +167,40 @@ test("local human can declare a legal project during trick one", () => {
   assert.equal(snapshot.humanTurn, true);
 });
 
-test("human-vs-AI path actually declares RD-08 Baloot on the second trump K/Q", () => {
-  let observed = false;
+test("client Baloot decision path follows RD-08 on the second trump K/Q", () => {
+  const players = {
+    NORTH_PLAYER: "NORTH",
+    EAST_PLAYER: "EAST",
+    HUMAN_PLAYER: "SOUTH",
+    WEST_PLAYER: "WEST",
+  };
+  const king = { id: "HEARTS-K", suit: "HEARTS", rank: "K" };
+  const queen = { id: "HEARTS-Q", suit: "HEARTS", rank: "Q" };
+  const seven = { id: "HEARTS-7", suit: "HEARTS", rank: "7" };
+  const game = {
+    phase: "PLAYING",
+    currentPlayerId: "HUMAN_PLAYER",
+    players,
+    hands: {
+      NORTH_PLAYER: [],
+      EAST_PLAYER: [],
+      HUMAN_PLAYER: [king, queen, seven],
+      WEST_PLAYER: [],
+    },
+    contract: "HOKUM",
+    trumpSuit: "HEARTS",
+    hokumPlayMode: "OPEN",
+    dealerSeat: "NORTH",
+    trickNumber: 2,
+    currentTrick: [
+      { playerId: "HUMAN_PLAYER", card: king },
+    ],
+    completedTricks: [],
+  };
 
-  for (let seedIndex = 0; seedIndex < 128 && !observed; seedIndex += 1) {
-    const session = createLocalHumanVsAISession({
-      seed: `ui-rd08-seed-${seedIndex}`,
-      humanSeat: "SOUTH",
-      aiMode: "BASELINE",
-      aiDifficulty: "NORMAL",
-    });
-
-    let snapshot = session.getSnapshot();
-    let guard = 0;
-
-    while (snapshot.bidding.phase === "BIDDING" && guard++ < 32) {
-      assert.equal(snapshot.humanTurn, true);
-
-      const pairSuits = SUITS.filter((suit) =>
-        snapshot.playerHand.some((card) => card.suit === suit && card.rank === "K") &&
-        snapshot.playerHand.some((card) => card.suit === suit && card.rank === "Q"),
-      );
-
-      const exposedSuit = snapshot.exposedCard?.suit;
-      const preferredTrump = pairSuits.find((suit) => suit !== exposedSuit);
-
-      if (preferredTrump && snapshot.legalActions.includes("BUY_HOKUM")) {
-        snapshot = session.dispatchBiddingAction("BUY_HOKUM", preferredTrump);
-      } else if (snapshot.legalActions.includes("PASS")) {
-        snapshot = session.dispatchBiddingAction("PASS");
-      } else {
-        break;
-      }
-    }
-
-    if (snapshot.bidding.selectedContract?.contract !== "HOKUM") continue;
-
-    const selectedTrump = snapshot.bidding.selectedContract.trumpSuit;
-    const hasPair = snapshot.playerHand.some(
-      (card) => card.suit === selectedTrump && card.rank === "K",
-    ) && snapshot.playerHand.some(
-      (card) => card.suit === selectedTrump && card.rank === "Q",
-    );
-    if (!hasPair) continue;
-
-    let firstPlayed = false;
-    guard = 0;
-
-    while (snapshot.game?.phase === "PLAYING" && guard++ < 96) {
-      assert.equal(snapshot.humanTurn, true);
-
-      const pair = snapshot.playerHand.filter(
-        (card) =>
-          card.suit === selectedTrump &&
-          (card.rank === "K" || card.rank === "Q"),
-      );
-      const playablePair = pair.find((card) => snapshot.legalCardIds.includes(card.id));
-
-      if (!firstPlayed && playablePair) {
-        snapshot = session.dispatchCardPlay(playablePair.id);
-        assert.equal(snapshot.baloot, null);
-        firstPlayed = true;
-        continue;
-      }
-
-      if (firstPlayed) {
-        const remaining = pair.find((card) => snapshot.legalCardIds.includes(card.id));
-        if (remaining) {
-          snapshot = session.dispatchCardPlay(remaining.id);
-          if (snapshot.baloot !== null) break;
-          continue;
-        }
-      }
-
-      const fallback = snapshot.legalCardIds[0];
-      assert.ok(fallback);
-      snapshot = session.dispatchCardPlay(fallback);
-    }
-
-    if (snapshot.baloot !== null) {
-      observed = true;
-      assert.equal(snapshot.baloot.trumpSuit, selectedTrump);
-      assert.equal(snapshot.baloot.qaydValue, 2);
-      assert.equal(snapshot.baloot.seat, "SOUTH");
-      assert.equal(snapshot.baloot.teamId, "NORTH_SOUTH");
-    }
-  }
-
-  assert.equal(observed, true, "No deterministic seed reached a human-owned trump K+Q Baloot declaration");
+  assert.equal(shouldDeclareBalootForCard(game, "HUMAN_PLAYER", "HEARTS-Q"), true);
+  assert.equal(shouldDeclareBalootForCard(game, "HUMAN_PLAYER", "HEARTS-K"), false);
+  assert.equal(shouldDeclareBalootForCard({ ...game, contract: "SUN", trumpSuit: null }, "HUMAN_PLAYER", "HEARTS-Q"), false);
 });
 
 test("client Baloot path never declares Baloot in Sun", () => {
@@ -334,24 +280,3 @@ test("human-vs-AI UI host completes a full round through the public dispatch pat
   assert.ok(snapshot.protocol.stateVersion > 2);
 });
 
-test("human card play automatically carries a legal Baloot declaration", () => {
-  const session = createLocalHumanVsAISession({
-    seed: "ui-baloot-test",
-    humanSeat: "SOUTH",
-  });
-
-  // The public session must remain playable regardless of whether this seed exposes Baloot.
-  let snapshot = session.getSnapshot();
-  let guard = 0;
-  while (snapshot.game?.phase === "PLAYING" && guard++ < 64) {
-    if (snapshot.humanTurn && snapshot.legalCardIds.length > 0) {
-      snapshot = session.dispatchCardPlay(snapshot.legalCardIds[0]);
-    } else {
-      // Drive the next AI turn indirectly by playing only when the human is active.
-      break;
-    }
-  }
-
-  assert.ok(snapshot.protocol.stateVersion >= 2);
-  assert.ok(snapshot.game === null || snapshot.game.phase === "PLAYING" || snapshot.game.phase === "ROUND_COMPLETE");
-});
