@@ -267,7 +267,7 @@ test("human-vs-AI UI host completes a full round through the public dispatch pat
 
   while (snapshot.game?.phase === "PLAYING" && guard++ < 256) {
     if (snapshot.humanTurn) {
-      assert.ok(snapshot.legalCardIds.length > 0);
+      assert.ok(snapshot.legalCardIds.length > 0, JSON.stringify({ phase: snapshot.game?.phase, currentPlayerId: snapshot.game?.currentPlayerId, humanTurn: snapshot.humanTurn, handLength: snapshot.game?.hands?.HUMAN_PLAYER?.length, trickNumber: snapshot.game?.trickNumber, currentTrickLength: snapshot.game?.currentTrick?.length, completedTricks: snapshot.game?.completedTricks?.length }));
       snapshot = session.dispatchCardPlay(snapshot.legalCardIds[0]);
     } else {
       throw new Error("dispatch path must advance AI turns back to the human");
