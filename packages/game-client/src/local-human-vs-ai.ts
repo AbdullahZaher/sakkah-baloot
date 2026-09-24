@@ -652,7 +652,9 @@ export function createLocalHumanVsAISession(
     );
 
     commitCard(playerId, cardId, ikaDeclared, balootDeclared);
-    runAI();
+    if (match.phase !== "ROUND_COMPLETE" && match.end.status !== "FINISHED") {
+      runAI();
+    }
 
     const afterAI = match.round?.game;
     if (afterAI?.phase === "PLAYING" && afterAI.currentPlayerId === playerId) {
