@@ -303,9 +303,11 @@ export function createLocalHumanVsAISession(
       humanTurn,
       roundScore: pendingRoundComplete
         ? null
-        : match.phase === "ROUND_COMPLETE" || match.phase === "MATCH_COMPLETE"
-          ? match.lastRoundScore
-          : round.score,
+        : round.phase === "ROUND_COMPLETE"
+          ? round.score
+          : match.phase === "ROUND_COMPLETE" || match.phase === "MATCH_COMPLETE"
+            ? match.lastRoundScore
+            : round.score,
       matchScore: match.score,
       matchEnd: match.end,
       projects: round.projects,
