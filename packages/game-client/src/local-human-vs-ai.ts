@@ -335,6 +335,7 @@ export function createLocalHumanVsAISession(
     );
 
     let nextRound = { ...round, bidding: authoritative.state };
+    const followUpEvents: MatchProtocolEvent[] = [];
 
     if (authoritative.state.phase === "CONTRACT_SELECTED") {
       const deal = completeDeal(
@@ -343,11 +344,56 @@ export function createLocalHumanVsAISession(
       );
       nextRound = { ...nextRound, deal };
       nextRound = withRoundGame(nextRound, buildGame(nextRound));
+      followUpEvents.push({
+        type: "DEAL",
+        roundId: round.roundId,
+        roundNumber: match.roundNumber,
+        dealerSeat: round.dealerSeat,
+        dealType: "COMPLETION",
+      });
+    } else if (authoritative.state.phase === "CANCELLED") {
+      const nextRoundNumber = match.roundNumber + 1;
+      const nextDealer = nextCounterClockwise(round.dealerSeat);
+      nextRound = createRound(matchId, nextRoundNumber, nextDealer, seed);
+      match = {
+        ...match,
+        round: nextRound,
+        roundId: nextRound.roundId,
+        roundNumber: nextRoundNumber,
+        dealerSeat: nextDealer,
+        phase: "ROUND_ACTIVE",
+        stateVersion: match.stateVersion + 1,
+        lastRoundScore: null,
+        end: { status: "ONGOING", score: match.score },
+      };
+      followUpEvents.push(
+        {
+          type: "NEXT_ROUND",
+          roundId: nextRound.roundId,
+          nextRoundNumber,
+          dealerSeat: nextDealer,
+        },
+        {
+          type: "DEAL",
+          roundId: nextRound.roundId,
+          roundNumber: nextRoundNumber,
+          dealerSeat: nextDealer,
+          dealType: "REDEAL",
+        },
+      );
+    } else {
+      match = { ...match, round: nextRound };
     }
 
-    match = { ...match, round: nextRound };
-    protocol = applyProtocol(protocol, event);
-    lastProtocolEvent = event.type;
+    if (authoritative.state.phase === "CONTRACT_SELECTED") {
+      match = { ...match, round: nextRound };
+    }
+
+    const events = [event, ...followUpEvents];
+    for (const protocolEvent of events) {
+      protocol = applyProtocol(protocol, protocolEvent);
+      lastProtocolEvent = protocolEvent.type;
+    }
   }
 
   function commitProject(playerId: PlayerId, project: ProjectDeclaration): void {
