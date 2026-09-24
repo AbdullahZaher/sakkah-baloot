@@ -1,4 +1,3 @@
-import { useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import {
   teamOfSeat,
@@ -45,6 +44,7 @@ export interface GameTableProps {
   readonly declaredProjects?: readonly ProjectDeclaration[];
   readonly baloot?: BalootDeclaration | null;
   readonly onProject?: (projectId: string) => void;
+  readonly completedTrickPresentation?: CompletedTrick | null;
 }
 
 export function GameTable({
@@ -70,37 +70,15 @@ export function GameTable({
   declaredProjects = [],
   baloot = null,
   onProject,
+  completedTrickPresentation = null,
 }: GameTableProps) {
-  // 2-Second Completed Trick Hold Presentation State
-  const [frozenTrick, setFrozenTrick] = useState<CompletedTrick | null>(null);
-  const prevCompletedCountRef = useRef<number>(0);
+  const isFrozen = Boolean(completedTrickPresentation);
+  const frozenTrick = completedTrickPresentation ?? null;
 
-  useEffect(() => {
-    const completedTricks = game?.completedTricks ?? [];
-    const currentCount = completedTricks.length;
+  const activeSeat: Seat = isFrozen && frozenTrick
+    ? frozenTrick.winnerSeat
+    : ((game ? game.players[game.currentPlayerId] : actingSeat) ?? actingSeat);
 
-    if (currentCount === 0) {
-      prevCompletedCountRef.current = 0;
-      setFrozenTrick(null);
-      return;
-    }
-
-    if (currentCount > prevCompletedCountRef.current) {
-      const lastTrick = completedTricks[currentCount - 1] ?? null;
-      if (lastTrick) {
-        setFrozenTrick(lastTrick);
-        const timer = setTimeout(() => {
-          setFrozenTrick(null);
-        }, 2000);
-        prevCompletedCountRef.current = currentCount;
-        return () => clearTimeout(timer);
-      }
-    }
-    prevCompletedCountRef.current = currentCount;
-  }, [game?.completedTricks]);
-
-  const isFrozen = frozenTrick !== null;
-  const activeSeat: Seat = (game ? game.players[game.currentPlayerId] : actingSeat) ?? actingSeat;
   const playerIsActing = !isFrozen && activeSeat === playerSeat;
   const actions = playerIsActing ? legalActions : [];
   const hokumSuits = actions.includes("BUY_HOKUM") ? availableHokumSuits(exposedCard?.suit ?? null) : [];
@@ -240,7 +218,7 @@ export function GameTable({
             </View>
           ) : null}
 
-          {/* Trick Taking Arena (authoritative plays with 2-second completed trick freeze) */}
+          {/* Trick Taking Arena (authoritative plays with completed trick freeze) */}
           {game && (!isRoundComplete || isFrozen) ? (
             <TrickView
               plays={trickCards}

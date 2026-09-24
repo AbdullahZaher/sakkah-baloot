@@ -25,6 +25,7 @@ import {
   type BiddingHands,
   type Card,
   type CardId,
+  type CompletedTrick,
   type GameState,
   type MatchEndResult,
   type MatchScore,
@@ -87,6 +88,7 @@ export interface LocalPlayablePreview {
   readonly baloot: NonNullable<MatchState["round"]>["baloot"];
   readonly protocol: MatchProtocolState;
   readonly lastProtocolEvent: MatchProtocolEvent["type"] | null;
+  readonly completedTrickPresentation: CompletedTrick | null;
 }
 
 export interface LocalPlayableSession {
@@ -101,6 +103,7 @@ export interface LocalPlayableSession {
   ) => LocalPlayablePreview;
   readonly dispatchProject: (projectId: string) => LocalPlayablePreview;
   readonly advanceRound: () => LocalPlayablePreview;
+  readonly acknowledgeCompletedTrick: () => LocalPlayablePreview;
 }
 
 export interface LocalPlayableConfig {
@@ -220,6 +223,8 @@ export function createLocalHumanVsAISession(
   );
   let protocol = initialProtocol(match);
   let lastProtocolEvent: MatchProtocolEvent["type"] | null = null;
+  let completedTrickPresentation: CompletedTrick | null = null;
+  let pendingRoundComplete = false;
 
   protocol = applyProtocol(protocol, {
     type: "DEAL",
@@ -242,7 +247,9 @@ export function createLocalHumanVsAISession(
       ? null
       : getCardById(round.deal.exposedCardId);
 
-    const legalActions = round.phase === "BIDDING"
+    const isTrickPresentationActive = completedTrickPresentation !== null;
+
+    const legalActions = !isTrickPresentationActive && round.phase === "BIDDING"
       ? legalBiddingActions(
           round.bidding,
           round.dealerSeat,
@@ -251,16 +258,22 @@ export function createLocalHumanVsAISession(
         )
       : [];
 
-    const actingSeat = round.game
-      ? seatForPlayer(round.game.currentPlayerId)
-      : round.bidding.actingSeat;
+    const actingSeat = completedTrickPresentation
+      ? completedTrickPresentation.winnerSeat
+      : round.game
+        ? seatForPlayer(round.game.currentPlayerId)
+        : round.bidding.actingSeat;
 
-    const legalCardIds = round.game?.phase === "PLAYING" &&
+    const humanTurn = !isTrickPresentationActive && actingSeat === humanSeat;
+
+    const legalCardIds = !isTrickPresentationActive &&
+      round.game?.phase === "PLAYING" &&
       round.game.currentPlayerId === humanPlayerId
       ? getLegalMoves(round.game, humanPlayerId).map((move) => move.cardId)
       : [];
 
-    const projectCandidates = round.game?.phase === "PLAYING" &&
+    const projectCandidates = !isTrickPresentationActive &&
+      round.game?.phase === "PLAYING" &&
       round.game.currentPlayerId === humanPlayerId &&
       round.game.trickNumber === 1 &&
       round.game.currentTrick.length === 0 &&
@@ -285,8 +298,8 @@ export function createLocalHumanVsAISession(
       legalActions,
       legalCardIds,
       actingSeat,
-      humanTurn: actingSeat === humanSeat,
-      roundScore: round.score,
+      humanTurn,
+      roundScore: pendingRoundComplete ? null : round.score,
       matchScore: match.score,
       matchEnd: match.end,
       projects: round.projects,
@@ -294,6 +307,7 @@ export function createLocalHumanVsAISession(
       baloot: round.baloot,
       protocol,
       lastProtocolEvent,
+      completedTrickPresentation,
     };
   }
 
@@ -419,6 +433,8 @@ export function createLocalHumanVsAISession(
     const round = match.round;
     if (!round?.game) throw new Error("Playing round is required");
 
+    const prevCompletedCount = round.game.completedTricks.length;
+
     const event: MatchProtocolEvent = {
       type: "PLAY_CARD",
       roundId: round.roundId,
@@ -443,35 +459,64 @@ export function createLocalHumanVsAISession(
     protocol = applyProtocol(protocol, event);
     lastProtocolEvent = event.type;
 
-    if (authoritative.state.phase === "ROUND_COMPLETE") {
-      const score = calculateRoundScore(nextRound);
-      const completedRound = completeRoundState(nextRound, score);
-      const completedMatch = completeMatchRound(match, score, completedRound);
-
-      const roundCompleteEvent: MatchProtocolEvent = {
-        type: "ROUND_COMPLETE",
-        roundId: round.roundId,
-        score: completedMatch.score,
-        matchEnd: completedMatch.end,
-      };
-
-      applyAuthoritativeRoundComplete(
-        match,
-        nextRound,
-        score,
-        roundCompleteEvent,
-      );
-
-      match = completedMatch;
-      protocol = applyProtocol(protocol, roundCompleteEvent);
-      lastProtocolEvent = roundCompleteEvent.type;
+    if (authoritative.state.completedTricks.length > prevCompletedCount) {
+      const completed = authoritative.state.completedTricks[authoritative.state.completedTricks.length - 1] ?? null;
+      completedTrickPresentation = completed;
+      if (authoritative.state.phase === "ROUND_COMPLETE") {
+        pendingRoundComplete = true;
+      }
     }
+  }
+
+  function acknowledgeCompletedTrick(): LocalPlayablePreview {
+    if (completedTrickPresentation === null) return snapshot();
+
+    completedTrickPresentation = null;
+
+    if (pendingRoundComplete) {
+      pendingRoundComplete = false;
+      const round = match.round;
+      if (round && round.game?.phase === "ROUND_COMPLETE") {
+        const score = calculateRoundScore(round);
+        const completedRound = completeRoundState(round, score);
+        const completedMatch = completeMatchRound(match, score, completedRound);
+
+        const roundCompleteEvent: MatchProtocolEvent = {
+          type: "ROUND_COMPLETE",
+          roundId: round.roundId,
+          score: completedMatch.score,
+          matchEnd: completedMatch.end,
+        };
+
+        applyAuthoritativeRoundComplete(
+          match,
+          round,
+          score,
+          roundCompleteEvent,
+        );
+
+        match = completedMatch;
+        protocol = applyProtocol(protocol, roundCompleteEvent);
+        lastProtocolEvent = roundCompleteEvent.type;
+      }
+    } else {
+      if (
+        match.round?.phase === "PLAYING" &&
+        match.round.game?.phase === "PLAYING" &&
+        match.end.status !== "FINISHED"
+      ) {
+        runAI();
+      }
+    }
+
+    return snapshot();
   }
 
   function runAI(): void {
     let guard = 0;
 
     while (guard++ < 256) {
+      if (completedTrickPresentation !== null) return;
       const round = match.round;
       if (!round || match.end.status === "FINISHED") return;
       if (
@@ -534,6 +579,7 @@ export function createLocalHumanVsAISession(
             const fallback = getLegalMoves(round.game, playerId)[0];
             if (!fallback) throw new Error("AI has no legal fallback card");
             commitCard(playerId, fallback.cardId, false, false);
+            if (completedTrickPresentation !== null) return;
             continue;
           }
         }
@@ -568,6 +614,9 @@ export function createLocalHumanVsAISession(
           action.ikaDeclared ?? false,
           actualBaloot,
         );
+        if (completedTrickPresentation !== null) {
+          return;
+        }
         continue;
       }
 
@@ -581,6 +630,9 @@ export function createLocalHumanVsAISession(
     type: BiddingAction["type"],
     suit?: Suit,
   ): LocalPlayablePreview {
+    if (completedTrickPresentation !== null) {
+      throw new Error("Cannot bid while completed trick presentation is active");
+    }
     const round = match.round;
     if (!round || round.phase !== "BIDDING") {
       throw new Error("Bidding is not active");
@@ -605,9 +657,7 @@ export function createLocalHumanVsAISession(
     const legal = legalBiddingActions(
       round.bidding,
       round.dealerSeat,
-      round.deal.exposedCardId === null
-        ? null
-        : getCardById(round.deal.exposedCardId).suit,
+      round.deal.exposedCardId ? getCardById(round.deal.exposedCardId).suit : null,
       round.deal.hands,
     );
 
@@ -624,6 +674,9 @@ export function createLocalHumanVsAISession(
     cardId: CardId,
     ikaDeclared = false,
   ): LocalPlayablePreview {
+    if (completedTrickPresentation !== null) {
+      throw new Error("Cannot play card while completed trick presentation is active");
+    }
     const round = match.round;
     if (!round?.game) throw new Error("Playing is not active");
 
@@ -645,6 +698,7 @@ export function createLocalHumanVsAISession(
 
     commitCard(playerId, cardId, ikaDeclared, balootDeclared);
     if (
+      completedTrickPresentation === null &&
       match.round?.phase === "PLAYING" &&
       match.round.game?.phase === "PLAYING" &&
       match.end.status !== "FINISHED"
@@ -653,7 +707,11 @@ export function createLocalHumanVsAISession(
     }
 
     const afterAI = match.round?.game;
-    if (afterAI?.phase === "PLAYING" && afterAI.currentPlayerId === playerId) {
+    if (
+      completedTrickPresentation === null &&
+      afterAI?.phase === "PLAYING" &&
+      afterAI.currentPlayerId === playerId
+    ) {
       const legalAfterAI = getLegalMoves(afterAI, playerId);
       if (legalAfterAI.length === 0) {
         throw new Error(
@@ -673,6 +731,9 @@ export function createLocalHumanVsAISession(
   }
 
   function dispatchProject(projectId: string): LocalPlayablePreview {
+    if (completedTrickPresentation !== null) {
+      throw new Error("Cannot declare project while completed trick presentation is active");
+    }
     const round = match.round;
     const humanPlayerId = playerIdForSeat(humanSeat);
     if (!round?.game || round.game.phase !== "PLAYING") {
@@ -761,6 +822,7 @@ export function createLocalHumanVsAISession(
     dispatchCardPlay,
     dispatchProject,
     advanceRound,
+    acknowledgeCompletedTrick,
   };
 }
 
