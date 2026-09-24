@@ -63,7 +63,7 @@ const PLAYER_BY_SEAT: Readonly<Record<Seat, PlayerId>> = {
 const PLAYERS: Readonly<Record<PlayerId, Seat>> = {
   NORTH_PLAYER: "NORTH",
   EAST_PLAYER: "EAST",
-  SOUTH: "SOUTH",
+  HUMAN_PLAYER: "SOUTH",
   WEST_PLAYER: "WEST",
 };
 
