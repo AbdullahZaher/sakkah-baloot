@@ -67,11 +67,14 @@ export type MatchProtocolEvent =
   | NextRoundEvent
   | MatchCompleteEvent;
 
+export type DealType = "INITIAL" | "COMPLETION" | "REDEAL";
+
 export interface DealEvent {
   readonly type: "DEAL";
   readonly roundId: string;
   readonly roundNumber: number;
   readonly dealerSeat: Seat;
+  readonly dealType?: DealType;
 }
 
 export interface BidEvent {
@@ -176,7 +179,7 @@ export function applyAuthoritativeBid(
     event.action,
     dealerSeat,
     deal.exposedCardId,
-    Object.fromEntries(DECK.map((card) => [card.id, card])) as Readonly<Record<CardId, Card>>,
+    undefined,
     deal.hands as BiddingHands,
   );
   return { state, event };
@@ -526,8 +529,8 @@ function assertProtocolTransition(
   event: MatchProtocolEvent,
 ): void {
   const allowed: Record<MatchProtocolState["phase"], readonly MatchProtocolEvent["type"][]> = {
-    DEAL: ["DEAL", "BID"],
-    BID: ["BID", "PLAY_CARD"],
+    DEAL: ["DEAL", "BID", "PLAY_CARD", "PROJECT", "BALOOT"],
+    BID: ["BID", "DEAL", "PLAY_CARD", "NEXT_ROUND"],
     PLAY_CARD: ["PLAY_CARD", "BALOOT", "PROJECT", "TRICK_COMPLETE", "ROUND_COMPLETE"],
     BALOOT: ["PLAY_CARD"],
     PROJECT: ["PROJECT", "PLAY_CARD"],

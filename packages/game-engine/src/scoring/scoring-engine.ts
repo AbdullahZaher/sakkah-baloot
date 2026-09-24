@@ -5,6 +5,9 @@ import { contractThreshold, SAUDI_RULE_PROFILE_V1, teamOfSeat, nextCounterClockw
 import { escalationCardMultiplier, projectMultiplier } from "../escalation.js";
 import type { CompletedTrick } from "../playing/types.js";
 import type { MatchEndResult, MatchScore, RoundScoreBreakdown, RoundScoreInput } from "./scoring-types.js";
+import { resolveProjects } from "../projects/project-engine.js";
+import { isBalootAbsorbedByHundred } from "../projects/baloot.js";
+import type { RoundState } from "../round-state.js";
 
 const TEAMS: readonly TeamId[] = ["NORTH_SOUTH", "EAST_WEST"];
 
@@ -170,4 +173,52 @@ export function evaluateMatchEnd(
     score,
     winnerTeamId: score.NORTH_SOUTH > score.EAST_WEST ? "NORTH_SOUTH" : "EAST_WEST",
   };
+}
+
+export function scoreCompletedRound(
+  round: RoundState,
+  escalation: EscalationLevel = "NORMAL",
+): RoundScoreBreakdown {
+  if (!round.game || round.game.phase !== "ROUND_COMPLETE") {
+    throw new Error("Cannot score an incomplete round");
+  }
+  const selected = round.bidding.selectedContract;
+  if (!selected) {
+    throw new Error("Cannot score a round without a selected contract");
+  }
+
+  const projectResolution = resolveProjects(round.projects, round.deal.dealerSeat);
+
+  const balootAbsorbed =
+    round.baloot !== null &&
+    projectResolution.awardedProjectIds.some((id: string) => {
+      const declaration = round.projects.find((p) => p.candidate.id === id);
+      return (
+        declaration?.candidate.type === "HUNDRED" &&
+        isBalootAbsorbedByHundred(round.baloot!, declaration.candidate.cards)
+      );
+    });
+
+  const balootQaid: Record<TeamId, number> = { NORTH_SOUTH: 0, EAST_WEST: 0 };
+  if (round.baloot && !balootAbsorbed) {
+    balootQaid[round.baloot.teamId] = round.baloot.qaydValue;
+  }
+
+  const buyerOriginallyHeldAce = round.deal.transcript.initialHands[
+    selected.purchaserSeat
+  ].some((id) => id.endsWith("-A"));
+
+  return scoreRound({
+    contract: selected.contract,
+    trumpSuit: selected.trumpSuit,
+    purchaserSeat: selected.purchaserSeat,
+    dealerSeat: round.deal.dealerSeat,
+    buyerOriginallyHeldAce,
+    escalation,
+    tricks: round.game.completedTricks,
+    projectRaw: projectResolution.projectRaw,
+    projectQaid: projectResolution.projectQaid,
+    balootRaw: { NORTH_SOUTH: 0, EAST_WEST: 0 },
+    balootQaid,
+  });
 }

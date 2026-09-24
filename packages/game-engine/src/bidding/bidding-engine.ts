@@ -1,4 +1,5 @@
 import type { CardId, Suit } from "../cards.js";
+import { CARD_LOOKUP } from "../cards.js";
 import type { Seat } from "../rules/types.js";
 import { SEATS } from "../rules/types.js";
 import type { Contract, RoundId } from "../rules/types.js";
@@ -168,7 +169,7 @@ export function applyBiddingAction(
   action: BiddingAction,
   dealerSeat: Seat,
   exposedCardId: CardId | null,
-  cards: Readonly<Record<CardId, { readonly suit: Suit }>> | null,
+  cards: Readonly<Record<CardId, { readonly suit: Suit }>> | null = CARD_LOOKUP,
   hands: BiddingHands = { NORTH: [], EAST: [], SOUTH: [], WEST: [] },
 ): BiddingState {
   if (hasProcessed(state, action.actionId)) return state;

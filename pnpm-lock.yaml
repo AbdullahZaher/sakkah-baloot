@@ -99,6 +99,25 @@ importers:
         specifier: ^5.0.0
         version: 5.9.3
 
+  packages/game-server:
+    dependencies:
+      '@sakkah-baloot/game-engine':
+        specifier: workspace:*
+        version: link:../game-engine
+      '@sakkah-baloot/game-protocol':
+        specifier: workspace:*
+        version: link:../game-protocol
+    devDependencies:
+      '@sakkah-baloot/game-ai':
+        specifier: workspace:*
+        version: link:../game-ai
+      tsx:
+        specifier: ^4.20.3
+        version: 4.23.15
+      typescript:
+        specifier: ^5.0.0
+        version: 5.9.3
+
   packages/game-simulator:
     dependencies:
       '@sakkah-baloot/game-ai':
