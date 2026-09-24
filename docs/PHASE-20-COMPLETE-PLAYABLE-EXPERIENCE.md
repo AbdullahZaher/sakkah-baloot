@@ -141,7 +141,7 @@ The game server remains the future authority for multiplayer command validation,
 - Transition into PLAYING.
 - Tests for all currently supported bidding branches.
 
-### Slice B — Card interaction — IN PROGRESS
+### Slice B — Card interaction — COMPLETE
 - Legal/unavailable card states.
 - Press-state feedback on legal cards.
 - Selected card state.
@@ -151,7 +151,7 @@ The game server remains the future authority for multiplayer command validation,
 - No interaction during trick presentation.
 - Tests for legal, illegal, and duplicate interaction.
 
-### Slice C — Turn flow
+### Slice C — Turn flow — COMPLETE
 - Thinking state.
 - AI action feedback.
 - Clean human return.
@@ -160,7 +160,7 @@ The game server remains the future authority for multiplayer command validation,
 - No AI progression during presentation.
 - Tests for human and AI transitions.
 
-### Slice D — Round lifecycle
+### Slice D — Round lifecycle — IN PROGRESS
 - Final-trick presentation.
 - Round result.
 - Score breakdown.
@@ -178,22 +178,22 @@ The game server remains the future authority for multiplayer command validation,
 - Manual gameplay verification.
 
 ## Definition of done for Phase 20.1
-- [ ] Human can bid.
-- [ ] Human can play every legal card.
-- [ ] Illegal cards cannot be played.
-- [ ] Projects can be declared when legal.
-- [ ] Baloot declaration is engine-authoritative.
-- [ ] All four cards remain visible during the completed-trick presentation window.
-- [ ] The next trick cannot start before the presentation window ends.
+- [x] Human can bid.
+- [x] Human can play every legal card.
+- [x] Illegal cards cannot be played.
+- [x] Projects can be declared when legal.
+- [x] Baloot declaration is engine-authoritative.
+- [x] All four cards remain visible during the completed-trick presentation window.
+- [x] The next trick cannot start before the presentation window ends.
 - [ ] Final-trick presentation completes before round scoring is surfaced.
 - [ ] Round result is understandable.
 - [ ] Next round can be started.
 - [ ] Match completion is understandable.
-- [ ] AI never advances through a presentation barrier.
-- [ ] UI contains no duplicated game rules.
-- [ ] Client tests pass.
-- [ ] Workspace typecheck passes.
-- [ ] Mobile playable build passes.
+- [x] AI never advances through a presentation barrier.
+- [x] UI contains no duplicated game rules.
+- [x] Client tests pass.
+- [x] Workspace typecheck passes.
+- [x] Mobile playable build passes.
 - [ ] A complete Human-vs-3-AI match has been manually played.
 - [ ] Implementation is submitted as a reviewable PR and is not merged automatically.
 
