@@ -6,6 +6,10 @@ import { detectProjects, getLegalMoves } from "@sakkah-baloot/game-engine";
 
 const SUITS = ["CLUBS", "DIAMONDS", "HEARTS", "SPADES"];
 
+function isBiddingActive(snapshot) {
+  return snapshot.bidding.phase === "FIRST_ROUND" || snapshot.bidding.phase === "SECOND_ROUND";
+}
+
 function selectContract(session) {
   for (let i = 0; i < 8; i += 1) {
     const snapshot = session.getSnapshot();
@@ -126,7 +130,7 @@ test("playable local host accepts a human bid and returns to the human turn", ()
 
   const before = session.getSnapshot();
 
-  if (before.bidding.phase === "BIDDING") {
+  if (isBiddingActive(before)) {
     const action = before.legalActions.includes("BUY_SUN")
       ? "BUY_SUN"
       : "PASS";
@@ -210,7 +214,7 @@ test("client Baloot path never declares Baloot in Sun", () => {
   let snapshot = session.getSnapshot();
   let guard = 0;
 
-  while (snapshot.bidding.phase === "BIDDING" && guard++ < 16) {
+  while (isBiddingActive(snapshot) && guard++ < 16) {
     if (snapshot.legalActions.includes("BUY_SUN")) {
       snapshot = session.dispatchBiddingAction("BUY_SUN");
       break;
@@ -253,7 +257,7 @@ test("human-vs-AI UI host completes a full round through the public dispatch pat
   let snapshot = session.getSnapshot();
   let guard = 0;
 
-  while (snapshot.bidding.phase === "BIDDING" && guard++ < 32) {
+  while (isBiddingActive(snapshot) && guard++ < 32) {
     assert.equal(snapshot.humanTurn, true);
     if (snapshot.legalActions.includes("BUY_SUN")) {
       snapshot = session.dispatchBiddingAction("BUY_SUN");
@@ -303,7 +307,7 @@ test("forensic: completed trick holds presentation state, prevents next trick AI
   });
 
   let snapshot = session.getSnapshot();
-  while (snapshot.bidding.phase === "BIDDING") {
+  while (isBiddingActive(snapshot)) {
     if (snapshot.legalActions.includes("BUY_SUN")) {
       snapshot = session.dispatchBiddingAction("BUY_SUN");
     } else {
@@ -357,7 +361,7 @@ test("human card interaction rejects an illegal card before mutating the game", 
   });
 
   let snapshot = session.getSnapshot();
-  while (snapshot.bidding.phase === "BIDDING") {
+  while (isBiddingActive(snapshot)) {
     if (snapshot.legalActions.includes("BUY_SUN")) {
       snapshot = session.dispatchBiddingAction("BUY_SUN");
     } else {
@@ -394,7 +398,7 @@ test("completed-trick presentation blocks duplicate human dispatch", () => {
   });
 
   let snapshot = session.getSnapshot();
-  while (snapshot.bidding.phase === "BIDDING") {
+  while (isBiddingActive(snapshot)) {
     if (snapshot.legalActions.includes("BUY_SUN")) {
       snapshot = session.dispatchBiddingAction("BUY_SUN");
     } else {
@@ -434,7 +438,7 @@ test("playable host exposes the latest authoritative action feedback", () => {
   let snapshot = session.getSnapshot();
   assert.ok(snapshot.actionFeedback);
 
-  while (snapshot.bidding.phase === "BIDDING") {
+  while (isBiddingActive(snapshot)) {
     const action = snapshot.legalActions.includes("BUY_SUN") ? "BUY_SUN" : "PASS";
     snapshot = session.dispatchBiddingAction(action);
   }
@@ -456,7 +460,7 @@ test("round lifecycle preserves score and stops advancing after match completion
   let rounds = 0;
 
   while (snapshot.matchEnd.status !== "FINISHED" && rounds < 30) {
-    while (snapshot.bidding.phase === "BIDDING") {
+    while (isBiddingActive(snapshot)) {
       if (snapshot.legalActions.includes("BUY_SUN")) {
         snapshot = session.dispatchBiddingAction("BUY_SUN");
       } else {
