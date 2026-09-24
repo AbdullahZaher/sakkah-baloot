@@ -467,6 +467,9 @@ function CardButton({
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={`ورقة ${card.rank} ${suitArabic(card.suit)}`}
+      accessibilityHint={enabled ? "اضغط للعب هذه الورقة" : "هذه الورقة غير قانونية في الدور الحالي"}
+      accessibilityState={{ disabled: !enabled }}
       disabled={!enabled}
       onPress={() => onPress?.(card.id)}
       style={({ pressed }) => [
