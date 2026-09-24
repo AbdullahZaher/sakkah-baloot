@@ -488,6 +488,12 @@ export function createLocalHumanVsAISession(
     while (guard++ < 256) {
       const round = match.round;
       if (!round || match.end.status === "FINISHED") return;
+      if (
+        round.phase !== "BIDDING" &&
+        !(round.phase === "PLAYING" && round.game?.phase === "PLAYING")
+      ) {
+        return;
+      }
 
       const actingSeat = round.game
         ? seatForPlayer(round.game.currentPlayerId)
