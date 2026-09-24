@@ -128,6 +128,7 @@ export function GameTableScreen() {
         baloot={preview.baloot}
         onProject={(projectId) => run(() => session.dispatchProject(projectId))}
         completedTrickPresentation={preview.completedTrickPresentation}
+        actionFeedback={preview.actionFeedback}
       />
     </View>
   );
