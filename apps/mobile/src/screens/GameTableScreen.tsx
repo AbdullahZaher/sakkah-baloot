@@ -106,6 +106,7 @@ export function GameTableScreen() {
         exposedCard={preview.exposedCard}
         hand={preview.playerHand}
         legalActions={preview.humanTurn ? preview.legalActions : []}
+        biddingHistory={preview.bidding.history}
         legalCardIds={preview.humanTurn ? preview.legalCardIds : []}
         game={preview.game}
         playerSeat={preview.playerSeat}
