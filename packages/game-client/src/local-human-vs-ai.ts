@@ -653,6 +653,24 @@ export function createLocalHumanVsAISession(
 
     commitCard(playerId, cardId, ikaDeclared, balootDeclared);
     runAI();
+
+    const afterAI = match.round?.game;
+    if (afterAI?.phase === "PLAYING" && afterAI.currentPlayerId === playerId) {
+      const legalAfterAI = getLegalMoves(afterAI, playerId);
+      if (legalAfterAI.length === 0) {
+        throw new Error(
+          `AI dispatch returned control to human with no legal card: ${JSON.stringify({
+            currentPlayerId: afterAI.currentPlayerId,
+            handLength: afterAI.hands[playerId]?.length ?? 0,
+            trickNumber: afterAI.trickNumber,
+            currentTrickLength: afterAI.currentTrick.length,
+            completedTricks: afterAI.completedTricks.length,
+            currentTrickPlayers: afterAI.currentTrick.map((play) => play.playerId),
+          })}`,
+        );
+      }
+    }
+
     return snapshot();
   }
 
