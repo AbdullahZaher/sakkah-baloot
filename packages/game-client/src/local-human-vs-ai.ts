@@ -14,8 +14,7 @@ import {
   getLegalMoves,
   legalBiddingActions,
   nextCounterClockwise,
-  resolveProjects,
-  scoreRound,
+  scoreCompletedRound,
   teamOfSeat,
   withRoundBaloot,
   withRoundGame,
@@ -160,54 +159,10 @@ function buildGame(round: NonNullable<MatchState["round"]>): GameState {
   };
 }
 
-function buyerOriginallyHeldAce(round: NonNullable<MatchState["round"]>): boolean {
-  const selected = round.bidding.selectedContract;
-  return selected !== null &&
-    round.deal.transcript.initialHands[selected.purchaserSeat].some((id) =>
-      id.endsWith("-A"),
-    );
-}
-
 function calculateRoundScore(
   round: NonNullable<MatchState["round"]>,
 ): RoundScoreBreakdown {
-  if (!round.game || round.game.phase !== "ROUND_COMPLETE") {
-    throw new Error("Round is not ready for scoring");
-  }
-
-  const selected = round.bidding.selectedContract;
-  if (!selected) throw new Error("Cannot score without a contract");
-
-  const projects = resolveProjects(round.projects, round.dealerSeat);
-  const balootAbsorbed = round.baloot !== null &&
-    projects.awardedProjectIds.some((id) => {
-      const declaration = round.projects.find((item) => item.candidate.id === id);
-      return declaration?.candidate.type === "HUNDRED" &&
-        round.baloot!.cards.every((cardId) =>
-          declaration.candidate.cards.includes(cardId),
-        );
-    });
-
-  const balootQaid = round.baloot && !balootAbsorbed
-    ? {
-        NORTH_SOUTH: round.baloot.teamId === "NORTH_SOUTH" ? 2 : 0,
-        EAST_WEST: round.baloot.teamId === "EAST_WEST" ? 2 : 0,
-      }
-    : { NORTH_SOUTH: 0, EAST_WEST: 0 };
-
-  return scoreRound({
-    contract: selected.contract,
-    trumpSuit: selected.trumpSuit,
-    purchaserSeat: selected.purchaserSeat,
-    dealerSeat: round.dealerSeat,
-    buyerOriginallyHeldAce: buyerOriginallyHeldAce(round),
-    escalation: "NORMAL",
-    tricks: round.game.completedTricks,
-    projectRaw: projects.projectRaw,
-    projectQaid: projects.projectQaid,
-    balootRaw: { NORTH_SOUTH: 0, EAST_WEST: 0 },
-    balootQaid,
-  });
+  return scoreCompletedRound(round, "NORMAL");
 }
 
 function initialProtocol(match: MatchState): MatchProtocolState {
