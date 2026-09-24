@@ -538,6 +538,16 @@ export function createLocalHumanVsAISession(
       match = completedMatch;
       protocol = applyProtocol(protocol, roundCompleteEvent);
       lastProtocolEvent = roundCompleteEvent.type;
+
+      if (completedMatch.phase === "MATCH_COMPLETE" && completedMatch.end.status === "FINISHED") {
+        const matchCompleteEvent: MatchProtocolEvent = {
+          type: "MATCH_COMPLETE",
+          score: completedMatch.score,
+          winnerTeamId: completedMatch.end.winnerTeamId,
+        };
+        protocol = applyProtocol(protocol, matchCompleteEvent);
+        lastProtocolEvent = matchCompleteEvent.type;
+      }
     } else {
       if (
         match.round?.phase === "PLAYING" &&
