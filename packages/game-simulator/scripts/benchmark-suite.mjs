@@ -251,7 +251,7 @@ function exhaustiveOracle(state, rootPlayerId) {
 
 function runEndgameThresholdSweep() {
   const thresholds = [4, 6, 8, 10, 12];
-  const maxNodesLimit = 5000;
+  const maxNodesLimit = 2000;
   const results = [];
 
   console.log("  Threshold | States | Exact | Cutoff | Oracle Agreement | Avg Nodes | Max Nodes | Time (ms) | Avg Latency");
