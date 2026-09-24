@@ -9,6 +9,7 @@ import {
   completeMatchRound,
   completeRoundState,
   createSeededRandom,
+  getCardById,
   detectProjects,
   declareProject,
   getLegalMoves,
@@ -20,7 +21,6 @@ import {
   withRoundGame,
   withRoundProjects,
   canDeclareBaloot,
-  declareBaloot,
   type BiddingAction,
   type BiddingHands,
   type Card,
@@ -111,20 +111,6 @@ export interface LocalPlayableConfig {
   readonly mctsIterations?: number;
 }
 
-const CARD_MAP: Readonly<Record<CardId, Card>> = Object.fromEntries(
-  createDeck().map((card) => [card.id, card]),
-) as Readonly<Record<CardId, Card>>;
-
-function createDeck(): readonly Card[] {
-  return (["CLUBS", "DIAMONDS", "HEARTS", "SPADES"] as const).flatMap((suit) =>
-    (["7", "8", "9", "10", "J", "Q", "K", "A"] as const).map((rank) => ({
-      id: `${suit}-${rank}`,
-      suit,
-      rank,
-    })),
-  );
-}
-
 function playerIdForSeat(seat: Seat): PlayerId {
   return PLAYER_BY_SEAT[seat];
 }
@@ -140,7 +126,7 @@ function buildGame(round: NonNullable<MatchState["round"]>): GameState {
   const hands = Object.fromEntries(
     (Object.keys(PLAYER_BY_SEAT) as Seat[]).map((seat) => [
       playerIdForSeat(seat),
-      round.deal.hands[seat].map((id) => CARD_MAP[id]!),
+      round.deal.hands[seat].map((id) => getCardById(id)),
     ]),
   ) as Record<PlayerId, readonly Card[]>;
 
@@ -254,7 +240,7 @@ export function createLocalHumanVsAISession(
 
     const exposedCard = round.deal.exposedCardId === null
       ? null
-      : CARD_MAP[round.deal.exposedCardId] ?? null;
+      : getCardById(round.deal.exposedCardId);
 
     const legalActions = round.phase === "BIDDING"
       ? legalBiddingActions(
@@ -621,7 +607,7 @@ export function createLocalHumanVsAISession(
       round.dealerSeat,
       round.deal.exposedCardId === null
         ? null
-        : CARD_MAP[round.deal.exposedCardId]!.suit,
+        : getCardById(round.deal.exposedCardId).suit,
       round.deal.hands,
     );
 
