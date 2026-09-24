@@ -1,0 +1,40 @@
+name: game-server-test
+
+on:
+  push:
+    paths:
+      - "packages/game-server/**"
+      - "packages/game-protocol/**"
+      - "packages/game-engine/**"
+      - "packages/game-ai/**"
+      - "package.json"
+      - "pnpm-workspace.yaml"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/game-server-test.yml"
+  pull_request:
+    paths:
+      - "packages/game-server/**"
+      - "packages/game-protocol/**"
+      - "packages/game-engine/**"
+      - "packages/game-ai/**"
+      - "package.json"
+      - "pnpm-workspace.yaml"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/game-server-test.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @sakkah-baloot/game-engine build
+      - run: pnpm --filter @sakkah-baloot/game-protocol build
+      - run: pnpm --filter @sakkah-baloot/game-ai build
+      - run: pnpm --filter @sakkah-baloot/game-server typecheck
+      - run: pnpm --filter @sakkah-baloot/game-server build
+      - run: pnpm --filter @sakkah-baloot/game-server test
