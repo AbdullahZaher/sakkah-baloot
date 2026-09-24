@@ -301,7 +301,11 @@ export function createLocalHumanVsAISession(
       legalCardIds,
       actingSeat,
       humanTurn,
-      roundScore: pendingRoundComplete ? null : round.score,
+      roundScore: pendingRoundComplete
+        ? null
+        : match.phase === "ROUND_COMPLETE" || match.phase === "MATCH_COMPLETE"
+          ? match.lastRoundScore
+          : round.score,
       matchScore: match.score,
       matchEnd: match.end,
       projects: round.projects,
