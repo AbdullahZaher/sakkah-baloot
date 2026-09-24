@@ -85,12 +85,13 @@ export function GameTable({
 }: GameTableProps) {
   const isFrozen = Boolean(completedTrickPresentation);
   const frozenTrick = completedTrickPresentation ?? null;
+  const isRoundFinished = roundScore !== null && !isFrozen;
 
   const activeSeat: Seat = isFrozen && frozenTrick
     ? frozenTrick.winnerSeat
     : ((game ? game.players[game.currentPlayerId] : actingSeat) ?? actingSeat);
 
-  const playerIsActing = !isFrozen && activeSeat === playerSeat;
+  const playerIsActing = !isFrozen && !isRoundFinished && activeSeat === playerSeat;
   const actions = playerIsActing ? legalActions : [];
   const hokumSuits = actions.includes("BUY_HOKUM") ? availableHokumSuits(exposedCard?.suit ?? null) : [];
   const trickCards = game?.currentTrick ?? [];
@@ -161,7 +162,7 @@ export function GameTable({
           label="NORTH"
           seatRole={seatRoleLabel("NORTH", playerSeat)}
           team={teamOfSeat("NORTH") === "NORTH_SOUTH" ? "LANA" : "LAHUM"}
-          active={!isFrozen && activeSeat === "NORTH"}
+          active={!isFrozen && !isRoundFinished && activeSeat === "NORTH"}
           isDealer={dealerSeat === "NORTH"}
           cardCount={cardCountForSeat(game, "NORTH")}
           style={styles.north}
@@ -172,7 +173,7 @@ export function GameTable({
           label="WEST"
           seatRole={seatRoleLabel("WEST", playerSeat)}
           team={teamOfSeat("WEST") === "NORTH_SOUTH" ? "LANA" : "LAHUM"}
-          active={!isFrozen && activeSeat === "WEST"}
+          active={!isFrozen && !isRoundFinished && activeSeat === "WEST"}
           isDealer={dealerSeat === "WEST"}
           cardCount={cardCountForSeat(game, "WEST")}
           style={styles.west}
@@ -183,7 +184,7 @@ export function GameTable({
           label="EAST"
           seatRole={seatRoleLabel("EAST", playerSeat)}
           team={teamOfSeat("EAST") === "NORTH_SOUTH" ? "LANA" : "LAHUM"}
-          active={!isFrozen && activeSeat === "EAST"}
+          active={!isFrozen && !isRoundFinished && activeSeat === "EAST"}
           isDealer={dealerSeat === "EAST"}
           cardCount={cardCountForSeat(game, "EAST")}
           style={styles.east}
@@ -282,9 +283,13 @@ export function GameTable({
             >
               {isFrozen
                 ? "جاري احتساب الفائز بالأكلة..."
-                : playerIsActing
-                  ? "دورك الآن — اختر ورقة للعب"
-                  : `في انتظار ${seatArabicName(activeSeat)}...`}
+                : isRoundFinished
+                  ? matchEnd?.status === "FINISHED"
+                    ? "انتهت الصكة"
+                    : "انتهت الجولة"
+                  : playerIsActing
+                    ? "دورك الآن — اختر ورقة للعب"
+                    : `في انتظار ${seatArabicName(activeSeat)}...`}
             </Text>
           </View>
 
