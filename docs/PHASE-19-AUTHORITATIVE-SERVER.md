@@ -204,7 +204,7 @@ The AI bridge (`executeAITurn`) converts the player's sanitized snapshot to an `
 
 ## 13. Testing Matrix
 
-The package includes a comprehensive suite of 24 unit and integration tests across 12 test files:
+The package includes a comprehensive suite of 29 unit and integration tests across 13 test files:
 
 - `test/match-creation.test.mjs`: Initial stateVersion 0, deterministic initial deal, seat router binding validation.
 - `test/idempotency-version.test.mjs`: Action idempotency caching, interleaved duplicate actions, stale/future version fencing, envelope validation.
@@ -218,6 +218,7 @@ The package includes a comprehensive suite of 24 unit and integration tests acro
 - `test/ai-unified-path.test.mjs`: End-to-end multi-AI match simulation through unified command interface.
 - `test/determinism.test.mjs`: Seeded match determinism across independent hosts.
 - `test/invariants.test.mjs`: Strict stateVersion monotonicity and 32-card conservation.
+- `test/authority-boundary.test.mjs`: AST/source verification of zero manual scoring or game-rule constants, Baloot delegation, Hundred absorption delegation, and round scoring parity.
 
 ---
 

@@ -18,26 +18,24 @@ import {
   SEATS,
   applyBiddingAction,
   applyCardPlay,
-  canDeclareBaloot,
   completeDeal,
   completeMatchRound,
   completeRoundState,
+  createBalootDeclaration,
   createBiddingState,
   createInitialDeal,
   createMatchState,
   createRoundState,
   createSeededRandom,
-  declareBaloot,
   declareProject,
   detectProjects,
-  isBalootAbsorbedByHundred,
+  getCardById,
   isCardLegal,
   isProjectDeclarationWindow,
   legalBiddingActions,
   nextCounterClockwise,
-  resolveProjects,
   rotateDealer,
-  scoreRound,
+  scoreCompletedRound,
   startNextRound,
   withRoundBaloot,
   withRoundGame,
@@ -60,7 +58,7 @@ import { ServerBoundaryError, ServerErrorCode } from "./errors.js";
 import { EventStore } from "./event-store.js";
 import { IdempotencyLedger } from "./idempotency-ledger.js";
 import { InMemoryMatchPersistence } from "./persistence.js";
-import { buildPlayerScopedSnapshot, getCardById } from "./player-snapshot.js";
+import { buildPlayerScopedSnapshot } from "./player-snapshot.js";
 import { SeatRouter } from "./seat-router.js";
 import type {
   AuthoritativeMatchHost,
@@ -72,10 +70,6 @@ import type {
   PlayerScopedSnapshot,
   ResumeResult,
 } from "./types.js";
-
-const CARD_LOOKUP = Object.fromEntries(
-  DECK.map((c) => [c.id, c]),
-) as Readonly<Record<CardId, Card>>;
 
 export class AuthoritativeMatchHostImpl implements AuthoritativeMatchHost {
   public readonly matchId: string;
@@ -385,7 +379,7 @@ export class AuthoritativeMatchHostImpl implements AuthoritativeMatchHost {
       action,
       round.dealerSeat,
       round.deal.exposedCardId,
-      CARD_LOOKUP,
+      undefined,
       round.deal.hands,
     );
 
@@ -541,13 +535,6 @@ export class AuthoritativeMatchHostImpl implements AuthoritativeMatchHost {
     }
 
     const game = round.game;
-    if (game.contract !== "HOKUM" || game.trumpSuit === null) {
-      throw new ServerBoundaryError(
-        ServerErrorCode.ILLEGAL_ACTION,
-        "Baloot is only available in Hokum contracts",
-      );
-    }
-
     const card = game.hands[playerId]?.find((c) => c.id === cardId);
     if (!card) {
       throw new ServerBoundaryError(
@@ -563,35 +550,21 @@ export class AuthoritativeMatchHostImpl implements AuthoritativeMatchHost {
       .filter((p) => p.playerId === playerId)
       .map((p) => p.card);
 
-    if (!canDeclareBaloot(game.contract, game.trumpSuit, playerSeat, card, alreadyPlayed, true)) {
+    const declaration = createBalootDeclaration(
+      round.roundId,
+      playerSeat,
+      game.contract,
+      game.trumpSuit,
+      card,
+      alreadyPlayed,
+    );
+
+    if (!declaration) {
       throw new ServerBoundaryError(
         ServerErrorCode.ILLEGAL_ACTION,
         "Invalid Baloot declaration conditions under game-engine rules",
       );
     }
-
-    const partner = alreadyPlayed.find(
-      (p) =>
-        p.suit === game.trumpSuit &&
-        ((p.rank === "K" && card.rank === "Q") || (p.rank === "Q" && card.rank === "K")),
-    );
-    if (!partner) {
-      throw new ServerBoundaryError(
-        ServerErrorCode.ILLEGAL_ACTION,
-        "Baloot declaration is missing King/Queen partner card",
-      );
-    }
-
-    const king = card.rank === "K" ? card : partner;
-    const queen = card.rank === "Q" ? card : partner;
-
-    const declaration = declareBaloot(
-      `${round.roundId}:BALOOT:${playerId}:${cardId}`,
-      playerSeat,
-      game.trumpSuit,
-      king,
-      queen,
-    );
 
     const nextRound = withRoundBaloot(round, declaration);
 
@@ -600,7 +573,7 @@ export class AuthoritativeMatchHostImpl implements AuthoritativeMatchHost {
       roundId: round.roundId,
       playerId,
       cardId,
-      trumpSuit: game.trumpSuit,
+      trumpSuit: declaration.trumpSuit,
     });
 
     this.matchState = {
@@ -636,16 +609,9 @@ export class AuthoritativeMatchHostImpl implements AuthoritativeMatchHost {
     let activeRound = round;
 
     // Handle Baloot declaration if flagged with the card play
-    if (balootDeclared) {
-      if (activeRound.baloot === null && game.contract === "HOKUM" && game.trumpSuit !== null) {
-        const card = game.hands[playerId]?.find((c) => c.id === cardId);
-        if (!card) {
-          throw new ServerBoundaryError(
-            ServerErrorCode.ILLEGAL_ACTION,
-            "Baloot card is not in player's hand",
-          );
-        }
-
+    if (balootDeclared && activeRound.baloot === null) {
+      const card = game.hands[playerId]?.find((c) => c.id === cardId);
+      if (card) {
         const alreadyPlayed = [
           ...game.completedTricks.flatMap((t) => t.plays),
           ...game.currentTrick,
@@ -653,31 +619,24 @@ export class AuthoritativeMatchHostImpl implements AuthoritativeMatchHost {
           .filter((p) => p.playerId === playerId)
           .map((p) => p.card);
 
-        if (canDeclareBaloot(game.contract, game.trumpSuit, playerSeat, card, alreadyPlayed, true)) {
-          const partner = alreadyPlayed.find(
-            (p) =>
-              p.suit === game.trumpSuit &&
-              ((p.rank === "K" && card.rank === "Q") || (p.rank === "Q" && card.rank === "K")),
-          );
-          if (partner) {
-            const king = card.rank === "K" ? card : partner;
-            const queen = card.rank === "Q" ? card : partner;
-            const baloot = declareBaloot(
-              `${round.roundId}:BALOOT:${playerId}:${cardId}`,
-              playerSeat,
-              game.trumpSuit,
-              king,
-              queen,
-            );
-            activeRound = withRoundBaloot(activeRound, baloot);
-            producedEvents.push({
-              type: "BALOOT",
-              roundId: round.roundId,
-              playerId,
-              cardId,
-              trumpSuit: game.trumpSuit,
-            });
-          }
+        const baloot = createBalootDeclaration(
+          round.roundId,
+          playerSeat,
+          game.contract,
+          game.trumpSuit,
+          card,
+          alreadyPlayed,
+        );
+
+        if (baloot) {
+          activeRound = withRoundBaloot(activeRound, baloot);
+          producedEvents.push({
+            type: "BALOOT",
+            roundId: round.roundId,
+            playerId,
+            cardId,
+            trumpSuit: baloot.trumpSuit,
+          });
         }
       }
     }
@@ -718,42 +677,7 @@ export class AuthoritativeMatchHostImpl implements AuthoritativeMatchHost {
 
     // Check if round completed (8 tricks)
     if (nextGame.phase === "ROUND_COMPLETE") {
-      const selected = round.bidding.selectedContract!;
-      const projectResolution = resolveProjects(nextRound.projects, round.deal.dealerSeat);
-
-      const balootAbsorbed =
-        nextRound.baloot !== null &&
-        projectResolution.awardedProjectIds.some((id) => {
-          const declaration = nextRound.projects.find((p) => p.candidate.id === id);
-          return (
-            declaration?.candidate.type === "HUNDRED" &&
-            nextRound.baloot!.cards.every((cid) => declaration.candidate.cards.includes(cid))
-          );
-        });
-
-      const balootQaid =
-        nextRound.baloot && !balootAbsorbed ? { [nextRound.baloot.teamId]: 2 } : {};
-
-      const buyerOriginallyHeldAce = round.deal.transcript.initialHands[
-        selected.purchaserSeat
-      ].some((id) => id.endsWith("-A"));
-
-      const roundScoreBreakdown: RoundScoreBreakdown = scoreRound({
-        contract: selected.contract,
-        trumpSuit: selected.trumpSuit,
-        purchaserSeat: selected.purchaserSeat,
-        dealerSeat: round.deal.dealerSeat,
-        buyerOriginallyHeldAce,
-        escalation: "NORMAL",
-        tricks: nextGame.completedTricks,
-        projectRaw: projectResolution.projectRaw,
-        projectQaid: projectResolution.projectQaid,
-        balootRaw: { NORTH_SOUTH: 0, EAST_WEST: 0 },
-        balootQaid: {
-          NORTH_SOUTH: balootQaid.NORTH_SOUTH ?? 0,
-          EAST_WEST: balootQaid.EAST_WEST ?? 0,
-        },
-      });
+      const roundScoreBreakdown = scoreCompletedRound(nextRound);
 
       nextRound = completeRoundState(nextRound, roundScoreBreakdown);
       const nextMatchState = completeMatchRound(

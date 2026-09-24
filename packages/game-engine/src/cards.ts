@@ -22,6 +22,16 @@ export const DECK: readonly Card[] = SUITS.flatMap((suit) =>
   })),
 );
 
+export const CARD_LOOKUP: Readonly<Record<CardId, Card>> = Object.fromEntries(
+  DECK.map((card) => [card.id, card]),
+) as Readonly<Record<CardId, Card>>;
+
+export function getCardById(id: CardId): Card {
+  const card = CARD_LOOKUP[id];
+  if (!card) throw new Error(`Unknown card ID: ${id}`);
+  return card;
+}
+
 const SUN_ORDER: readonly Rank[] = ["A", "10", "K", "Q", "J", "9", "8", "7"];
 const HOKUM_ORDER: readonly Rank[] = ["J", "9", "A", "10", "K", "Q", "8", "7"];
 

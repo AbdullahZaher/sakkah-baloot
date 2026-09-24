@@ -60,6 +60,35 @@ export function declareBaloot(
   };
 }
 
+export function createBalootDeclaration(
+  roundId: string,
+  playerSeat: Seat,
+  contract: Contract,
+  trumpSuit: Suit | null,
+  cardBeingPlayed: Card,
+  alreadyPlayedByPlayer: readonly Card[],
+): BalootDeclaration | null {
+  if (!canDeclareBaloot(contract, trumpSuit, playerSeat, cardBeingPlayed, alreadyPlayedByPlayer, true)) {
+    return null;
+  }
+  if (trumpSuit === null) return null;
+  const partner = alreadyPlayedByPlayer.find(
+    (c) =>
+      isTrump(c, contract, trumpSuit) &&
+      ((c.rank === "K" && cardBeingPlayed.rank === "Q") || (c.rank === "Q" && cardBeingPlayed.rank === "K")),
+  );
+  if (!partner) return null;
+  const king = cardBeingPlayed.rank === "K" ? cardBeingPlayed : partner;
+  const queen = cardBeingPlayed.rank === "Q" ? cardBeingPlayed : partner;
+  return declareBaloot(
+    `${roundId}:BALOOT:${playerSeat}:${cardBeingPlayed.id}`,
+    playerSeat,
+    trumpSuit,
+    king,
+    queen,
+  );
+}
+
 export function isBalootAbsorbedByHundred(
   baloot: BalootDeclaration,
   hundredCards: readonly CardId[],

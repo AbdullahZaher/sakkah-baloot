@@ -9,23 +9,14 @@ import type {
 import {
   DECK,
   SEATS,
+  getCardById,
   getLegalMoves,
   legalBiddingActions,
 } from "@sakkah-baloot/game-engine";
 import type { ConnectionStatus, PlayerScopedSnapshot } from "./types.js";
 import type { SeatRouter } from "./seat-router.js";
 
-const CARD_LOOKUP = Object.fromEntries(
-  DECK.map((c) => [c.id, c]),
-) as Readonly<Record<CardId, Card>>;
-
-export function getCardById(id: CardId): Card {
-  const card = CARD_LOOKUP[id];
-  if (!card) {
-    throw new Error(`Card not found: ${id}`);
-  }
-  return card;
-}
+export { getCardById };
 
 export function buildPlayerScopedSnapshot(
   match: MatchState,
