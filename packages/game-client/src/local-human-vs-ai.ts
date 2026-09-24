@@ -159,6 +159,30 @@ function buildGame(round: NonNullable<MatchState["round"]>): GameState {
   };
 }
 
+export function shouldDeclareBalootForCard(
+  game: GameState,
+  playerId: PlayerId,
+  cardId: CardId,
+): boolean {
+  const card = game.hands[playerId]?.find((candidate) => candidate.id === cardId);
+  if (!card) return false;
+  const alreadyPlayedByPlayer = [
+    ...game.completedTricks.flatMap((trick) => trick.plays),
+    ...game.currentTrick,
+  ]
+    .filter((play) => play.playerId === playerId)
+    .map((play) => play.card);
+
+  return canDeclareBaloot(
+    game.contract,
+    game.trumpSuit,
+    game.players[playerId]!,
+    card,
+    alreadyPlayedByPlayer,
+    true,
+  );
+}
+
 function calculateRoundScore(
   round: NonNullable<MatchState["round"]>,
 ): RoundScoreBreakdown {
@@ -575,23 +599,11 @@ export function createLocalHumanVsAISession(
       throw new Error("Card is not legal");
     }
 
-    const card = round.game.hands[playerId]?.find((candidate) => candidate.id === cardId);
-    const priorPlayed = [
-      ...round.game.completedTricks.flatMap((trick) => trick.plays),
-      ...round.game.currentTrick,
-    ]
-      .filter((play) => play.playerId === playerId)
-      .map((play) => play.card);
-    const balootDeclared =
-      card !== undefined &&
-      canDeclareBaloot(
-        round.game.contract,
-        round.game.trumpSuit,
-        humanSeat,
-        card,
-        priorPlayed,
-        true,
-      );
+    const balootDeclared = shouldDeclareBalootForCard(
+      round.game,
+      playerId,
+      cardId,
+    );
 
     commitCard(playerId, cardId, ikaDeclared, balootDeclared);
     runAI();
