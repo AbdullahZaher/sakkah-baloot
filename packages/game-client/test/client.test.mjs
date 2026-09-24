@@ -331,6 +331,8 @@ test("forensic: completed trick holds presentation state, prevents next trick AI
   assert.equal(snapshot.completedTrickPresentation.trickNumber, 1);
   assert.equal(snapshot.completedTrickPresentation.plays.length, 4);
   assert.ok(snapshot.completedTrickPresentation.winnerSeat);
+  assert.equal(snapshot.lastProtocolEvent, "TRICK_COMPLETE");
+  assert.equal(snapshot.protocol.phase, "TRICK_COMPLETE");
 
   // Verify human input is disabled during presentation hold
   assert.equal(snapshot.humanTurn, false);
