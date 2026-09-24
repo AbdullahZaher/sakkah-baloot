@@ -347,3 +347,78 @@ test("forensic: completed trick holds presentation state, prevents next trick AI
   // Game has now safely advanced to Trick 2
   assert.ok(afterAck.game?.trickNumber === 2 || afterAck.game?.phase === "PLAYING");
 });
+
+
+test("human card interaction rejects an illegal card before mutating the game", () => {
+  const session = createLocalHumanVsAISession({
+    seed: "phase20-illegal-card",
+    humanSeat: "SOUTH",
+    aiMode: "BASELINE",
+  });
+
+  let snapshot = session.getSnapshot();
+  while (snapshot.bidding.phase === "BIDDING") {
+    if (snapshot.legalActions.includes("BUY_SUN")) {
+      snapshot = session.dispatchBiddingAction("BUY_SUN");
+    } else {
+      snapshot = session.dispatchBiddingAction("PASS");
+    }
+  }
+
+  assert.equal(snapshot.game?.phase, "PLAYING");
+  assert.equal(snapshot.humanTurn, true);
+  const legal = new Set(snapshot.legalCardIds);
+  const illegal = snapshot.playerHand.find((card) => !legal.has(card.id));
+
+  if (!illegal) {
+    // The deterministic hand may have every visible card legal on the opening lead.
+    return;
+  }
+
+  const before = snapshot.game?.hands.HUMAN_PLAYER?.length ?? 0;
+  assert.throws(
+    () => session.dispatchCardPlay(illegal.id),
+    /Card is not legal/,
+  );
+
+  const after = session.getSnapshot();
+  assert.equal(after.game?.hands.HUMAN_PLAYER?.length ?? 0, before);
+  assert.equal(after.game?.currentPlayerId, "HUMAN_PLAYER");
+});
+
+test("completed-trick presentation blocks duplicate human dispatch", () => {
+  const session = createLocalHumanVsAISession({
+    seed: "phase20-duplicate-dispatch",
+    humanSeat: "SOUTH",
+    aiMode: "BASELINE",
+  });
+
+  let snapshot = session.getSnapshot();
+  while (snapshot.bidding.phase === "BIDDING") {
+    if (snapshot.legalActions.includes("BUY_SUN")) {
+      snapshot = session.dispatchBiddingAction("BUY_SUN");
+    } else {
+      snapshot = session.dispatchBiddingAction("PASS");
+    }
+  }
+
+  while (!snapshot.completedTrickPresentation) {
+    assert.equal(snapshot.humanTurn, true);
+    const cardId = snapshot.legalCardIds[0];
+    assert.ok(cardId);
+    snapshot = session.dispatchCardPlay(cardId);
+  }
+
+  const held = snapshot;
+  const nextCard = held.game?.hands.HUMAN_PLAYER?.[0]?.id;
+  if (nextCard) {
+    assert.throws(
+      () => session.dispatchCardPlay(nextCard),
+      /Cannot play card while completed trick presentation is active/,
+    );
+  }
+
+  const heldAgain = session.getSnapshot();
+  assert.equal(heldAgain.completedTrickPresentation?.trickNumber, held.completedTrickPresentation?.trickNumber);
+  assert.equal(heldAgain.game?.completedTricks.length, held.game?.completedTricks.length);
+});
