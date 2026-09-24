@@ -89,6 +89,7 @@ export interface LocalPlayablePreview {
   readonly protocol: MatchProtocolState;
   readonly lastProtocolEvent: MatchProtocolEvent["type"] | null;
   readonly completedTrickPresentation: CompletedTrick | null;
+  readonly actionFeedback: string | null;
 }
 
 export interface LocalPlayableSession {
@@ -225,6 +226,7 @@ export function createLocalHumanVsAISession(
   let lastProtocolEvent: MatchProtocolEvent["type"] | null = null;
   let completedTrickPresentation: CompletedTrick | null = null;
   let pendingRoundComplete = false;
+  let actionFeedback: string | null = null;
 
   protocol = applyProtocol(protocol, {
     type: "DEAL",
@@ -308,6 +310,7 @@ export function createLocalHumanVsAISession(
       protocol,
       lastProtocolEvent,
       completedTrickPresentation,
+      actionFeedback,
     };
   }
 
@@ -394,6 +397,7 @@ export function createLocalHumanVsAISession(
       protocol = applyProtocol(protocol, protocolEvent);
       lastProtocolEvent = protocolEvent.type;
     }
+    actionFeedback = `${seatForPlayer(playerId)}: ${action.type}`;
   }
 
   function commitProject(playerId: PlayerId, project: ProjectDeclaration): void {
@@ -422,6 +426,7 @@ export function createLocalHumanVsAISession(
     match = { ...match, round: nextRound };
     protocol = applyProtocol(protocol, event);
     lastProtocolEvent = event.type;
+    actionFeedback = `${seatForPlayer(playerId)} أعلن مشروعًا`;
   }
 
   function commitCard(
@@ -458,6 +463,10 @@ export function createLocalHumanVsAISession(
     match = { ...match, round: nextRound };
     protocol = applyProtocol(protocol, event);
     lastProtocolEvent = event.type;
+    const playedCard = round.game.hands[playerId]?.find((card) => card.id === cardId);
+    actionFeedback = playedCard
+      ? `${seatForPlayer(playerId)} لعب ${playedCard.rank} ${playedCard.suit}`
+      : `${seatForPlayer(playerId)} لعب ورقة`;
 
     if (authoritative.state.completedTricks.length > prevCompletedCount) {
       const completed = authoritative.state.completedTricks[authoritative.state.completedTricks.length - 1] ?? null;
