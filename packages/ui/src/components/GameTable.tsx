@@ -53,6 +53,7 @@ export interface GameTableProps {
   readonly baloot?: BalootDeclaration | null;
   readonly onProject?: (projectId: string) => void;
   readonly completedTrickPresentation?: CompletedTrick | null;
+  readonly actionFeedback?: string | null;
 }
 
 export function GameTable({
@@ -80,6 +81,7 @@ export function GameTable({
   baloot = null,
   onProject,
   completedTrickPresentation = null,
+  actionFeedback = null,
 }: GameTableProps) {
   const isFrozen = Boolean(completedTrickPresentation);
   const frozenTrick = completedTrickPresentation ?? null;
@@ -147,6 +149,12 @@ export function GameTable({
             </View>
           ) : null}
         </View>
+
+        {actionFeedback ? (
+          <View style={styles.actionFeedback} pointerEvents="none">
+            <Text style={styles.actionFeedbackText}>{formatActionFeedback(actionFeedback)}</Text>
+          </View>
+        ) : null}
 
         {/* North Player (AI Partner - Top) */}
         <SeatView
@@ -309,6 +317,20 @@ export function GameTable({
       </View>
     </View>
   );
+}
+
+function formatActionFeedback(value: string): string {
+  return value
+    .replace("NORTH", "الشمال")
+    .replace("EAST", "الشرق")
+    .replace("SOUTH", "الجنوب")
+    .replace("WEST", "الغرب")
+    .replace("BUY_SUN", "صن")
+    .replace("BUY_HOKUM", "حكم")
+    .replace("BUY_HOKUM_EXPOSED", "حكم")
+    .replace("BUY_ASHKAL", "أشكال")
+    .replace("PASS", "بس")
+    .replace("DECLARE_KASHO", "كاشو");
 }
 
 function BidHistory({
@@ -1451,6 +1473,23 @@ const styles = StyleSheet.create({
   },
   redColor: {
     color: "#DC2626",
+  },
+  actionFeedback: {
+    position: "absolute",
+    top: 44,
+    alignSelf: "center",
+    zIndex: 40,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 9,
+    backgroundColor: "rgba(5, 18, 14, 0.94)",
+    borderWidth: 1,
+    borderColor: "rgba(212, 175, 55, 0.55)",
+  },
+  actionFeedbackText: {
+    color: "#F5E6BF",
+    fontSize: 9,
+    fontWeight: "900",
   },
   bidHistory: {
     marginTop: 4,
