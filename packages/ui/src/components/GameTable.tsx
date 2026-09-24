@@ -28,6 +28,14 @@ export interface GameTableProps {
   readonly exposedCard: Card | null;
   readonly hand: readonly Card[];
   readonly legalActions: readonly BiddingActionType[];
+  readonly biddingHistory?: readonly {
+    readonly actionId: string;
+    readonly turnNumber: number;
+    readonly seat: Seat;
+    readonly phase: "FIRST_ROUND" | "SECOND_ROUND";
+    readonly action: BiddingActionType;
+    readonly stateVersion: number;
+  }[];
   readonly legalCardIds?: readonly CardId[];
   readonly game?: GameState | null;
   readonly playerSeat?: Seat;
@@ -54,6 +62,7 @@ export function GameTable({
   exposedCard,
   hand,
   legalActions,
+  biddingHistory = [],
   legalCardIds = [],
   game = null,
   playerSeat = "SOUTH",
@@ -209,6 +218,10 @@ export function GameTable({
           ) : null}
 
           {/* Bidding Phase: Exposed Card Container */}
+          {!game && biddingHistory.length > 0 ? (
+            <BidHistory history={biddingHistory} />
+          ) : null}
+
           {!game ? (
             <View style={styles.exposedContainer}>
               <View style={styles.exposedBadge}>
@@ -296,6 +309,45 @@ export function GameTable({
       </View>
     </View>
   );
+}
+
+function BidHistory({
+  history,
+}: {
+  history: readonly {
+    readonly actionId: string;
+    readonly turnNumber: number;
+    readonly seat: Seat;
+    readonly phase: "FIRST_ROUND" | "SECOND_ROUND";
+    readonly action: BiddingActionType;
+    readonly stateVersion: number;
+  }[];
+}) {
+  if (history.length === 0) return null;
+  return (
+    <View style={styles.bidHistory}>
+      <Text style={styles.bidHistoryTitle}>سجل المزايدة</Text>
+      <View style={styles.bidHistoryRows}>
+        {history.slice(-6).map((item) => (
+          <View key={item.actionId} style={styles.bidHistoryRow}>
+            <Text style={styles.bidHistorySeat}>{seatArabicName(item.seat)}</Text>
+            <Text style={styles.bidHistoryAction}>{biddingActionArabic(item.action)}</Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+function biddingActionArabic(action: BiddingActionType): string {
+  switch (action) {
+    case "PASS": return "بس";
+    case "BUY_SUN": return "صن";
+    case "BUY_HOKUM_EXPOSED": return "حكم المكشوف";
+    case "BUY_HOKUM": return "حكم";
+    case "BUY_ASHKAL": return "أشكال";
+    case "DECLARE_KASHO": return "كاشو";
+  }
 }
 
 function TrickView({
@@ -1393,7 +1445,46 @@ const styles = StyleSheet.create({
   redColor: {
     color: "#DC2626",
   },
-  actionDock: {
+  bidHistory: {
+    marginTop: 4,
+    maxWidth: 250,
+    alignSelf: "center",
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 10,
+    backgroundColor: "rgba(5, 18, 14, 0.88)",
+    borderWidth: 1,
+    borderColor: "rgba(212, 175, 55, 0.25)",
+  },
+  bidHistoryTitle: {
+    color: "#F5E6BF",
+    fontSize: 9,
+    fontWeight: "900",
+    textAlign: "center",
+    marginBottom: 3,
+  },
+  bidHistoryRows: {
+    gap: 2,
+  },
+  bidHistoryRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 5,
+  },
+  bidHistorySeat: {
+    color: "#CBD5E1",
+    fontSize: 8,
+    fontWeight: "800",
+    minWidth: 38,
+    textAlign: "right",
+  },
+  bidHistoryAction: {
+    color: "#FDE68A",
+    fontSize: 8,
+    fontWeight: "900",
+  },
+    actionDock: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 4,
