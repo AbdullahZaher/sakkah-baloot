@@ -471,7 +471,7 @@ export function createLocalHumanVsAISession(
 
       applyAuthoritativeRoundComplete(
         match,
-        completedRound,
+        nextRound,
         score,
         roundCompleteEvent,
       );
