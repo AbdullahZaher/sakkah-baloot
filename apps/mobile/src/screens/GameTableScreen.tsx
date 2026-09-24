@@ -87,6 +87,12 @@ export function GameTableScreen() {
         roundScore={preview.roundScore}
         matchScore={preview.matchScore}
         matchEnd={preview.matchEnd}
+        contract={preview.game?.contract ?? null}
+        trumpSuit={preview.game?.trumpSuit ?? null}
+        projectCandidates={preview.projectCandidates}
+        declaredProjects={preview.projects}
+        baloot={preview.baloot}
+        onProject={(projectId) => run(() => session.dispatchProject(projectId))}
       />
     </View>
   );

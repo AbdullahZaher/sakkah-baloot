@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import type { BiddingAction, Card, CardId, GameState, MatchEndResult, MatchScore, RoundScoreBreakdown, Seat, Suit } from "@sakkah-baloot/game-engine";
+import type { BalootDeclaration, BiddingAction, Card, CardId, Contract, GameState, MatchEndResult, MatchScore, ProjectCandidate, ProjectDeclaration, RoundScoreBreakdown, Seat, Suit } from "@sakkah-baloot/game-engine";
 
 type BiddingActionType = BiddingAction["type"];
 
@@ -19,18 +19,25 @@ interface GameTableProps {
   readonly roundScore?: RoundScoreBreakdown | null;
   readonly matchScore?: MatchScore;
   readonly matchEnd?: MatchEndResult;
+  readonly contract?: Contract | null;
+  readonly trumpSuit?: Suit | null;
+  readonly projectCandidates?: readonly ProjectCandidate[];
+  readonly declaredProjects?: readonly ProjectDeclaration[];
+  readonly baloot?: BalootDeclaration | null;
+  readonly onProject?: (projectId: string) => void;
 }
 
 export function GameTable({
   dealerSeat, actingSeat, phase, exposedCard, hand, legalActions, legalCardIds = [], game = null,
   playerSeat = "SOUTH", onBiddingAction, onCardPlay, onNextRound, roundScore, matchScore, matchEnd,
+  contract = null, trumpSuit = null, projectCandidates = [], declaredProjects = [], baloot = null, onProject,
 }: GameTableProps) {
   const playerIsActing = actingSeat === playerSeat;
   const actions = playerIsActing ? legalActions : [];
   const hokumSuits = actions.includes("BUY_HOKUM") ? availableHokumSuits(exposedCard?.suit ?? null) : [];
   const trickCards = game?.currentTrick ?? [];
   const isRoundComplete = game?.phase === "ROUND_COMPLETE";
-  const activeSeat = game ? game.currentPlayerId : actingSeat;
+  const activeSeat = game ? game.players[game.currentPlayerId] : actingSeat;
 
   return (
     <View style={styles.screen}>
@@ -45,6 +52,7 @@ export function GameTable({
           team="LANA"
           active={activeSeat === "NORTH"}
           isDealer={dealerSeat === "NORTH"}
+          cardCount={cardCountForSeat(game, "NORTH")}
           style={styles.north}
         />
 
@@ -55,6 +63,7 @@ export function GameTable({
           team="LAHUM"
           active={activeSeat === "WEST"}
           isDealer={dealerSeat === "WEST"}
+          cardCount={cardCountForSeat(game, "WEST")}
           style={styles.west}
         />
 
@@ -65,6 +74,7 @@ export function GameTable({
           team="LAHUM"
           active={activeSeat === "EAST"}
           isDealer={dealerSeat === "EAST"}
+          cardCount={cardCountForSeat(game, "EAST")}
           style={styles.east}
         />
 
@@ -78,6 +88,30 @@ export function GameTable({
               </Text>
             </View>
           </View>
+
+          {game && contract ? (
+            <View style={styles.contractBadge}>
+              <Text style={styles.contractText}>
+                {contract === "HOKUM"
+                  ? `حكم ${trumpSuit ? suitArabic(trumpSuit) : ""} ${trumpSuit ? suitSymbol(trumpSuit) : ""}`
+                  : "صن"}
+              </Text>
+            </View>
+          ) : null}
+
+          {baloot ? (
+            <View style={styles.balootBanner}>
+              <Text style={styles.balootBannerText}>بلوت {suitSymbol(baloot.trumpSuit)} · +٢ قيد</Text>
+            </View>
+          ) : null}
+
+          {game && game.trickNumber === 1 && game.currentTrick.length === 0 ? (
+            <ProjectPanel
+              candidates={projectCandidates}
+              declared={declaredProjects}
+              onProject={onProject}
+            />
+          ) : null}
 
           {/* Bidding Phase: Exposed Card */}
           {!game ? (
@@ -238,6 +272,7 @@ function CardButton({
 }) {
   const offset = index - (total - 1) / 2;
   const rotation = `${offset * 2}deg`;
+  const transform = [{ rotate: rotation }, ...(enabled ? [{ translateY: -4 }] : [])];
 
   return (
     <Pressable
@@ -246,7 +281,7 @@ function CardButton({
       onPress={() => onPress?.(card.id)}
       style={[
         styles.cardButton,
-        { transform: [{ rotate: rotation }] },
+        { transform },
         enabled ? styles.cardEnabled : styles.cardDisabled,
       ]}
     >
@@ -256,13 +291,14 @@ function CardButton({
 }
 
 function SeatView({
-  label, seatRole, team, active, isDealer, style,
+  label, seatRole, team, active, isDealer, cardCount, style,
 }: {
   label: Seat;
   seatRole: string;
   team: "LANA" | "LAHUM";
   active: boolean;
   isDealer: boolean;
+  cardCount?: number | undefined;
   style?: object;
 }) {
   return (
@@ -283,8 +319,79 @@ function SeatView({
       </View>
       <View style={styles.seatBadge}>
         <Text style={styles.seatLabel}>{seatArabicName(label)}</Text>
-        <Text style={styles.seatSub}>{seatRole}</Text>
+        <View style={styles.seatMetaRow}>
+          <Text style={styles.seatSub}>{seatRole}</Text>
+          {cardCount !== undefined ? <Text style={styles.cardCount}>🂠 {cardCount}</Text> : null}
+        </View>
       </View>
+    </View>
+  );
+}
+
+function cardCountForSeat(game: GameState | null, seat: Seat): number | undefined {
+  if (!game) return undefined;
+  const player = Object.entries(game.players).find(([, playerSeat]) => playerSeat === seat)?.[0];
+  return player ? (game.hands[player]?.length ?? 0) : undefined;
+}
+
+function projectLabel(type: ProjectCandidate["type"]): string {
+  switch (type) {
+    case "SERA": return "سِرَا";
+    case "FIFTY": return "خمسين";
+    case "HUNDRED": return "مية";
+    case "FOUR_HUNDRED": return "أربعمية";
+  }
+}
+
+function formatProjectCards(cards: readonly CardId[]): string {
+  return cards.map((id) => {
+    const [suit, rank] = id.split("-");
+    return suit && rank ? `${rank}${suitSymbol(suit as Suit)}` : id;
+  }).join(" ");
+}
+
+function ProjectPanel({
+  candidates,
+  declared,
+  onProject,
+}: {
+  candidates: readonly ProjectCandidate[];
+  declared: readonly ProjectDeclaration[];
+  onProject?: ((projectId: string) => void) | undefined;
+}) {
+  const declaredIds = new Set(declared.map((item) => item.candidate.id));
+  const available = candidates.filter((candidate) => !declaredIds.has(candidate.id));
+  return (
+    <View style={styles.projectPanel}>
+      <View style={styles.projectHeaderRow}>
+        <Text style={styles.projectTitle}>المشاريع</Text>
+        {declared.length > 0 ? <Text style={styles.projectDeclared}>معلن {declared.length}</Text> : null}
+      </View>
+      {declared.length > 0 ? (
+        <View style={styles.declaredProjectRow}>
+          {declared.map((item) => (
+            <View key={item.declarationId} style={styles.declaredChip}>
+              <Text style={styles.declaredChipText}>{projectLabel(item.candidate.type)}</Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
+      {available.length > 0 ? (
+        <View style={styles.projectChoices}>
+          {available.map((candidate) => (
+            <Pressable
+              key={candidate.id}
+              accessibilityRole="button"
+              onPress={() => onProject?.(candidate.id)}
+              disabled={!onProject}
+              style={({ pressed }) => [styles.projectChoice, pressed && styles.projectChoicePressed]}
+            >
+              <Text style={styles.projectChoiceTitle}>{projectLabel(candidate.type)} +{candidate.qaydValue}</Text>
+              <Text style={styles.projectChoiceCards}>{formatProjectCards(candidate.cards)}</Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -471,6 +578,111 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "700",
   },
+  contractBadge: {
+    marginTop: 2,
+    backgroundColor: "rgba(212, 175, 55, 0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(212, 175, 55, 0.35)",
+    borderRadius: 7,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  contractText: {
+    color: "#F8E7B0",
+    fontSize: 9,
+    fontWeight: "900",
+  },
+  balootBanner: {
+    marginTop: 4,
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+    borderRadius: 9,
+    backgroundColor: "rgba(245, 158, 11, 0.18)",
+    borderWidth: 1,
+    borderColor: "#F59E0B",
+  },
+  balootBannerText: {
+    color: "#FDE68A",
+    fontSize: 9,
+    fontWeight: "900",
+  },
+  projectPanel: {
+    marginTop: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    borderRadius: 10,
+    backgroundColor: "rgba(5, 18, 14, 0.72)",
+    borderWidth: 1,
+    borderColor: "rgba(212, 175, 55, 0.18)",
+    maxWidth: 250,
+    alignItems: "center",
+  },
+  projectHeaderRow: {
+    width: "100%",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  projectTitle: {
+    color: "#E8D49B",
+    fontSize: 9,
+    fontWeight: "900",
+  },
+  projectDeclared: {
+    color: "#94A3B8",
+    fontSize: 8,
+    fontWeight: "700",
+  },
+  declaredProjectRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: 3,
+    marginTop: 3,
+  },
+  declaredChip: {
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 5,
+    backgroundColor: "rgba(52, 211, 153, 0.14)",
+    borderWidth: 1,
+    borderColor: "rgba(52, 211, 153, 0.28)",
+  },
+  declaredChipText: {
+    color: "#6EE7B7",
+    fontSize: 7,
+    fontWeight: "800",
+  },
+  projectChoices: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: 3,
+    marginTop: 3,
+  },
+  projectChoice: {
+    minWidth: 70,
+    paddingHorizontal: 5,
+    paddingVertical: 3,
+    borderRadius: 7,
+    backgroundColor: "rgba(30, 41, 59, 0.9)",
+    borderWidth: 1,
+    borderColor: "rgba(165, 180, 252, 0.3)",
+    alignItems: "center",
+  },
+  projectChoicePressed: {
+    opacity: 0.72,
+  },
+  projectChoiceTitle: {
+    color: "#EDE9FE",
+    fontSize: 8,
+    fontWeight: "900",
+  },
+  projectChoiceCards: {
+    color: "#C7D2FE",
+    fontSize: 7,
+    marginTop: 1,
+  },
   exposedContainer: {
     alignItems: "center",
     backgroundColor: "rgba(5, 18, 14, 0.7)",
@@ -577,6 +789,16 @@ const styles = StyleSheet.create({
     color: "#94A3B8",
     fontSize: 7,
   },
+  seatMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  cardCount: {
+    color: "#CBD5E1",
+    fontSize: 7,
+    fontWeight: "800",
+  },
   hand: {
     flexDirection: "row",
     justifyContent: "center",
@@ -590,7 +812,6 @@ const styles = StyleSheet.create({
   },
   cardEnabled: {
     opacity: 1,
-    transform: [{ translateY: -4 }],
   },
   cardDisabled: {
     opacity: 0.4,
