@@ -71,6 +71,7 @@ const PLAYERS: Readonly<Record<PlayerId, Seat>> = {
 export interface LocalPlayablePreview {
   readonly dealerSeat: Seat;
   readonly roundNumber: number;
+  readonly matchPhase: MatchState["phase"];
   readonly playerSeat: Seat;
   readonly playerHand: readonly Card[];
   readonly exposedCard: Card | null;
@@ -292,6 +293,7 @@ export function createLocalHumanVsAISession(
     return {
       dealerSeat: match.dealerSeat,
       roundNumber: match.roundNumber,
+      matchPhase: match.phase,
       playerSeat: humanSeat,
       playerHand: hand,
       exposedCard,
