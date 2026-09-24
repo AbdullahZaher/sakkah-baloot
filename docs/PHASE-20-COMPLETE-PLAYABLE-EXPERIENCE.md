@@ -141,8 +141,9 @@ The game server remains the future authority for multiplayer command validation,
 - Transition into PLAYING.
 - Tests for all currently supported bidding branches.
 
-### Slice B — Card interaction
+### Slice B — Card interaction — IN PROGRESS
 - Legal/unavailable card states.
+- Press-state feedback on legal cards.
 - Selected card state.
 - Safe single dispatch.
 - Explicit play affordance where needed.
