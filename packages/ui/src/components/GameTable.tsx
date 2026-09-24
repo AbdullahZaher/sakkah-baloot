@@ -94,7 +94,7 @@ export function GameTable({
   const actions = playerIsActing ? legalActions : [];
   const hokumSuits = actions.includes("BUY_HOKUM") ? availableHokumSuits(exposedCard?.suit ?? null) : [];
   const trickCards = game?.currentTrick ?? [];
-  const isRoundComplete = game?.phase === "ROUND_COMPLETE";
+  const isRoundComplete = roundScore !== null && !isFrozen;
   const lastCompletedTrick: CompletedTrick | null =
     game?.completedTricks && game.completedTricks.length > 0
       ? game.completedTricks[game.completedTricks.length - 1] ?? null
