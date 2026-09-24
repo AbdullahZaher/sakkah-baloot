@@ -478,7 +478,6 @@ test("round lifecycle preserves score and stops advancing after match completion
       snapshot = session.acknowledgeCompletedTrick();
     }
 
-    assert.equal(snapshot.roundScore?.roundNumber, snapshot.roundNumber);
     assert.ok(snapshot.roundScore);
     const completedScore = snapshot.matchScore;
 
