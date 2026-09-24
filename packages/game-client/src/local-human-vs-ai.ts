@@ -809,10 +809,10 @@ export function createLocalHumanVsAISession(
   }
 
   function advanceRound(): LocalPlayablePreview {
+    if (match.end.status === "FINISHED") return snapshot();
     if (match.phase !== "ROUND_COMPLETE") {
       throw new Error("Round is not complete");
     }
-    if (match.end.status === "FINISHED") return snapshot();
 
     const nextRoundNumber = match.roundNumber + 1;
     const nextDealer = nextCounterClockwise(match.dealerSeat);
