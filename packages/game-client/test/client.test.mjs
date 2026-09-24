@@ -487,6 +487,10 @@ test("round lifecycle preserves score and stops advancing after match completion
     assert.ok(snapshot.roundScore);
     assert.ok(["ROUND_COMPLETE", "MATCH_COMPLETE"].includes(snapshot.matchPhase));
     assert.equal(snapshot.game?.phase, "ROUND_COMPLETE");
+    if (snapshot.matchPhase === "MATCH_COMPLETE") {
+      assert.equal(snapshot.lastProtocolEvent, "MATCH_COMPLETE");
+      assert.equal(snapshot.protocol.phase, "MATCH_COMPLETE");
+    }
     const completedScore = snapshot.matchScore;
 
     if (snapshot.matchEnd.status === "FINISHED") {
