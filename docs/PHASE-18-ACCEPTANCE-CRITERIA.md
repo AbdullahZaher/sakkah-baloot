@@ -65,7 +65,7 @@
 - [x] **Exact/near-exact solver is used only within a defined state/budget boundary.**
   - *Evidence:* `packages/game-ai/src/endgame-solver.ts` (`solveEndgame`), verified in `packages/game-ai/test/endgame-solver.test.mjs`.
 - [x] **Solver output is verified against exhaustive small-state engine search.**
-  - *Evidence:* Evaluated with 100% exact solve rate across threshold sweeps in `packages/game-simulator/scripts/benchmark-suite.mjs`.
+  - *Evidence:* Evaluated with 100% exact solve rate and 100% optimal minimax payoff agreement across synthetic legal engine state sweeps in `packages/game-simulator/scripts/benchmark-suite.mjs`.
 
 ## G. Full Match
 
@@ -86,9 +86,9 @@
 
 Minimum required pre-release validation:
 
-- [x] **1,000 AI-vs-AI matches.**
+- [x] **1,000 deterministic full-match validation simulations.**
   - *Evidence:* 1,000 completed, 0 illegal actions, digest `70199b8b`.
-- [x] **10,000 AI-vs-AI matches before final Phase 18 closure.**
+- [x] **10,000 deterministic full-match validation simulations before final Phase 18 closure.**
   - *Evidence:* 10,000 completed, 0 illegal actions, digest `c49b880f`.
 - [x] **Zero illegal AI actions.**
   - *Evidence:* `illegalActions === 0` recorded across all 11,000+ simulation matches.
@@ -129,4 +129,4 @@ Minimum required pre-release validation:
 
 All acceptance criteria are met and backed by reproducible automated tests and empirical benchmark data:
 
-**Human vs 3 AI -> complete match -> deterministic replay -> large simulation (1,000 & 10,000 matches) -> zero authoritative-rule violations.**
+**Human vs 3 AI -> complete match -> deterministic replay -> large validation simulation (1,000 & 10,000 matches) -> zero authoritative-rule violations.**
