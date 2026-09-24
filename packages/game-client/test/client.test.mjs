@@ -422,3 +422,23 @@ test("completed-trick presentation blocks duplicate human dispatch", () => {
   assert.equal(heldAgain.completedTrickPresentation?.trickNumber, held.completedTrickPresentation?.trickNumber);
   assert.equal(heldAgain.game?.completedTricks.length, held.game?.completedTricks.length);
 });
+
+
+test("playable host exposes the latest authoritative action feedback", () => {
+  const session = createLocalHumanVsAISession({
+    seed: "phase20-action-feedback",
+    humanSeat: "SOUTH",
+    aiMode: "BASELINE",
+  });
+
+  let snapshot = session.getSnapshot();
+  assert.ok(snapshot.actionFeedback);
+
+  while (snapshot.bidding.phase === "BIDDING") {
+    const action = snapshot.legalActions.includes("BUY_SUN") ? "BUY_SUN" : "PASS";
+    snapshot = session.dispatchBiddingAction(action);
+  }
+
+  assert.ok(snapshot.actionFeedback);
+  assert.equal(typeof snapshot.actionFeedback, "string");
+});
