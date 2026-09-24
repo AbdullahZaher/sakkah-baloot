@@ -160,7 +160,7 @@ The game server remains the future authority for multiplayer command validation,
 - No AI progression during presentation.
 - Tests for human and AI transitions.
 
-### Slice D — Round lifecycle — IN PROGRESS
+### Slice D — Round lifecycle — COMPLETE
 - Final-trick presentation.
 - Round result.
 - Score breakdown.
@@ -185,13 +185,14 @@ The game server remains the future authority for multiplayer command validation,
 - [x] Baloot declaration is engine-authoritative.
 - [x] All four cards remain visible during the completed-trick presentation window.
 - [x] The next trick cannot start before the presentation window ends.
-- [ ] Final-trick presentation completes before round scoring is surfaced.
-- [ ] Round result is understandable.
-- [ ] Next round can be started.
-- [ ] Match completion is understandable.
+- [x] Final-trick presentation completes before round scoring is surfaced.
+- [x] Round result is understandable.
+- [x] Next round can be started.
+- [x] Match completion is understandable.
 - [x] AI never advances through a presentation barrier.
 - [x] UI contains no duplicated game rules.
 - [x] Client tests pass.
+  - 15 game-client tests pass, including multi-round lifecycle and terminal `advanceRound()` idempotence.
 - [x] Workspace typecheck passes.
 - [x] Mobile playable build passes.
 - [ ] A complete Human-vs-3-AI match has been manually played.
