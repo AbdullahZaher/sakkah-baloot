@@ -84,6 +84,7 @@ export interface LocalPlayablePreview {
   readonly matchScore: MatchScore;
   readonly matchEnd: MatchEndResult;
   readonly projects: readonly ProjectDeclaration[];
+  readonly projectCandidates: readonly import("@sakkah-baloot/game-engine").ProjectCandidate[];
   readonly baloot: NonNullable<MatchState["round"]>["baloot"];
   readonly protocol: MatchProtocolState;
   readonly lastProtocolEvent: MatchProtocolEvent["type"] | null;
@@ -99,6 +100,7 @@ export interface LocalPlayableSession {
     cardId: CardId,
     ikaDeclared?: boolean,
   ) => LocalPlayablePreview;
+  readonly dispatchProject: (projectId: string) => LocalPlayablePreview;
   readonly advanceRound: () => LocalPlayablePreview;
 }
 
@@ -293,6 +295,20 @@ export function createLocalHumanVsAISession(
       ? getLegalMoves(round.game, humanPlayerId).map((move) => move.cardId)
       : [];
 
+    const projectCandidates = round.game?.phase === "PLAYING" &&
+      round.game.currentPlayerId === humanPlayerId &&
+      round.game.trickNumber === 1 &&
+      round.game.currentTrick.length === 0 &&
+      round.game.completedTricks.length === 0 &&
+      round.bidding.selectedContract !== null
+      ? detectProjects(
+          round.game.hands[humanPlayerId] ?? [],
+          round.bidding.selectedContract.contract,
+          round.bidding.selectedContract.trumpSuit,
+          humanSeat,
+        )
+      : [];
+
     return {
       dealerSeat: match.dealerSeat,
       roundNumber: match.roundNumber,
@@ -309,6 +325,7 @@ export function createLocalHumanVsAISession(
       matchScore: match.score,
       matchEnd: match.end,
       projects: round.projects,
+      projectCandidates,
       baloot: round.baloot,
       protocol,
       lastProtocolEvent,
@@ -603,8 +620,62 @@ export function createLocalHumanVsAISession(
       throw new Error("Card is not legal");
     }
 
-    commitCard(playerId, cardId, ikaDeclared, false);
+    const card = round.game.hands[playerId]?.find((candidate) => candidate.id === cardId);
+    const priorPlayed = [
+      ...round.game.completedTricks.flatMap((trick) => trick.plays),
+      ...round.game.currentTrick,
+    ]
+      .filter((play) => play.playerId === playerId)
+      .map((play) => play.card);
+    const balootDeclared =
+      card !== undefined &&
+      canDeclareBaloot(
+        round.game.contract,
+        round.game.trumpSuit,
+        humanSeat,
+        card,
+        priorPlayed,
+        true,
+      );
+
+    commitCard(playerId, cardId, ikaDeclared, balootDeclared);
     runAI();
+    return snapshot();
+  }
+
+  function dispatchProject(projectId: string): LocalPlayablePreview {
+    const round = match.round;
+    const humanPlayerId = playerIdForSeat(humanSeat);
+    if (!round?.game || round.game.phase !== "PLAYING") {
+      throw new Error("Projects require an active playing round");
+    }
+    if (round.game.currentPlayerId !== humanPlayerId) {
+      throw new Error("It is not the human player's turn");
+    }
+    if (round.game.trickNumber !== 1 || round.game.currentTrick.length !== 0) {
+      throw new Error("Project declaration window is closed");
+    }
+
+    const selected = round.bidding.selectedContract;
+    if (!selected) throw new Error("Cannot declare project without a contract");
+
+    const candidate = detectProjects(
+      round.game.hands[humanPlayerId] ?? [],
+      selected.contract,
+      selected.trumpSuit,
+      humanSeat,
+    ).find((item) => item.id === projectId);
+    if (!candidate) throw new Error("Unknown project candidate");
+
+    const declaration = declareProject(
+      candidate,
+      "project:" + round.roundId + ":" + humanPlayerId + ":" + candidate.id,
+      "PLAYING",
+      1,
+      0,
+      round.projects,
+    );
+    commitProject(humanPlayerId, declaration);
     return snapshot();
   }
 
@@ -659,6 +730,7 @@ export function createLocalHumanVsAISession(
     getSnapshot: snapshot,
     dispatchBiddingAction,
     dispatchCardPlay,
+    dispatchProject,
     advanceRound,
   };
 }
