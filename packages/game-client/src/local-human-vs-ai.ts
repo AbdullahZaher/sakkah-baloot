@@ -486,7 +486,8 @@ export function createLocalHumanVsAISession(
       : `${seatForPlayer(playerId)} لعب ورقة`;
 
     if (authoritative.state.completedTricks.length > prevCompletedCount) {
-      const completed = authoritative.state.completedTricks[authoritative.state.completedTricks.length - 1] ?? null;
+      const completed = authoritative.state.completedTricks[authoritative.state.completedTricks.length - 1];
+      if (!completed) throw new Error("Completed trick result is missing");
       completedTrickPresentation = completed;
       protocol = applyProtocol(protocol, {
         type: "TRICK_COMPLETE",
