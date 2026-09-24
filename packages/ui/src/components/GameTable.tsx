@@ -1,9 +1,27 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import type { BalootDeclaration, BiddingAction, Card, CardId, Contract, GameState, MatchEndResult, MatchScore, ProjectCandidate, ProjectDeclaration, RoundScoreBreakdown, Seat, Suit } from "@sakkah-baloot/game-engine";
+import {
+  teamOfSeat,
+  type BalootDeclaration,
+  type BiddingAction,
+  type Card,
+  type CardId,
+  type CompletedTrick,
+  type Contract,
+  type GameState,
+  type MatchEndResult,
+  type MatchScore,
+  type ProjectCandidate,
+  type ProjectDeclaration,
+  type RoundScoreBreakdown,
+  type Seat,
+  type SelectedContract,
+  type Suit,
+  type TeamId,
+} from "@sakkah-baloot/game-engine";
 
 type BiddingActionType = BiddingAction["type"];
 
-interface GameTableProps {
+export interface GameTableProps {
   readonly dealerSeat: Seat;
   readonly actingSeat: Seat;
   readonly phase: string;
@@ -21,6 +39,7 @@ interface GameTableProps {
   readonly matchEnd?: MatchEndResult;
   readonly contract?: Contract | null;
   readonly trumpSuit?: Suit | null;
+  readonly selectedContract?: SelectedContract | null;
   readonly projectCandidates?: readonly ProjectCandidate[];
   readonly declaredProjects?: readonly ProjectDeclaration[];
   readonly baloot?: BalootDeclaration | null;
@@ -28,28 +47,92 @@ interface GameTableProps {
 }
 
 export function GameTable({
-  dealerSeat, actingSeat, phase, exposedCard, hand, legalActions, legalCardIds = [], game = null,
-  playerSeat = "SOUTH", onBiddingAction, onCardPlay, onNextRound, roundScore, matchScore, matchEnd,
-  contract = null, trumpSuit = null, projectCandidates = [], declaredProjects = [], baloot = null, onProject,
+  dealerSeat,
+  actingSeat,
+  phase,
+  exposedCard,
+  hand,
+  legalActions,
+  legalCardIds = [],
+  game = null,
+  playerSeat = "SOUTH",
+  onBiddingAction,
+  onCardPlay,
+  onNextRound,
+  roundScore,
+  matchScore,
+  matchEnd,
+  contract = null,
+  trumpSuit = null,
+  selectedContract = null,
+  projectCandidates = [],
+  declaredProjects = [],
+  baloot = null,
+  onProject,
 }: GameTableProps) {
-  const playerIsActing = actingSeat === playerSeat;
+  const activeSeat: Seat = (game ? game.players[game.currentPlayerId] : actingSeat) ?? actingSeat;
+  const playerIsActing = activeSeat === playerSeat;
   const actions = playerIsActing ? legalActions : [];
   const hokumSuits = actions.includes("BUY_HOKUM") ? availableHokumSuits(exposedCard?.suit ?? null) : [];
   const trickCards = game?.currentTrick ?? [];
   const isRoundComplete = game?.phase === "ROUND_COMPLETE";
-  const activeSeat = game ? game.players[game.currentPlayerId] : actingSeat;
+  const lastCompletedTrick: CompletedTrick | null =
+    game?.completedTricks && game.completedTricks.length > 0
+      ? game.completedTricks[game.completedTricks.length - 1] ?? null
+      : null;
+
+  // Active contract resolution
+  const activeContract = selectedContract?.contract ?? contract ?? game?.contract ?? null;
+  const activeTrumpSuit = selectedContract?.trumpSuit ?? trumpSuit ?? game?.trumpSuit ?? null;
+  const purchaserSeat = selectedContract?.purchaserSeat ?? null;
 
   return (
     <View style={styles.screen}>
       <View style={styles.table}>
-        {/* Decorative inner table border */}
+        {/* Decorative inner table felt border */}
         <View style={styles.tableInnerRing} pointerEvents="none" />
+
+        {/* Top persistent Contract & Round Info Banner */}
+        <View style={styles.topHudBar}>
+          {activeContract ? (
+            <View style={styles.contractHud}>
+              <View style={styles.contractBadge}>
+                <Text style={styles.contractBadgeText}>
+                  {activeContract === "HOKUM"
+                    ? `حكم ${activeTrumpSuit ? suitArabic(activeTrumpSuit) : ""} ${activeTrumpSuit ? suitSymbol(activeTrumpSuit) : ""}`
+                    : selectedContract?.mode === "ASHKAL"
+                      ? "أشكال (صن للموزع)"
+                      : "صن"}
+                </Text>
+              </View>
+              {purchaserSeat ? (
+                <View style={styles.purchaserBadge}>
+                  <Text style={styles.purchaserText}>
+                    المشتري: <Text style={styles.purchaserSeatHighlight}>{seatArabicName(purchaserSeat)}</Text> ({teamLabel(teamOfSeat(purchaserSeat))})
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+          ) : (
+            <View style={styles.biddingPhaseBadge}>
+              <Text style={styles.biddingPhaseText}>{formatPhase(phase)}</Text>
+            </View>
+          )}
+
+          {game ? (
+            <View style={styles.trickCounterBadge}>
+              <Text style={styles.trickCounterText}>
+                الأكلة {game.trickNumber} من 8
+              </Text>
+            </View>
+          ) : null}
+        </View>
 
         {/* North Player (AI Partner - Top) */}
         <SeatView
           label="NORTH"
-          seatRole="الشريك"
-          team="LANA"
+          seatRole={seatRoleLabel("NORTH", playerSeat)}
+          team={teamOfSeat("NORTH") === "NORTH_SOUTH" ? "LANA" : "LAHUM"}
           active={activeSeat === "NORTH"}
           isDealer={dealerSeat === "NORTH"}
           cardCount={cardCountForSeat(game, "NORTH")}
@@ -59,8 +142,8 @@ export function GameTable({
         {/* West Player (AI Opponent - Left) */}
         <SeatView
           label="WEST"
-          seatRole="خصم"
-          team="LAHUM"
+          seatRole={seatRoleLabel("WEST", playerSeat)}
+          team={teamOfSeat("WEST") === "NORTH_SOUTH" ? "LANA" : "LAHUM"}
           active={activeSeat === "WEST"}
           isDealer={dealerSeat === "WEST"}
           cardCount={cardCountForSeat(game, "WEST")}
@@ -70,42 +153,43 @@ export function GameTable({
         {/* East Player (AI Opponent - Right) */}
         <SeatView
           label="EAST"
-          seatRole="خصم"
-          team="LAHUM"
+          seatRole={seatRoleLabel("EAST", playerSeat)}
+          team={teamOfSeat("EAST") === "NORTH_SOUTH" ? "LANA" : "LAHUM"}
           active={activeSeat === "EAST"}
           isDealer={dealerSeat === "EAST"}
           cardCount={cardCountForSeat(game, "EAST")}
           style={styles.east}
         />
 
-        {/* Center Board: Logo, Phase, Exposed Card, or Trick Pile */}
+        {/* Center Board Arena */}
         <View style={styles.center}>
-          <View style={styles.centerHeader}>
-            <Text style={styles.logo}>صكّة</Text>
-            <View style={styles.phaseBadge}>
-              <Text style={styles.phaseText}>
-                {game ? `الأكلة ${game.trickNumber} من 8` : formatPhase(phase)}
-              </Text>
-            </View>
-          </View>
-
-          {game && contract ? (
-            <View style={styles.contractBadge}>
-              <Text style={styles.contractText}>
-                {contract === "HOKUM"
-                  ? `حكم ${trumpSuit ? suitArabic(trumpSuit) : ""} ${trumpSuit ? suitSymbol(trumpSuit) : ""}`
-                  : "صن"}
-              </Text>
-            </View>
-          ) : null}
-
+          {/* Baloot Notification Banner */}
           {baloot ? (
             <View style={styles.balootBanner}>
-              <Text style={styles.balootBannerText}>بلوت {suitSymbol(baloot.trumpSuit)} · +٢ قيد</Text>
+              <Text style={styles.balootBannerText}>
+                🌟 بلوت {suitSymbol(baloot.trumpSuit)} {suitArabic(baloot.trumpSuit)} · +{baloot.qaydValue} قيد ({seatArabicName(baloot.ownerSeat)})
+              </Text>
             </View>
           ) : null}
 
-          {game && game.trickNumber === 1 && game.currentTrick.length === 0 ? (
+          {/* Declared Projects Persistent Bar */}
+          {declaredProjects.length > 0 && !isRoundComplete ? (
+            <View style={styles.declaredProjectsContainer}>
+              <Text style={styles.declaredProjectsTitle}>المشاريع المعلنة:</Text>
+              <View style={styles.declaredProjectList}>
+                {declaredProjects.map((item) => (
+                  <View key={item.declarationId} style={styles.declaredChip}>
+                    <Text style={styles.declaredChipText}>
+                      {seatArabicName(item.candidate.ownerSeat)}: {projectLabel(item.candidate.type)} (+{item.candidate.qaydValue})
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          ) : null}
+
+          {/* Interactive Project Declaration during Trick 1 */}
+          {game && game.trickNumber === 1 && game.currentTrick.length === 0 && projectCandidates.length > 0 ? (
             <ProjectPanel
               candidates={projectCandidates}
               declared={declaredProjects}
@@ -113,18 +197,24 @@ export function GameTable({
             />
           ) : null}
 
-          {/* Bidding Phase: Exposed Card */}
+          {/* Bidding Phase: Exposed Card Container */}
           {!game ? (
             <View style={styles.exposedContainer}>
               <View style={styles.exposedBadge}>
-                <Text style={styles.exposedBadgeText}>المكشوفة</Text>
+                <Text style={styles.exposedBadgeText}>ورقة الشراء المكشوفة</Text>
               </View>
-              <CardView card={exposedCard} compact />
+              <CardView card={exposedCard} />
             </View>
           ) : null}
 
-          {/* Trick Taking Arena */}
-          {game && !isRoundComplete ? <TrickView plays={trickCards} /> : null}
+          {/* Trick Taking Arena (authoritative plays) */}
+          {game && !isRoundComplete ? (
+            <TrickView
+              plays={trickCards}
+              activeSeat={activeSeat}
+              lastCompletedTrick={lastCompletedTrick}
+            />
+          ) : null}
 
           {/* Round Score Recap Dialog */}
           {isRoundComplete && roundScore ? (
@@ -139,6 +229,15 @@ export function GameTable({
 
         {/* South Player Area (Human Player Hand + Actions Dock) */}
         <View style={styles.south}>
+          {/* Turn indicator ribbon above hand */}
+          <View style={styles.southTurnRibbon}>
+            <View style={[styles.turnDot, playerIsActing ? styles.turnDotActive : styles.turnDotInactive]} />
+            <Text style={[styles.southTurnText, playerIsActing && styles.southTurnTextActive]}>
+              {playerIsActing ? "دورك الآن — اختر ورقة للعب" : `في انتظار ${seatArabicName(activeSeat)}...`}
+            </Text>
+          </View>
+
+          {/* Bidding Action Dock */}
           {actions.length > 0 ? (
             <View style={styles.actionDock}>
               {actions.filter((action) => action !== "BUY_HOKUM").map((action) => (
@@ -169,85 +268,56 @@ export function GameTable({
   );
 }
 
-function RoundResult({
-  score, matchScore, matchEnd, onNextRound,
+function TrickView({
+  plays,
+  activeSeat,
+  lastCompletedTrick,
 }: {
-  score: RoundScoreBreakdown;
-  matchScore: MatchScore;
-  matchEnd: MatchEndResult;
-  onNextRound?: (() => void) | undefined;
+  plays: readonly GameState["currentTrick"][number][];
+  activeSeat: Seat;
+  lastCompletedTrick: CompletedTrick | null;
 }) {
-  const canContinue = matchEnd.status !== "FINISHED";
-  return (
-    <View style={styles.resultCard}>
-      <Text style={styles.resultTitle}>نتيجة الجولة</Text>
-
-      <View style={styles.resultGrid}>
-        <View style={styles.resultCol}>
-          <Text style={[styles.resultColHeader, styles.textLana]}>لنا (شمال + جنوب)</Text>
-          <Text style={styles.resultRow}>الأبناط: {score.cardRaw.NORTH_SOUTH}</Text>
-          <Text style={styles.resultRow}>المشاريع: {score.projectQaid.NORTH_SOUTH}</Text>
-          <Text style={styles.resultRow}>البلوت: {score.balootQaid.NORTH_SOUTH}</Text>
-          <Text style={styles.resultQaidTotal}>القيد: {score.finalQaid.NORTH_SOUTH}</Text>
-        </View>
-
-        <View style={styles.resultDivider} />
-
-        <View style={styles.resultCol}>
-          <Text style={[styles.resultColHeader, styles.textLahum]}>لهم (شرق + غرب)</Text>
-          <Text style={styles.resultRow}>الأبناط: {score.cardRaw.EAST_WEST}</Text>
-          <Text style={styles.resultRow}>المشاريع: {score.projectQaid.EAST_WEST}</Text>
-          <Text style={styles.resultRow}>البلوت: {score.balootQaid.EAST_WEST}</Text>
-          <Text style={styles.resultQaidTotal}>القيد: {score.finalQaid.EAST_WEST}</Text>
-        </View>
-      </View>
-
-      {score.kabootTeamId ? (
-        <View style={styles.badgeKaboot}>
-          <Text style={styles.badgeKabootText}>كابوت لصالح: {score.kabootTeamId === "NORTH_SOUTH" ? "لنا" : "لهم"}</Text>
-        </View>
-      ) : null}
-
-      {score.reverseKaboot ? (
-        <View style={styles.badgeReverse}>
-          <Text style={styles.badgeReverseText}>ريبيرس كابوت</Text>
-        </View>
-      ) : null}
-
-      <View style={styles.matchScoreBar}>
-        <Text style={styles.matchScoreLabel}>الصكّة:</Text>
-        <Text style={styles.matchScoreNumbers}>{matchScore.NORTH_SOUTH} لنا — {matchScore.EAST_WEST} لهم</Text>
-      </View>
-
-      {matchEnd.status === "FINISHED" ? <Text style={styles.finishedStatus}>انتهت الصكّة</Text> : null}
-      {matchEnd.status === "EXTRA_DEAL" ? <Text style={styles.extraDealStatus}>تعادل فوق 152 — توزيع إضافي</Text> : null}
-
-      {canContinue ? (
-        <Pressable accessibilityRole="button" onPress={onNextRound} style={styles.nextRoundBtn}>
-          <Text style={styles.nextRoundBtnText}>{matchEnd.status === "EXTRA_DEAL" ? "توزيع إضافي" : "الجولة التالية"}</Text>
-        </Pressable>
-      ) : null}
-    </View>
-  );
-}
-
-function TrickView({ plays }: { plays: readonly GameState["currentTrick"][number][] }) {
-  if (plays.length === 0) {
-    return (
-      <View style={styles.waitingTrick}>
-        <Text style={styles.waitingTrickText}>في انتظار اللعب...</Text>
-      </View>
-    );
-  }
+  const seats: readonly Seat[] = ["NORTH", "EAST", "SOUTH", "WEST"] as const;
 
   return (
-    <View style={styles.trickArena}>
-      {plays.map((play) => (
-        <View key={play.sequence} style={[styles.trickCardSlot, getTrickSlotStyle(play.seat)]}>
-          <Text style={styles.trickSeatTag}>{seatArabicName(play.seat)}</Text>
-          <CardView card={play.card} compact />
+    <View style={styles.trickContainer}>
+      {/* Last completed trick winner banner */}
+      {lastCompletedTrick && plays.length === 0 ? (
+        <View style={styles.lastWinnerBadge}>
+          <Text style={styles.lastWinnerText}>
+            الأكلة {lastCompletedTrick.trickNumber} فاز بها: <Text style={styles.lastWinnerHighlight}>{seatArabicName(lastCompletedTrick.winnerSeat)}</Text> ({teamLabel(teamOfSeat(lastCompletedTrick.winnerSeat))})
+          </Text>
         </View>
-      ))}
+      ) : null}
+
+      {/* 4-Compass Trick Arena */}
+      <View style={styles.trickArena}>
+        {seats.map((seat) => {
+          const play = plays.find((p) => p.seat === seat);
+          const isSeatActive = activeSeat === seat && !play;
+          const slotStyle = getTrickSlotStyle(seat);
+          const isLana = teamOfSeat(seat) === "NORTH_SOUTH";
+
+          if (play) {
+            return (
+              <View key={seat} style={[styles.trickCardSlot, slotStyle]}>
+                <View style={[styles.trickSeatTag, isLana ? styles.seatTagLana : styles.seatTagLahum]}>
+                  <Text style={styles.trickSeatTagText}>{seatArabicName(seat)}</Text>
+                </View>
+                <CardView card={play.card} size="medium" />
+              </View>
+            );
+          }
+
+          return (
+            <View key={seat} style={[styles.trickEmptySlot, slotStyle, isSeatActive && styles.trickActiveEmptySlot]}>
+              <Text style={[styles.trickEmptySlotText, isSeatActive && styles.trickActiveEmptyText]}>
+                {isSeatActive ? "يلعب الآن" : seatArabicName(seat)}
+              </Text>
+            </View>
+          );
+        })}
+      </View>
     </View>
   );
 }
@@ -262,7 +332,11 @@ function getTrickSlotStyle(seat: Seat) {
 }
 
 function CardButton({
-  card, enabled, index, total, onPress,
+  card,
+  enabled,
+  index,
+  total,
+  onPress,
 }: {
   card: Card;
   enabled: boolean;
@@ -271,8 +345,9 @@ function CardButton({
   onPress?: ((cardId: CardId) => void) | undefined;
 }) {
   const offset = index - (total - 1) / 2;
-  const rotation = `${offset * 2}deg`;
-  const transform = [{ rotate: rotation }, ...(enabled ? [{ translateY: -4 }] : [])];
+  const rotation = `${offset * 2.2}deg`;
+  const translateY = enabled ? -10 : 0;
+  const transform = [{ rotate: rotation }, { translateY }];
 
   return (
     <Pressable
@@ -291,7 +366,13 @@ function CardButton({
 }
 
 function SeatView({
-  label, seatRole, team, active, isDealer, cardCount, style,
+  label,
+  seatRole,
+  team,
+  active,
+  isDealer,
+  cardCount,
+  style,
 }: {
   label: Seat;
   seatRole: string;
@@ -303,11 +384,13 @@ function SeatView({
 }) {
   return (
     <View style={[styles.seatPod, style]}>
-      <View style={[
-        styles.avatarWrap,
-        team === "LANA" ? styles.avatarLana : styles.avatarLahum,
-        active && styles.avatarActive,
-      ]}>
+      <View
+        style={[
+          styles.avatarWrap,
+          team === "LANA" ? styles.avatarLana : styles.avatarLahum,
+          active && styles.avatarActive,
+        ]}
+      >
         <Text style={[styles.avatarInitial, team === "LANA" ? styles.avatarInitialLana : styles.avatarInitialLahum]}>
           {seatInitial(label)}
         </Text>
@@ -317,8 +400,15 @@ function SeatView({
           </View>
         ) : null}
       </View>
-      <View style={styles.seatBadge}>
-        <Text style={styles.seatLabel}>{seatArabicName(label)}</Text>
+      <View style={[styles.seatBadge, active && styles.seatBadgeActive]}>
+        <View style={styles.seatHeaderRow}>
+          <Text style={[styles.seatLabel, active && styles.seatLabelActive]}>{seatArabicName(label)}</Text>
+          {active ? (
+            <View style={styles.activeTurnPill}>
+              <Text style={styles.activeTurnPillText}>دوره</Text>
+            </View>
+          ) : null}
+        </View>
         <View style={styles.seatMetaRow}>
           <Text style={styles.seatSub}>{seatRole}</Text>
           {cardCount !== undefined ? <Text style={styles.cardCount}>🂠 {cardCount}</Text> : null}
@@ -344,10 +434,12 @@ function projectLabel(type: ProjectCandidate["type"]): string {
 }
 
 function formatProjectCards(cards: readonly CardId[]): string {
-  return cards.map((id) => {
-    const [suit, rank] = id.split("-");
-    return suit && rank ? `${rank}${suitSymbol(suit as Suit)}` : id;
-  }).join(" ");
+  return cards
+    .map((id) => {
+      const [suit, rank] = id.split("-");
+      return suit && rank ? `${rank}${suitSymbol(suit as Suit)}` : id;
+    })
+    .join(" ");
 }
 
 function ProjectPanel({
@@ -361,45 +453,45 @@ function ProjectPanel({
 }) {
   const declaredIds = new Set(declared.map((item) => item.candidate.id));
   const available = candidates.filter((candidate) => !declaredIds.has(candidate.id));
+  if (available.length === 0) return null;
+
   return (
     <View style={styles.projectPanel}>
       <View style={styles.projectHeaderRow}>
-        <Text style={styles.projectTitle}>المشاريع</Text>
-        {declared.length > 0 ? <Text style={styles.projectDeclared}>معلن {declared.length}</Text> : null}
+        <Text style={styles.projectTitle}>إعلان المشاريع المتاحة</Text>
       </View>
-      {declared.length > 0 ? (
-        <View style={styles.declaredProjectRow}>
-          {declared.map((item) => (
-            <View key={item.declarationId} style={styles.declaredChip}>
-              <Text style={styles.declaredChipText}>{projectLabel(item.candidate.type)}</Text>
-            </View>
-          ))}
-        </View>
-      ) : null}
-      {available.length > 0 ? (
-        <View style={styles.projectChoices}>
-          {available.map((candidate) => (
-            <Pressable
-              key={candidate.id}
-              accessibilityRole="button"
-              onPress={() => onProject?.(candidate.id)}
-              disabled={!onProject}
-              style={({ pressed }) => [styles.projectChoice, pressed && styles.projectChoicePressed]}
-            >
-              <Text style={styles.projectChoiceTitle}>{projectLabel(candidate.type)} +{candidate.qaydValue}</Text>
-              <Text style={styles.projectChoiceCards}>{formatProjectCards(candidate.cards)}</Text>
-            </Pressable>
-          ))}
-        </View>
-      ) : null}
+      <View style={styles.projectChoices}>
+        {available.map((candidate) => (
+          <Pressable
+            key={candidate.id}
+            accessibilityRole="button"
+            onPress={() => onProject?.(candidate.id)}
+            disabled={!onProject}
+            style={({ pressed }) => [styles.projectChoice, pressed && styles.projectChoicePressed]}
+          >
+            <Text style={styles.projectChoiceTitle}>
+              {projectLabel(candidate.type)} (+{candidate.qaydValue} قيد)
+            </Text>
+            <Text style={styles.projectChoiceCards}>{formatProjectCards(candidate.cards)}</Text>
+          </Pressable>
+        ))}
+      </View>
     </View>
   );
 }
 
-function CardView({ card, compact = false, highlight = false }: { card: Card | null; compact?: boolean; highlight?: boolean }) {
+function CardView({
+  card,
+  size = "standard",
+  highlight = false,
+}: {
+  card: Card | null;
+  size?: "standard" | "medium" | "compact";
+  highlight?: boolean;
+}) {
   if (!card) {
     return (
-      <View style={[styles.card, compact && styles.compactCard, styles.emptyCard]}>
+      <View style={[styles.card, size === "medium" && styles.mediumCard, size === "compact" && styles.compactCard, styles.emptyCard]}>
         <Text style={styles.emptyCardText}>—</Text>
       </View>
     );
@@ -408,32 +500,51 @@ function CardView({ card, compact = false, highlight = false }: { card: Card | n
   const red = isRedSuit(card);
 
   return (
-    <View style={[
-      styles.card,
-      compact && styles.compactCard,
-      highlight && styles.cardHighlight,
-    ]}>
+    <View
+      style={[
+        styles.card,
+        size === "medium" && styles.mediumCard,
+        size === "compact" && styles.compactCard,
+        highlight && styles.cardHighlight,
+      ]}
+    >
       {/* Top corner rank and suit */}
       <View style={styles.cardCornerTop}>
-        <Text style={[styles.rank, compact && styles.compactRank, red && styles.redColor]}>{card.rank}</Text>
-        <Text style={[styles.suitIconSmall, compact && styles.compactSuitIcon, red && styles.redColor]}>{suitSymbol(card.suit)}</Text>
+        <Text style={[styles.rank, size === "compact" && styles.compactRank, red && styles.redColor]}>
+          {card.rank}
+        </Text>
+        <Text style={[styles.suitIconSmall, size === "compact" && styles.compactSuitIcon, red && styles.redColor]}>
+          {suitSymbol(card.suit)}
+        </Text>
       </View>
 
       {/* Center suit symbol */}
-      <Text style={[styles.centerSuit, compact && styles.compactCenterSuit, red && styles.redColor]}>
+      <Text style={[styles.centerSuit, size === "medium" && styles.mediumCenterSuit, size === "compact" && styles.compactCenterSuit, red && styles.redColor]}>
         {suitSymbol(card.suit)}
       </Text>
 
       {/* Bottom corner rank and suit */}
       <View style={styles.cardCornerBottom}>
-        <Text style={[styles.rank, compact && styles.compactRank, red && styles.redColor]}>{card.rank}</Text>
-        <Text style={[styles.suitIconSmall, compact && styles.compactSuitIcon, red && styles.redColor]}>{suitSymbol(card.suit)}</Text>
+        <Text style={[styles.rank, size === "compact" && styles.compactRank, red && styles.redColor]}>
+          {card.rank}
+        </Text>
+        <Text style={[styles.suitIconSmall, size === "compact" && styles.compactSuitIcon, red && styles.redColor]}>
+          {suitSymbol(card.suit)}
+        </Text>
       </View>
     </View>
   );
 }
 
-function Action({ action, suit, onPress }: { action: BiddingActionType; suit?: Suit; onPress?: ((action: BiddingActionType, suit?: Suit) => void) | undefined }) {
+function Action({
+  action,
+  suit,
+  onPress,
+}: {
+  action: BiddingActionType;
+  suit?: Suit;
+  onPress?: ((action: BiddingActionType, suit?: Suit) => void) | undefined;
+}) {
   const buttonStyle = getActionButtonStyle(action);
   return (
     <Pressable
@@ -497,6 +608,16 @@ function seatArabicName(seat: Seat): string {
   }
 }
 
+function seatRoleLabel(seat: Seat, playerSeat: Seat): string {
+  if (seat === playerSeat) return "أنت";
+  if (teamOfSeat(seat) === teamOfSeat(playerSeat)) return "الشريك";
+  return "خصم";
+}
+
+function teamLabel(team: TeamId): string {
+  return team === "NORTH_SOUTH" ? "لنا" : "لهم";
+}
+
 function seatInitial(seat: Seat): string {
   switch (seat) {
     case "NORTH": return "ش";
@@ -521,10 +642,79 @@ function formatPhase(phase: string): string {
   return phase;
 }
 
+function RoundResult({
+  score,
+  matchScore,
+  matchEnd,
+  onNextRound,
+}: {
+  score: RoundScoreBreakdown;
+  matchScore: MatchScore;
+  matchEnd: MatchEndResult;
+  onNextRound?: (() => void) | undefined;
+}) {
+  const canContinue = matchEnd.status !== "FINISHED";
+  return (
+    <View style={styles.resultCard}>
+      <Text style={styles.resultTitle}>نتيجة الجولة</Text>
+
+      <View style={styles.resultGrid}>
+        <View style={styles.resultCol}>
+          <Text style={[styles.resultColHeader, styles.textLana]}>لنا (شمال + جنوب)</Text>
+          <Text style={styles.resultRow}>الأبناط: {score.cardRaw.NORTH_SOUTH}</Text>
+          <Text style={styles.resultRow}>المشاريع: {score.projectQaid.NORTH_SOUTH}</Text>
+          <Text style={styles.resultRow}>البلوت: {score.balootQaid.NORTH_SOUTH}</Text>
+          <Text style={styles.resultQaidTotal}>القيد: {score.finalQaid.NORTH_SOUTH}</Text>
+        </View>
+
+        <View style={styles.resultDivider} />
+
+        <View style={styles.resultCol}>
+          <Text style={[styles.resultColHeader, styles.textLahum]}>لهم (شرق + غرب)</Text>
+          <Text style={styles.resultRow}>الأبناط: {score.cardRaw.EAST_WEST}</Text>
+          <Text style={styles.resultRow}>المشاريع: {score.projectQaid.EAST_WEST}</Text>
+          <Text style={styles.resultRow}>البلوت: {score.balootQaid.EAST_WEST}</Text>
+          <Text style={styles.resultQaidTotal}>القيد: {score.finalQaid.EAST_WEST}</Text>
+        </View>
+      </View>
+
+      {score.kabootTeamId ? (
+        <View style={styles.badgeKaboot}>
+          <Text style={styles.badgeKabootText}>كابوت لصالح: {score.kabootTeamId === "NORTH_SOUTH" ? "لنا" : "لهم"}</Text>
+        </View>
+      ) : null}
+
+      {score.reverseKaboot ? (
+        <View style={styles.badgeReverse}>
+          <Text style={styles.badgeReverseText}>ريبيرس كابوت</Text>
+        </View>
+      ) : null}
+
+      <View style={styles.matchScoreBar}>
+        <Text style={styles.matchScoreLabel}>الصكّة:</Text>
+        <Text style={styles.matchScoreNumbers}>
+          {matchScore.NORTH_SOUTH} لنا — {matchScore.EAST_WEST} لهم
+        </Text>
+      </View>
+
+      {matchEnd.status === "FINISHED" ? <Text style={styles.finishedStatus}>انتهت الصكّة</Text> : null}
+      {matchEnd.status === "EXTRA_DEAL" ? <Text style={styles.extraDealStatus}>تعادل فوق 152 — توزيع إضافي</Text> : null}
+
+      {canContinue ? (
+        <Pressable accessibilityRole="button" onPress={onNextRound} style={styles.nextRoundBtn}>
+          <Text style={styles.nextRoundBtnText}>
+            {matchEnd.status === "EXTRA_DEAL" ? "توزيع إضافي" : "الجولة التالية"}
+          </Text>
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    paddingHorizontal: 8,
+    paddingHorizontal: 6,
     paddingVertical: 4,
     width: "100%",
     height: "100%",
@@ -542,132 +732,172 @@ const styles = StyleSheet.create({
   },
   tableInnerRing: {
     position: "absolute",
-    width: "90%",
-    height: "82%",
+    width: "92%",
+    height: "85%",
     borderRadius: 20,
     borderWidth: 1,
     borderStyle: "dashed",
     borderColor: "rgba(212, 175, 55, 0.2)",
   },
+  topHudBar: {
+    position: "absolute",
+    top: 6,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    width: "92%",
+    zIndex: 25,
+  },
+  contractHud: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "rgba(5, 18, 14, 0.85)",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(212, 175, 55, 0.4)",
+  },
+  contractBadge: {
+    backgroundColor: "rgba(212, 175, 55, 0.2)",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 5,
+  },
+  contractBadgeText: {
+    color: "#FDE68A",
+    fontSize: 10,
+    fontWeight: "900",
+  },
+  purchaserBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  purchaserText: {
+    color: "#E2E8F0",
+    fontSize: 9,
+    fontWeight: "700",
+  },
+  purchaserSeatHighlight: {
+    color: "#38BDF8",
+    fontWeight: "900",
+  },
+  biddingPhaseBadge: {
+    backgroundColor: "rgba(5, 18, 14, 0.85)",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(212, 175, 55, 0.3)",
+  },
+  biddingPhaseText: {
+    color: "#D8C28A",
+    fontSize: 10,
+    fontWeight: "800",
+  },
+  trickCounterBadge: {
+    backgroundColor: "rgba(5, 18, 14, 0.85)",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(212, 175, 55, 0.3)",
+  },
+  trickCounterText: {
+    color: "#E2E8F0",
+    fontSize: 10,
+    fontWeight: "800",
+  },
   center: {
     alignItems: "center",
     justifyContent: "center",
     zIndex: 10,
-  },
-  centerHeader: {
-    alignItems: "center",
-    marginBottom: 4,
-  },
-  logo: {
-    color: "#F5E6BF",
-    fontSize: 20,
-    fontWeight: "900",
-    letterSpacing: -0.5,
-  },
-  phaseBadge: {
-    backgroundColor: "rgba(5, 18, 14, 0.8)",
-    borderWidth: 1,
-    borderColor: "rgba(212, 175, 55, 0.3)",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
-    marginTop: 2,
-  },
-  phaseText: {
-    color: "#D8C28A",
-    fontSize: 10,
-    fontWeight: "700",
-  },
-  contractBadge: {
-    marginTop: 2,
-    backgroundColor: "rgba(212, 175, 55, 0.12)",
-    borderWidth: 1,
-    borderColor: "rgba(212, 175, 55, 0.35)",
-    borderRadius: 7,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-  },
-  contractText: {
-    color: "#F8E7B0",
-    fontSize: 9,
-    fontWeight: "900",
+    width: "100%",
   },
   balootBanner: {
-    marginTop: 4,
-    paddingHorizontal: 9,
-    paddingVertical: 3,
-    borderRadius: 9,
-    backgroundColor: "rgba(245, 158, 11, 0.18)",
+    marginBottom: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    backgroundColor: "rgba(245, 158, 11, 0.22)",
     borderWidth: 1,
     borderColor: "#F59E0B",
+    alignItems: "center",
   },
   balootBannerText: {
     color: "#FDE68A",
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: "900",
   },
-  projectPanel: {
-    marginTop: 4,
-    paddingHorizontal: 6,
-    paddingVertical: 4,
-    borderRadius: 10,
-    backgroundColor: "rgba(5, 18, 14, 0.72)",
+  declaredProjectsContainer: {
+    marginBottom: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    backgroundColor: "rgba(5, 18, 14, 0.8)",
     borderWidth: 1,
-    borderColor: "rgba(212, 175, 55, 0.18)",
-    maxWidth: 250,
+    borderColor: "rgba(52, 211, 153, 0.3)",
+    alignItems: "center",
+    gap: 2,
+  },
+  declaredProjectsTitle: {
+    color: "#6EE7B7",
+    fontSize: 8,
+    fontWeight: "800",
+  },
+  declaredProjectList: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 4,
+    justifyContent: "center",
+  },
+  declaredChip: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 5,
+    backgroundColor: "rgba(52, 211, 153, 0.15)",
+    borderWidth: 1,
+    borderColor: "rgba(52, 211, 153, 0.3)",
+  },
+  declaredChipText: {
+    color: "#A7F3D0",
+    fontSize: 8,
+    fontWeight: "800",
+  },
+  projectPanel: {
+    marginBottom: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 10,
+    backgroundColor: "rgba(5, 18, 14, 0.9)",
+    borderWidth: 1,
+    borderColor: "rgba(212, 175, 55, 0.3)",
+    maxWidth: 280,
     alignItems: "center",
   },
   projectHeaderRow: {
-    width: "100%",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    marginBottom: 4,
   },
   projectTitle: {
     color: "#E8D49B",
     fontSize: 9,
     fontWeight: "900",
   },
-  projectDeclared: {
-    color: "#94A3B8",
-    fontSize: 8,
-    fontWeight: "700",
-  },
-  declaredProjectRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    gap: 3,
-    marginTop: 3,
-  },
-  declaredChip: {
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    borderRadius: 5,
-    backgroundColor: "rgba(52, 211, 153, 0.14)",
-    borderWidth: 1,
-    borderColor: "rgba(52, 211, 153, 0.28)",
-  },
-  declaredChipText: {
-    color: "#6EE7B7",
-    fontSize: 7,
-    fontWeight: "800",
-  },
   projectChoices: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "center",
-    gap: 3,
-    marginTop: 3,
+    gap: 4,
   },
   projectChoice: {
-    minWidth: 70,
-    paddingHorizontal: 5,
-    paddingVertical: 3,
+    minWidth: 80,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
     borderRadius: 7,
-    backgroundColor: "rgba(30, 41, 59, 0.9)",
+    backgroundColor: "rgba(30, 41, 59, 0.95)",
     borderWidth: 1,
-    borderColor: "rgba(165, 180, 252, 0.3)",
+    borderColor: "rgba(165, 180, 252, 0.4)",
     alignItems: "center",
   },
   projectChoicePressed: {
@@ -675,7 +905,7 @@ const styles = StyleSheet.create({
   },
   projectChoiceTitle: {
     color: "#EDE9FE",
-    fontSize: 8,
+    fontSize: 9,
     fontWeight: "900",
   },
   projectChoiceCards: {
@@ -685,19 +915,115 @@ const styles = StyleSheet.create({
   },
   exposedContainer: {
     alignItems: "center",
-    backgroundColor: "rgba(5, 18, 14, 0.7)",
-    padding: 6,
+    backgroundColor: "rgba(5, 18, 14, 0.8)",
+    padding: 8,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(212, 175, 55, 0.35)",
-    marginTop: 2,
+    borderColor: "rgba(212, 175, 55, 0.4)",
   },
   exposedBadge: {
-    marginBottom: 3,
+    marginBottom: 5,
   },
   exposedBadgeText: {
     color: "#F5E6BF",
     fontSize: 9,
+    fontWeight: "800",
+  },
+  trickContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  lastWinnerBadge: {
+    marginBottom: 4,
+    backgroundColor: "rgba(5, 18, 14, 0.85)",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "rgba(212, 175, 55, 0.3)",
+  },
+  lastWinnerText: {
+    color: "#CBD5E1",
+    fontSize: 9,
+    fontWeight: "700",
+  },
+  lastWinnerHighlight: {
+    color: "#FCD34D",
+    fontWeight: "900",
+  },
+  trickArena: {
+    width: 250,
+    height: 165,
+    position: "relative",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  trickCardSlot: {
+    position: "absolute",
+    alignItems: "center",
+    gap: 2,
+    zIndex: 10,
+  },
+  trickEmptySlot: {
+    position: "absolute",
+    width: 46,
+    height: 66,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: "rgba(255, 255, 255, 0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.15)",
+  },
+  trickActiveEmptySlot: {
+    borderColor: "#34D399",
+    borderWidth: 1.5,
+    backgroundColor: "rgba(52, 211, 153, 0.1)",
+  },
+  trickEmptySlotText: {
+    color: "#64748B",
+    fontSize: 8,
+    fontWeight: "700",
+    textAlign: "center",
+  },
+  trickActiveEmptyText: {
+    color: "#34D399",
+    fontWeight: "900",
+  },
+  trickNorth: {
+    top: 2,
+    left: 102,
+  },
+  trickSouth: {
+    bottom: 2,
+    left: 102,
+  },
+  trickEast: {
+    right: 12,
+    top: 48,
+  },
+  trickWest: {
+    left: 12,
+    top: 48,
+  },
+  trickSeatTag: {
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 4,
+    borderWidth: 1,
+  },
+  seatTagLana: {
+    backgroundColor: "rgba(16, 185, 129, 0.2)",
+    borderColor: "rgba(52, 211, 153, 0.4)",
+  },
+  seatTagLahum: {
+    backgroundColor: "rgba(239, 68, 68, 0.2)",
+    borderColor: "rgba(248, 113, 113, 0.4)",
+  },
+  trickSeatTagText: {
+    color: "#F8FAFC",
+    fontSize: 7,
     fontWeight: "800",
   },
   seatPod: {
@@ -706,23 +1032,53 @@ const styles = StyleSheet.create({
     zIndex: 15,
   },
   north: {
-    top: 6,
+    top: 36,
   },
   west: {
-    left: 10,
-    top: "32%",
+    left: 8,
+    top: "34%",
   },
   east: {
-    right: 10,
-    top: "32%",
+    right: 8,
+    top: "34%",
   },
   south: {
     position: "absolute",
-    bottom: 4,
+    bottom: 2,
     left: 0,
     right: 0,
     alignItems: "center",
     zIndex: 20,
+  },
+  southTurnRibbon: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(5, 18, 14, 0.8)",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    marginBottom: 2,
+  },
+  turnDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  turnDotActive: {
+    backgroundColor: "#34D399",
+  },
+  turnDotInactive: {
+    backgroundColor: "#94A3B8",
+  },
+  southTurnText: {
+    color: "#94A3B8",
+    fontSize: 9,
+    fontWeight: "700",
+  },
+  southTurnTextActive: {
+    color: "#6EE7B7",
+    fontWeight: "900",
   },
   avatarWrap: {
     width: 32,
@@ -773,17 +1129,43 @@ const styles = StyleSheet.create({
     fontWeight: "900",
   },
   seatBadge: {
-    backgroundColor: "rgba(5, 18, 14, 0.75)",
+    backgroundColor: "rgba(5, 18, 14, 0.8)",
     paddingHorizontal: 6,
-    paddingVertical: 1,
+    paddingVertical: 2,
     borderRadius: 6,
     alignItems: "center",
     marginTop: 2,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.1)",
+  },
+  seatBadgeActive: {
+    borderColor: "#D4AF37",
+    backgroundColor: "rgba(10, 35, 26, 0.95)",
+  },
+  seatHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
   },
   seatLabel: {
     color: "#E2E8F0",
     fontSize: 9,
     fontWeight: "700",
+  },
+  seatLabelActive: {
+    color: "#FDE68A",
+    fontWeight: "900",
+  },
+  activeTurnPill: {
+    backgroundColor: "#059669",
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    borderRadius: 4,
+  },
+  activeTurnPillText: {
+    color: "#FFFFFF",
+    fontSize: 7,
+    fontWeight: "900",
   },
   seatSub: {
     color: "#94A3B8",
@@ -792,7 +1174,7 @@ const styles = StyleSheet.create({
   seatMetaRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
+    gap: 4,
   },
   cardCount: {
     color: "#CBD5E1",
@@ -803,8 +1185,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "flex-end",
-    height: 72,
-    marginTop: 2,
+    height: 74,
+    marginTop: 1,
   },
   cardButton: {
     marginHorizontal: 2,
@@ -814,11 +1196,11 @@ const styles = StyleSheet.create({
     opacity: 1,
   },
   cardDisabled: {
-    opacity: 0.4,
+    opacity: 0.45,
   },
   card: {
-    width: 44,
-    height: 64,
+    width: 46,
+    height: 66,
     borderRadius: 6,
     backgroundColor: "#FFFFFF",
     justifyContent: "space-between",
@@ -827,6 +1209,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     borderWidth: 1,
     borderColor: "#D1D5DB",
+  },
+  mediumCard: {
+    width: 44,
+    height: 64,
   },
   compactCard: {
     width: 36,
@@ -878,6 +1264,10 @@ const styles = StyleSheet.create({
   },
   centerSuit: {
     color: "#0F172A",
+    fontSize: 18,
+    lineHeight: 18,
+  },
+  mediumCenterSuit: {
     fontSize: 16,
     lineHeight: 16,
   },
@@ -892,14 +1282,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 4,
-    marginBottom: 4,
+    marginBottom: 3,
     justifyContent: "center",
-    backgroundColor: "rgba(5, 18, 14, 0.9)",
+    backgroundColor: "rgba(5, 18, 14, 0.92)",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "rgba(212, 175, 55, 0.3)",
+    borderColor: "rgba(212, 175, 55, 0.35)",
   },
   actionBtn: {
     paddingHorizontal: 8,
@@ -928,7 +1318,7 @@ const styles = StyleSheet.create({
     borderColor: "#A5B4FC",
   },
   actionPass: {
-    backgroundColor: "rgba(239, 68, 68, 0.2)",
+    backgroundColor: "rgba(239, 68, 68, 0.25)",
     borderColor: "rgba(239, 68, 68, 0.6)",
   },
   actionKasho: {
@@ -938,37 +1328,9 @@ const styles = StyleSheet.create({
   actionDefault: {
     backgroundColor: "#1E293B",
   },
-  trickArena: {
-    width: 140,
-    height: 100,
-    position: "relative",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  trickCardSlot: {
-    position: "absolute",
-    alignItems: "center",
-    gap: 1,
-  },
-  trickNorth: { top: 0 },
-  trickSouth: { bottom: 0 },
-  trickEast: { right: 0 },
-  trickWest: { left: 0 },
-  trickSeatTag: {
-    color: "#F5E6BF",
-    fontSize: 8,
-    fontWeight: "700",
-  },
-  waitingTrick: {
-    paddingVertical: 4,
-  },
-  waitingTrickText: {
-    color: "#94A3B8",
-    fontSize: 10,
-  },
   resultCard: {
-    minWidth: 240,
-    maxWidth: 300,
+    minWidth: 260,
+    maxWidth: 320,
     padding: 10,
     borderRadius: 14,
     backgroundColor: "#071B14",
@@ -985,7 +1347,7 @@ const styles = StyleSheet.create({
   resultGrid: {
     flexDirection: "row",
     justifyContent: "space-between",
-    backgroundColor: "rgba(0, 0, 0, 0.3)",
+    backgroundColor: "rgba(0, 0, 0, 0.35)",
     padding: 6,
     borderRadius: 8,
   },

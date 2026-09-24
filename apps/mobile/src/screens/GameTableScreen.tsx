@@ -89,6 +89,7 @@ export function GameTableScreen() {
         matchEnd={preview.matchEnd}
         contract={preview.game?.contract ?? null}
         trumpSuit={preview.game?.trumpSuit ?? null}
+        selectedContract={preview.bidding.selectedContract}
         projectCandidates={preview.projectCandidates}
         declaredProjects={preview.projects}
         baloot={preview.baloot}
