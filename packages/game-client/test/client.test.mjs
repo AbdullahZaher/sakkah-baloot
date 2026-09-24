@@ -442,3 +442,60 @@ test("playable host exposes the latest authoritative action feedback", () => {
   assert.ok(snapshot.actionFeedback);
   assert.equal(typeof snapshot.actionFeedback, "string");
 });
+
+
+test("round lifecycle preserves score and stops advancing after match completion", () => {
+  const session = createLocalHumanVsAISession({
+    seed: "phase20-match-lifecycle",
+    humanSeat: "SOUTH",
+    aiMode: "BASELINE",
+    aiDifficulty: "NORMAL",
+  });
+
+  let snapshot = session.getSnapshot();
+  let rounds = 0;
+
+  while (snapshot.matchEnd.status !== "FINISHED" && rounds < 30) {
+    while (snapshot.bidding.phase === "BIDDING") {
+      if (snapshot.legalActions.includes("BUY_SUN")) {
+        snapshot = session.dispatchBiddingAction("BUY_SUN");
+      } else {
+        snapshot = session.dispatchBiddingAction("PASS");
+      }
+    }
+
+    while (snapshot.game?.phase === "PLAYING") {
+      if (snapshot.completedTrickPresentation) {
+        snapshot = session.acknowledgeCompletedTrick();
+        continue;
+      }
+      assert.equal(snapshot.humanTurn, true);
+      assert.ok(snapshot.legalCardIds.length > 0);
+      snapshot = session.dispatchCardPlay(snapshot.legalCardIds[0]);
+    }
+
+    if (snapshot.completedTrickPresentation) {
+      snapshot = session.acknowledgeCompletedTrick();
+    }
+
+    assert.equal(snapshot.game?.phase, "ROUND_COMPLETE");
+    assert.ok(snapshot.roundScore);
+    const completedScore = snapshot.matchScore;
+
+    if (snapshot.matchEnd.status === "FINISHED") {
+      const terminal = session.advanceRound();
+      assert.equal(terminal.matchEnd.status, "FINISHED");
+      assert.deepEqual(terminal.matchScore, completedScore);
+      assert.equal(terminal.roundNumber, snapshot.roundNumber);
+      break;
+    }
+
+    snapshot = session.advanceRound();
+    assert.equal(snapshot.roundNumber, rounds + 2);
+    assert.deepEqual(snapshot.matchScore, completedScore);
+    rounds += 1;
+  }
+
+  assert.equal(snapshot.matchEnd.status, "FINISHED");
+  assert.ok(snapshot.matchScore.NORTH_SOUTH >= 152 || snapshot.matchScore.EAST_WEST >= 152);
+});
