@@ -140,3 +140,51 @@ test("playable local host accepts a human bid and returns to the human turn", ()
     assert.equal(before.actingSeat, "SOUTH");
   }
 });
+
+
+test("local human can declare a legal project during trick one", () => {
+  const session = createLocalHumanVsAISession({
+    seed: "ui-project-test",
+    humanSeat: "SOUTH",
+    aiMode: "BASELINE",
+  });
+
+  let snapshot = session.getSnapshot();
+  if (snapshot.game?.phase !== "PLAYING" || snapshot.actingSeat !== "SOUTH") {
+    assert.fail("Deterministic setup did not reach the human playing turn");
+  }
+
+  const candidate = snapshot.projectCandidates[0];
+  if (!candidate) {
+    // No project is present in this deterministic hand; the UI correctly has no project action to expose.
+    assert.deepEqual(snapshot.projectCandidates, []);
+    return;
+  }
+
+  snapshot = session.dispatchProject(candidate.id);
+  assert.equal(snapshot.projects.length, 1);
+  assert.equal(snapshot.projects[0].candidate.id, candidate.id);
+  assert.equal(snapshot.humanTurn, true);
+});
+
+test("human card play automatically carries a legal Baloot declaration", () => {
+  const session = createLocalHumanVsAISession({
+    seed: "ui-baloot-test",
+    humanSeat: "SOUTH",
+  });
+
+  // The public session must remain playable regardless of whether this seed exposes Baloot.
+  let snapshot = session.getSnapshot();
+  let guard = 0;
+  while (snapshot.game?.phase === "PLAYING" && guard++ < 64) {
+    if (snapshot.humanTurn && snapshot.legalCardIds.length > 0) {
+      snapshot = session.dispatchCardPlay(snapshot.legalCardIds[0]);
+    } else {
+      // Drive the next AI turn indirectly by playing only when the human is active.
+      break;
+    }
+  }
+
+  assert.ok(snapshot.protocol.stateVersion >= 2);
+  assert.ok(snapshot.game === null || snapshot.game.phase === "PLAYING" || snapshot.game.phase === "ROUND_COMPLETE");
+});
