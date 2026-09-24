@@ -16,6 +16,7 @@ import {
   legalBiddingActions,
   nextCounterClockwise,
   scoreCompletedRound,
+  startNextRound,
   teamOfSeat,
   withRoundBaloot,
   withRoundGame,
@@ -465,6 +466,18 @@ export function createLocalHumanVsAISession(
     }
 
     match = { ...match, round: nextRound };
+    if (authoritative.baloot && round.baloot === null) {
+      const balootEvent: MatchProtocolEvent = {
+        type: "BALOOT",
+        roundId: round.roundId,
+        playerId,
+        cardId,
+        trumpSuit: authoritative.baloot.trumpSuit,
+      };
+      protocol = applyProtocol(protocol, balootEvent);
+      lastProtocolEvent = balootEvent.type;
+    }
+
     protocol = applyProtocol(protocol, event);
     lastProtocolEvent = event.type;
     const playedCard = round.game.hands[playerId]?.find((card) => card.id === cardId);
@@ -475,6 +488,13 @@ export function createLocalHumanVsAISession(
     if (authoritative.state.completedTricks.length > prevCompletedCount) {
       const completed = authoritative.state.completedTricks[authoritative.state.completedTricks.length - 1] ?? null;
       completedTrickPresentation = completed;
+      protocol = applyProtocol(protocol, {
+        type: "TRICK_COMPLETE",
+        roundId: round.roundId,
+        trickNumber: completed.trickNumber,
+        winnerSeat: completed.winnerSeat,
+      });
+      lastProtocolEvent = "TRICK_COMPLETE";
       if (authoritative.state.phase === "ROUND_COMPLETE") {
         pendingRoundComplete = true;
       }
@@ -804,17 +824,7 @@ export function createLocalHumanVsAISession(
       dealerSeat: nextDealer,
     };
 
-    match = {
-      ...match,
-      round: nextRound,
-      roundId: nextRound.roundId,
-      roundNumber: nextRoundNumber,
-      dealerSeat: nextDealer,
-      phase: "ROUND_ACTIVE",
-      stateVersion: match.stateVersion + 1,
-      lastRoundScore: null,
-      end: { status: "ONGOING", score: match.score },
-    };
+    match = startNextRound(match, nextRound);
 
     protocol = applyProtocol(protocol, event);
     lastProtocolEvent = event.type;
