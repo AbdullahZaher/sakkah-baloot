@@ -469,10 +469,11 @@ function CardButton({
       accessibilityRole="button"
       disabled={!enabled}
       onPress={() => onPress?.(card.id)}
-      style={[
+      style={({ pressed }) => [
         styles.cardButton,
-        { transform },
+        { transform: [{ rotate: rotation }, { translateY: pressed && enabled ? -16 : translateY }] },
         enabled ? styles.cardEnabled : styles.cardDisabled,
+        pressed && enabled ? styles.cardPressed : null,
       ]}
     >
       <CardView card={card} highlight={enabled} />
@@ -1356,6 +1357,9 @@ const styles = StyleSheet.create({
   },
   cardEnabled: {
     opacity: 1,
+  },
+  cardPressed: {
+    opacity: 0.92,
   },
   cardDisabled: {
     opacity: 0.45,
