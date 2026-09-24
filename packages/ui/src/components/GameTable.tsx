@@ -298,7 +298,7 @@ function SeatView({
   team: "LANA" | "LAHUM";
   active: boolean;
   isDealer: boolean;
-  cardCount?: number;
+  cardCount?: number | undefined;
   style?: object;
 }) {
   return (
@@ -357,7 +357,7 @@ function ProjectPanel({
 }: {
   candidates: readonly ProjectCandidate[];
   declared: readonly ProjectDeclaration[];
-  onProject?: (projectId: string) => void;
+  onProject?: ((projectId: string) => void) | undefined;
 }) {
   const declaredIds = new Set(declared.map((item) => item.candidate.id));
   const available = candidates.filter((candidate) => !declaredIds.has(candidate.id));
