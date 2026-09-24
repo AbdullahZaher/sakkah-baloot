@@ -1,0 +1,59 @@
+name: mobile-playable-build
+
+on:
+  push:
+    paths:
+      - "apps/mobile/**"
+      - "packages/game-client/**"
+      - "packages/game-engine/**"
+      - "packages/game-protocol/**"
+      - "packages/game-ai/**"
+      - "packages/ui/**"
+      - "package.json"
+      - "pnpm-workspace.yaml"
+      - ".github/workflows/mobile-playable-build.yml"
+  pull_request:
+    paths:
+      - "apps/mobile/**"
+      - "packages/game-client/**"
+      - "packages/game-engine/**"
+      - "packages/game-protocol/**"
+      - "packages/game-ai/**"
+      - "packages/ui/**"
+      - "package.json"
+      - "pnpm-workspace.yaml"
+      - ".github/workflows/mobile-playable-build.yml"
+
+jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: corepack enable
+      - run: pnpm install --no-frozen-lockfile
+      - run: pnpm --filter @sakkah-baloot/game-engine build
+      - run: pnpm --filter @sakkah-baloot/game-protocol build
+      - run: pnpm --filter @sakkah-baloot/game-ai build
+      - run: pnpm --filter @sakkah-baloot/game-client build
+      - run: pnpm --filter @sakkah-baloot/game-client typecheck
+      - run: pnpm --filter @sakkah-baloot/ui typecheck
+      - run: pnpm --filter @sakkah-baloot/mobile typecheck
+
+  web-build:
+    runs-on: ubuntu-latest
+    needs: typecheck
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: corepack enable
+      - run: pnpm install --no-frozen-lockfile
+      - run: pnpm --filter @sakkah-baloot/game-engine build
+      - run: pnpm --filter @sakkah-baloot/game-protocol build
+      - run: pnpm --filter @sakkah-baloot/game-ai build
+      - run: pnpm --filter @sakkah-baloot/game-client build
+      - run: pnpm --filter @sakkah-baloot/mobile build

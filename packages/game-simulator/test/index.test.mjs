@@ -125,3 +125,95 @@ test("batch integrity gate", () => {
   assert.equal(result.illegalActions, 0);
   assert.ok(result.deterministicDigest.length > 0);
 });
+
+test("1,000-match deterministic validation has zero illegal actions", () => {
+  const result = simulateMatchBatch({
+    seed: "validation-1000",
+    games: 1000,
+    maxRoundsPerGame: 30,
+  });
+
+  assert.equal(result.games, 1000);
+  assert.equal(result.illegalActions, 0);
+  assert.ok(result.deterministicDigest.length > 0);
+});
+
+
+test("10,000 full-match deterministic validation has zero illegal actions", () => {
+  const result = simulateMatchBatch({
+    seed: "validation-10000",
+    games: 10000,
+    maxRoundsPerGame: 30,
+  });
+
+  assert.equal(result.games, 10000);
+  assert.equal(result.illegalActions, 0);
+  assert.equal(result.finishedMatches + result.maxRoundTerminations, 10000);
+  assert.ok(result.deterministicDigest.length > 0);
+});
+
+test("assertReplayEquivalent validates full canonical state equality", async () => {
+  const { assertReplayEquivalent } = await import("../dist/index.js");
+  const initial = state();
+  const result = simulateCardPlayRound(initial, firstLegalPolicy, "replay-full");
+  
+  // Identical replay succeeds
+  assert.doesNotThrow(() => {
+    assertReplayEquivalent(initial, result.playedCardIds, result.final);
+  });
+
+  // Mutated currentPlayerId is detected
+  assert.throws(() => {
+    const mutated = { ...result.final, currentPlayerId: "EAST" };
+    assertReplayEquivalent(initial, result.playedCardIds, mutated);
+  }, /Replay divergence/);
+
+  // Mutated trickNumber is detected
+  assert.throws(() => {
+    const mutated = { ...result.final, trickNumber: 1 };
+    assertReplayEquivalent(initial, result.playedCardIds, mutated);
+  }, /Replay divergence/);
+
+  // Mutated contract is detected
+  assert.throws(() => {
+    const mutated = { ...result.final, contract: "HOKUM" };
+    assertReplayEquivalent(initial, result.playedCardIds, mutated);
+  }, /Replay divergence/);
+
+  // Mutated dealerSeat is detected
+  assert.throws(() => {
+    const mutated = { ...result.final, dealerSeat: "EAST" };
+    assertReplayEquivalent(initial, result.playedCardIds, mutated);
+  }, /Replay divergence/);
+
+  // Mutated trumpSuit is detected
+  assert.throws(() => {
+    const mutated = { ...result.final, trumpSuit: "SPADES" };
+    assertReplayEquivalent(initial, result.playedCardIds, mutated);
+  }, /Replay divergence/);
+
+  // Mutated hokumPlayMode is detected
+  assert.throws(() => {
+    const mutated = { ...result.final, hokumPlayMode: "CLOSED" };
+    assertReplayEquivalent(initial, result.playedCardIds, mutated);
+  }, /Replay divergence/);
+
+  // Mutated hands is detected
+  assert.throws(() => {
+    const mutated = {
+      ...result.final,
+      hands: {
+        ...result.final.hands,
+        NORTH: [{ id: "S-7", suit: "SPADES", rank: "7" }],
+      },
+    };
+    assertReplayEquivalent(initial, result.playedCardIds, mutated);
+  }, /Replay divergence/);
+
+  // Mutated completedTricks is detected
+  assert.throws(() => {
+    const mutated = { ...result.final, completedTricks: [] };
+    assertReplayEquivalent(initial, result.playedCardIds, mutated);
+  }, /Replay divergence/);
+});
+

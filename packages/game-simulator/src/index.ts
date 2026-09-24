@@ -53,6 +53,15 @@ const CARD_BY_ID: Readonly<Record<CardId, Card>> = Object.fromEntries(
   ),
 ) as Readonly<Record<CardId, Card>>;
 
+import {
+  chooseBaselineAction,
+  chooseISMCTSCard,
+  createBeliefState,
+  solveEndgame,
+  type AIDifficulty,
+  type AIRoundObservation,
+} from "@sakkah-baloot/game-ai";
+
 export interface SimulationPolicyContext {
   readonly state: GameState;
   readonly playerId: PlayerId;
@@ -61,6 +70,118 @@ export interface SimulationPolicyContext {
 }
 
 export type CardPolicy = (context: SimulationPolicyContext) => CardId;
+
+export const firstLegalCard: CardPolicy = ({ legalCardIds }: SimulationPolicyContext): CardId => {
+  return legalCardIds[0]!;
+};
+
+export const randomCardPolicy: CardPolicy = ({ legalCardIds, random }: SimulationPolicyContext): CardId => {
+  const index = Math.floor(random() * legalCardIds.length);
+  return legalCardIds[index] ?? legalCardIds[0]!;
+};
+
+export function createBaselineCardPolicy(
+  difficulty: AIDifficulty = "NORMAL",
+  preferInformation = true,
+): CardPolicy {
+  return ({ state, playerId, legalCardIds }: SimulationPolicyContext): CardId => {
+    const observation = buildObservationFromState(state, playerId, legalCardIds);
+    const decision = chooseBaselineAction(observation, { difficulty, preferInformation });
+    if (decision.action.type !== "PLAY_CARD") {
+      throw new Error("Baseline policy did not return a card action during PLAYING phase");
+    }
+    return decision.action.cardId;
+  };
+}
+
+export function createISMCTSCardPolicy(config?: {
+  readonly iterations?: number;
+  readonly seed?: string;
+}): CardPolicy {
+  const iterations = config?.iterations ?? 32;
+  return ({ state, playerId, legalCardIds, random }: SimulationPolicyContext): CardId => {
+    const observation = buildObservationFromState(state, playerId, legalCardIds);
+    const input = {
+      playerId,
+      ownHand: state.hands[playerId] ?? [],
+      game: {
+        players: state.players,
+        currentTrick: state.currentTrick,
+        completedTricks: state.completedTricks,
+      },
+      contract: state.contract,
+      trumpSuit: state.trumpSuit,
+    };
+    const belief = createBeliefState(input);
+    const seed = config?.seed ?? `mcts:${Math.floor(random() * 1_000_000)}`;
+    const decision = chooseISMCTSCard(observation, belief, { iterations, seed });
+    return decision.cardId;
+  };
+}
+
+export function createEndgameEnhancedCardPolicy(config?: {
+  readonly maxRemainingCards?: number;
+  readonly maxNodes?: number;
+  readonly fallback?: CardPolicy;
+}): CardPolicy {
+  const maxRemainingCards = config?.maxRemainingCards ?? 6;
+  const maxNodes = config?.maxNodes ?? 2000;
+  const fallback = config?.fallback ?? createBaselineCardPolicy("HARD");
+
+  return (ctx: SimulationPolicyContext): CardId => {
+    const decision = solveEndgame(ctx.state, ctx.playerId, {
+      maxRemainingCards,
+      maxNodes,
+    });
+    if (decision !== null && ctx.legalCardIds.includes(decision.cardId)) {
+      return decision.cardId;
+    }
+    return fallback(ctx);
+  };
+}
+
+function buildObservationFromState(
+  state: GameState,
+  playerId: PlayerId,
+  legalCardIds: readonly CardId[],
+): AIRoundObservation {
+  const seat = state.players[playerId]!;
+  const teamId = teamOfSeat(seat);
+  const ownHand = state.hands[playerId] ?? [];
+  const knownPlayedCards = [
+    ...state.completedTricks.flatMap((t) => t.plays.map((p) => p.card)),
+    ...state.currentTrick.map((p) => p.card),
+  ];
+  const { hands: _hiddenHands, ...gameWithoutHands } = state;
+  void _hiddenHands;
+
+  return {
+    matchId: "sim-match",
+    roundId: "sim-round",
+    roundNumber: 1,
+    playerId,
+    seat,
+    teamId,
+    phase: "PLAYING",
+    score: { NORTH_SOUTH: 0, EAST_WEST: 0 },
+    bidding: null,
+    playing: {
+      phase: "PLAYING",
+      game: {
+        ...gameWithoutHands,
+        ownHand,
+        knownPlayedCards,
+        legalCardIds,
+      },
+      contract: state.contract,
+      trumpSuit: state.trumpSuit,
+    },
+    projects: [],
+    baloot: null,
+    stateVersion: 1,
+  };
+}
+
 
 export interface SimulationBatchResult {
   readonly games: number;
@@ -132,6 +253,7 @@ export function simulateMatch(
     const played: CardId[] = [];
 
     while (game.phase === "PLAYING") {
+      assertGameConservation(game);
       const playerId = game.currentPlayerId;
       const legalCardIds = getLegalMoves(game, playerId).map((move) => move.cardId);
       if (legalCardIds.length === 0) throw new Error("Simulation reached a state with no legal moves");
@@ -197,6 +319,9 @@ export function simulateMatch(
     }
 
     assertReplayEquivalent(initialGame, played, game);
+
+    assertGameConservation(game);
+    if (game.completedTricks.length !== 8) throw new Error("Simulation did not complete exactly 8 tricks");
 
     const projectResolution = resolveProjects(projects, dealerSeat);
     const purchaserSeat = bidding.selectedContract.purchaserSeat;
@@ -529,9 +654,6 @@ function createGameState(
   };
 }
 
-function firstLegalCard({ legalCardIds }: SimulationPolicyContext): CardId {
-  return legalCardIds[0]!;
-}
 
 function seededRandom(seed: string): () => number {
   const source = createEngineRandom(seed);
@@ -545,6 +667,23 @@ function hashDigest(value: string): string {
     hash = Math.imul(hash, 16777619);
   }
   return (hash >>> 0).toString(16).padStart(8, "0");
+}
+
+function assertGameConservation(state: GameState): void {
+  const cards = [
+    ...Object.values(state.hands).flat(),
+    ...state.currentTrick.map((play) => play.card),
+    ...state.completedTricks.flatMap((trick) => trick.plays.map((play) => play.card)),
+  ];
+
+  const ids = cards.map((card) => card.id);
+  if (ids.length !== 32 || new Set(ids).size !== 32) {
+    throw new Error("Simulation card conservation invariant failed");
+  }
+
+  if (state.completedTricks.some((trick) => trick.plays.length !== 4)) {
+    throw new Error("Simulation trick invariant failed");
+  }
 }
 
 function cloneGameState(state: GameState): GameState {
@@ -583,7 +722,48 @@ function assertGameStateConservation(state: GameState): void {
   }
 }
 
-function assertReplayEquivalent(
+export function serializeGameStateCanonical(state: GameState): string {
+  const normalizedHands = Object.entries(state.hands)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([playerId, hand]) => [playerId, hand.map((c) => c.id).sort()]);
+
+  const normalizedCurrentTrick = state.currentTrick.map((p) => ({
+    playerId: p.playerId,
+    seat: p.seat,
+    cardId: p.card.id,
+    ikaDeclared: p.ikaDeclared,
+    sequence: p.sequence,
+  }));
+
+  const normalizedCompletedTricks = state.completedTricks.map((t) => ({
+    trickNumber: t.trickNumber,
+    leaderSeat: t.leaderSeat,
+    winnerSeat: t.winnerSeat,
+    plays: t.plays.map((p) => ({
+      playerId: p.playerId,
+      seat: p.seat,
+      cardId: p.card.id,
+      ikaDeclared: p.ikaDeclared,
+      sequence: p.sequence,
+    })),
+  }));
+
+  return JSON.stringify({
+    phase: state.phase,
+    currentPlayerId: state.currentPlayerId,
+    dealerSeat: state.dealerSeat,
+    contract: state.contract,
+    trumpSuit: state.trumpSuit,
+    hokumPlayMode: state.hokumPlayMode,
+    trickNumber: state.trickNumber,
+    players: Object.entries(state.players).sort(([a], [b]) => a.localeCompare(b)),
+    hands: normalizedHands,
+    currentTrick: normalizedCurrentTrick,
+    completedTricks: normalizedCompletedTricks,
+  });
+}
+
+export function assertReplayEquivalent(
   initial: GameState,
   played: readonly CardId[],
   expected: GameState,
@@ -591,18 +771,43 @@ function assertReplayEquivalent(
   let replay = cloneGameState(initial);
   for (const cardId of played) {
     const playerId = replay.currentPlayerId;
-    if (!getLegalMoves(replay, playerId).some((move) => move.cardId === cardId)) {
-      throw new Error(`Replay divergence: illegal replay card ${cardId}`);
+    const legalMoves = getLegalMoves(replay, playerId);
+    if (!legalMoves.some((move) => move.cardId === cardId)) {
+      throw new Error(`Replay divergence: illegal replay card ${cardId} for player ${playerId}`);
     }
     replay = applyCardPlay(replay, playerId, cardId);
   }
 
-  if (
-    replay.currentPlayerId !== expected.currentPlayerId ||
-    replay.trickNumber !== expected.trickNumber ||
-    replay.completedTricks.length !== expected.completedTricks.length ||
-    JSON.stringify(replay.completedTricks) !== JSON.stringify(expected.completedTricks)
-  ) {
-    throw new Error("Replay divergence detected");
+  if (replay.phase !== expected.phase) {
+    throw new Error(`Replay divergence: phase mismatch (replayed: ${replay.phase}, expected: ${expected.phase})`);
+  }
+  if (replay.currentPlayerId !== expected.currentPlayerId) {
+    throw new Error(`Replay divergence: currentPlayerId mismatch (replayed: ${replay.currentPlayerId}, expected: ${expected.currentPlayerId})`);
+  }
+  if (replay.dealerSeat !== expected.dealerSeat) {
+    throw new Error(`Replay divergence: dealerSeat mismatch (replayed: ${replay.dealerSeat}, expected: ${expected.dealerSeat})`);
+  }
+  if (replay.contract !== expected.contract) {
+    throw new Error(`Replay divergence: contract mismatch (replayed: ${replay.contract}, expected: ${expected.contract})`);
+  }
+  if (replay.trumpSuit !== expected.trumpSuit) {
+    throw new Error(`Replay divergence: trumpSuit mismatch (replayed: ${replay.trumpSuit}, expected: ${expected.trumpSuit})`);
+  }
+  if (replay.hokumPlayMode !== expected.hokumPlayMode) {
+    throw new Error(`Replay divergence: hokumPlayMode mismatch (replayed: ${replay.hokumPlayMode}, expected: ${expected.hokumPlayMode})`);
+  }
+  if (replay.trickNumber !== expected.trickNumber) {
+    throw new Error(`Replay divergence: trickNumber mismatch (replayed: ${replay.trickNumber}, expected: ${expected.trickNumber})`);
+  }
+  if (replay.completedTricks.length !== expected.completedTricks.length) {
+    throw new Error(`Replay divergence: completedTricks length mismatch (replayed: ${replay.completedTricks.length}, expected: ${expected.completedTricks.length})`);
+  }
+
+  const replayCanonical = serializeGameStateCanonical(replay);
+  const expectedCanonical = serializeGameStateCanonical(expected);
+
+  if (replayCanonical !== expectedCanonical) {
+    throw new Error(`Replay divergence: canonical state mismatch.\nReplayed: ${replayCanonical}\nExpected: ${expectedCanonical}`);
   }
 }
+

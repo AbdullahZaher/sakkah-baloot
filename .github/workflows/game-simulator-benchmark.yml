@@ -14,17 +14,9 @@ jobs:
           node-version: 22
       - run: corepack enable
       - run: pnpm install --no-frozen-lockfile
+      - run: pnpm --filter @sakkah-baloot/game-engine build
+      - run: pnpm --filter @sakkah-baloot/game-protocol build
+      - run: pnpm --filter @sakkah-baloot/game-ai build
       - run: pnpm --filter @sakkah-baloot/game-simulator typecheck
       - run: pnpm --filter @sakkah-baloot/game-simulator build
-      - run: |
-          node --input-type=module --import tsx <<'EOF'
-          import { simulateMatchBatch } from "./packages/game-simulator/dist/index.js";
-          const result = simulateMatchBatch({
-            seed: "gate-10000",
-            games: 10_000,
-            maxRoundsPerGame: 200,
-          });
-          console.log(JSON.stringify(result, null, 2));
-          if (result.illegalActions !== 0) process.exit(1);
-          if (result.finishedMatches + result.maxRoundTerminations !== 10_000) process.exit(1);
-          EOF
+      - run: node packages/game-simulator/scripts/benchmark-suite.mjs

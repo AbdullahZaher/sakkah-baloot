@@ -4,9 +4,10 @@
   "version": "0.1.0",
   "packageManager": "pnpm@10.0.0",
   "scripts": {
-    "typecheck": "pnpm --filter @sakkah-baloot/game-engine build && pnpm -r typecheck",
-    "build": "pnpm -r build",
-    "test": "pnpm --filter @sakkah-baloot/game-engine test",
+    "typecheck": "pnpm --filter @sakkah-baloot/game-engine build && pnpm --filter @sakkah-baloot/game-protocol build && pnpm --filter @sakkah-baloot/game-ai build && pnpm --filter @sakkah-baloot/game-client build && pnpm --filter @sakkah-baloot/game-simulator build && pnpm -r typecheck",
+    "build": "pnpm --filter @sakkah-baloot/game-engine build && pnpm --filter @sakkah-baloot/game-protocol build && pnpm --filter @sakkah-baloot/game-ai build && pnpm --filter @sakkah-baloot/game-client build && pnpm --filter @sakkah-baloot/game-simulator build",
+    "test": "pnpm --filter @sakkah-baloot/game-engine test && pnpm --filter @sakkah-baloot/game-protocol test && pnpm --filter @sakkah-baloot/game-ai test && pnpm --filter @sakkah-baloot/game-client test && pnpm --filter @sakkah-baloot/game-simulator test",
     "mobile": "pnpm --filter @sakkah-baloot/mobile start"
   }
 }
+

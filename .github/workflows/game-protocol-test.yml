@@ -26,4 +26,5 @@ jobs:
       - run: pnpm install --no-frozen-lockfile
       - run: pnpm --filter @sakkah-baloot/game-engine build
       - run: pnpm --filter @sakkah-baloot/game-protocol typecheck
+      - run: pnpm --filter @sakkah-baloot/game-protocol build
       - run: pnpm --filter @sakkah-baloot/game-protocol test

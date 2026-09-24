@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { createLocalBiddingSession } from "../src/index.ts";
+import { createLocalBiddingSession, createLocalHumanVsAISession } from "../src/index.ts";
 import { detectProjects, getLegalMoves } from "@sakkah-baloot/game-engine";
 
 const SUITS = ["CLUBS", "DIAMONDS", "HEARTS", "SPADES"];
@@ -99,4 +99,44 @@ test("repeated snapshots are observationally idempotent", () => {
   assert.equal(second.dealerSeat, first.dealerSeat);
   assert.equal(second.bidding.turnNumber, first.bidding.turnNumber);
   assert.deepEqual(second.deal.hands, first.deal.hands);
+});
+
+
+test("playable local host exposes authoritative protocol state", () => {
+  const session = createLocalHumanVsAISession({
+    seed: "ui-playable-test",
+    humanSeat: "SOUTH",
+    aiMode: "BASELINE",
+    aiDifficulty: "NORMAL",
+  });
+
+  const snapshot = session.getSnapshot();
+
+  assert.equal(snapshot.playerSeat, "SOUTH");
+  assert.equal(snapshot.humanTurn, true);
+  assert.equal(snapshot.actingSeat, "SOUTH");
+  assert.ok(["BID", "PLAY_CARD"].includes(snapshot.protocol.phase));
+  assert.ok(snapshot.protocol.stateVersion >= 2);
+});
+
+test("playable local host accepts a human bid and returns to the human turn", () => {
+  const session = createLocalHumanVsAISession({
+    seed: "ui-playable-bid-test",
+    humanSeat: "SOUTH",
+  });
+
+  const before = session.getSnapshot();
+
+  if (before.bidding.phase === "BIDDING") {
+    const action = before.legalActions.includes("BUY_SUN")
+      ? "BUY_SUN"
+      : "PASS";
+    const after = session.dispatchBiddingAction(action);
+    assert.equal(after.humanTurn, true);
+    assert.equal(after.actingSeat, "SOUTH");
+    assert.ok(after.protocol.stateVersion > before.protocol.stateVersion);
+  } else {
+    assert.equal(before.humanTurn, true);
+    assert.equal(before.actingSeat, "SOUTH");
+  }
 });

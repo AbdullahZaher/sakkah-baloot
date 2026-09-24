@@ -25,5 +25,8 @@ jobs:
       - run: corepack enable
       - run: pnpm install --no-frozen-lockfile
       - run: pnpm --filter @sakkah-baloot/game-engine build
+      - run: pnpm --filter @sakkah-baloot/game-protocol build
+      - run: pnpm --filter @sakkah-baloot/game-ai build
       - run: pnpm --filter @sakkah-baloot/game-client typecheck
+      - run: pnpm --filter @sakkah-baloot/game-client build
       - run: pnpm --filter @sakkah-baloot/game-client test

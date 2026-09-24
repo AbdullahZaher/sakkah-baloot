@@ -1,1 +1,1 @@
-export * from "./components/GameTable.js";
+export * from "./components/GameTable";

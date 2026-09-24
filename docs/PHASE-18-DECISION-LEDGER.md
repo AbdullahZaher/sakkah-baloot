@@ -98,3 +98,28 @@
 **Rationale:** First prove that the game itself can sustain a full Human-vs-3-AI match and large simulation workload.
 
 **Status:** FROZEN
+
+## D18-13 — Empirical Endgame Threshold Frozen at 6–8 Cards
+
+**Decision:** The default activation threshold for exact endgame solving is set to 6–8 remaining cards with a 2,000 node search limit.
+
+**Rationale:** Empirical sweeps across thresholds 4, 6, 8, 10, and 12 demonstrated sub-millisecond execution times and 100% exact solve rates with zero node cutoffs, achieving maximum endgame tactical precision without degrading search throughput.
+
+**Status:** FROZEN
+
+## D18-14 — Two-Tier Deterministic Simulation Gates
+
+**Decision:** Simulator validation is split into a blocking 1,000-match CI gate and a comprehensive 10,000-match stress benchmark.
+
+**Rationale:** 1,000 matches executes in ~7 seconds on CI while guaranteeing zero illegal actions, zero invalid states, and deterministic seed digests. 10,000 matches executes in ~35 seconds on manual/stress CI for deep empirical statistical validation.
+
+**Status:** FROZEN
+
+## D18-15 — Topological CI Build Order
+
+**Decision:** All package workflows must build dependency packages in strict topological order (`game-engine` -> `game-protocol` -> `game-ai` -> `game-client` -> `game-simulator`) before running tests or consumers.
+
+**Rationale:** Prevents runtime module resolution and missing declaration errors when running package test runners or Node imports on clean checkouts.
+
+**Status:** FROZEN
+

@@ -117,3 +117,131 @@ test("AI card action candidates come only from the authoritative redacted action
 
   assert.deepEqual(actions, [{ type: "PLAY_CARD", cardId: "SPADES-A" }]);
 });
+
+test("adversarial security test: no hidden opponent cards exist in serialized or inspectable AI observation", () => {
+  const dealerSeat = "NORTH";
+  const deal = createInitialDeal("round-sec-1", dealerSeat, createSeededRandom("security-seed-123"));
+  
+  // Complete 8-card hands for 4 players in PLAYING phase
+  const allCardIds = {
+    NORTH: ["SPADES-A", "SPADES-K", "SPADES-Q", "SPADES-J", "SPADES-10", "SPADES-9", "SPADES-8", "SPADES-7"],
+    EAST: ["HEARTS-A", "HEARTS-K", "HEARTS-Q", "HEARTS-J", "HEARTS-10", "HEARTS-9", "HEARTS-8", "HEARTS-7"],
+    SOUTH: ["DIAMONDS-A", "DIAMONDS-K", "DIAMONDS-Q", "DIAMONDS-J", "DIAMONDS-10", "DIAMONDS-9", "DIAMONDS-8", "DIAMONDS-7"],
+    WEST: ["CLUBS-A", "CLUBS-K", "CLUBS-Q", "CLUBS-J", "CLUBS-10", "CLUBS-9", "CLUBS-8", "CLUBS-7"],
+  };
+
+  const toCards = (ids) => ids.map((id) => {
+    const [suit, rank] = id.split("-");
+    return { id, suit, rank };
+  });
+
+  const authoritativeGame = {
+    phase: "PLAYING",
+    currentPlayerId: "PLAYER-NORTH",
+    players: {
+      "PLAYER-NORTH": "NORTH",
+      "PLAYER-EAST": "EAST",
+      "PLAYER-SOUTH": "SOUTH",
+      "PLAYER-WEST": "WEST",
+    },
+    hands: {
+      "PLAYER-NORTH": toCards(allCardIds.NORTH),
+      "PLAYER-EAST": toCards(allCardIds.EAST),
+      "PLAYER-SOUTH": toCards(allCardIds.SOUTH),
+      "PLAYER-WEST": toCards(allCardIds.WEST),
+    },
+    contract: "HOKUM",
+    trumpSuit: "SPADES",
+    hokumPlayMode: "OPEN",
+    dealerSeat: "WEST",
+    trickNumber: 1,
+    currentTrick: [],
+    completedTricks: [],
+  };
+
+  const bidding = createBiddingState("round-sec-1", dealerSeat);
+  const match = {
+    matchId: "sec-match",
+    roundId: "round-sec-1",
+    roundNumber: 1,
+    dealerSeat: "WEST",
+    phase: "ROUND_ACTIVE",
+    stateVersion: 12,
+    score: { NORTH_SOUTH: 0, EAST_WEST: 0 },
+    lastRoundScore: null,
+    end: { status: "ONGOING", score: { NORTH_SOUTH: 0, EAST_WEST: 0 } },
+    round: {
+      roundId: "round-sec-1",
+      roundNumber: 1,
+      phase: "PLAYING",
+      deal,
+      bidding,
+      game: authoritativeGame,
+      projects: [],
+      baloot: null,
+      score: null,
+    },
+  };
+
+  const observation = createAIObservation({
+    match,
+    playerId: "PLAYER-NORTH",
+    playerSeat: "NORTH",
+    legalCardIds: ["SPADES-A", "SPADES-K"],
+  });
+
+  // Verify own hand is present
+  assert.equal(observation.playing?.game.ownHand.length, 8);
+  assert.deepEqual(
+    observation.playing?.game.ownHand.map((c) => c.id),
+    allCardIds.NORTH,
+  );
+
+  // Collect every string in the entire observation tree
+  const extractedStrings = [];
+  function recursivelyExtractStrings(obj) {
+    if (obj === null || obj === undefined) return;
+    if (typeof obj === "string") {
+      extractedStrings.push(obj);
+      return;
+    }
+    if (Array.isArray(obj)) {
+      for (const item of obj) recursivelyExtractStrings(item);
+      return;
+    }
+    if (typeof obj === "object") {
+      for (const [key, value] of Object.entries(obj)) {
+        extractedStrings.push(key);
+        recursivelyExtractStrings(value);
+      }
+    }
+  }
+  recursivelyExtractStrings(observation);
+
+  const serialized = JSON.stringify(observation);
+
+  // Adversarial assertion: NONE of the opponent cards should ever appear in strings or serialized JSON
+  const opponentCardIds = [
+    ...allCardIds.EAST,
+    ...allCardIds.SOUTH,
+    ...allCardIds.WEST,
+  ];
+
+  for (const hiddenCardId of opponentCardIds) {
+    assert.equal(
+      extractedStrings.includes(hiddenCardId),
+      false,
+      `Hidden opponent card ${hiddenCardId} was leaked in observation object tree!`,
+    );
+    assert.equal(
+      serialized.includes(hiddenCardId),
+      false,
+      `Hidden opponent card ${hiddenCardId} was leaked in serialized JSON observation!`,
+    );
+  }
+
+  // Verify no hidden hands map exists
+  assert.equal(observation.playing?.game.hands, undefined);
+  assert.doesNotMatch(serialized, /"hands":/);
+});
+

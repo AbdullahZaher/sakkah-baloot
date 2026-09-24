@@ -1,0 +1,48 @@
+name: simulator-large-validation
+
+on:
+  workflow_dispatch:
+    inputs:
+      games:
+        description: "Number of deterministic full-match simulations"
+        required: true
+        default: "10000"
+        type: string
+      max_rounds:
+        description: "Maximum rounds per simulated match"
+        required: true
+        default: "30"
+        type: string
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: corepack enable
+      - run: pnpm install --no-frozen-lockfile
+      - run: pnpm --filter @sakkah-baloot/game-engine build
+      - run: pnpm --filter @sakkah-baloot/game-protocol build
+      - run: pnpm --filter @sakkah-baloot/game-ai build
+      - run: pnpm --filter @sakkah-baloot/game-simulator build
+      - name: Run large deterministic validation
+        run: |
+          node --input-type=module <<'NODE'
+          import { simulateMatchBatch } from "./packages/game-simulator/dist/index.js";
+          const games = Number(process.env.GAMES);
+          const maxRounds = Number(process.env.MAX_ROUNDS);
+          const result = simulateMatchBatch({
+            seed: "large-validation",
+            games,
+            maxRoundsPerGame: maxRounds,
+          });
+          console.log(JSON.stringify(result, null, 2));
+          if (result.games !== games) process.exit(1);
+          if (result.illegalActions !== 0) process.exit(1);
+          NODE
+        env:
+          GAMES: ${{ inputs.games }}
+          MAX_ROUNDS: ${{ inputs.max_rounds }}
