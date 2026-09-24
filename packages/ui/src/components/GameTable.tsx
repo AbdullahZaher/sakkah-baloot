@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import {
   teamOfSeat,
@@ -70,8 +71,37 @@ export function GameTable({
   baloot = null,
   onProject,
 }: GameTableProps) {
+  // 2-Second Completed Trick Hold Presentation State
+  const [frozenTrick, setFrozenTrick] = useState<CompletedTrick | null>(null);
+  const prevCompletedCountRef = useRef<number>(0);
+
+  useEffect(() => {
+    const completedTricks = game?.completedTricks ?? [];
+    const currentCount = completedTricks.length;
+
+    if (currentCount === 0) {
+      prevCompletedCountRef.current = 0;
+      setFrozenTrick(null);
+      return;
+    }
+
+    if (currentCount > prevCompletedCountRef.current) {
+      const lastTrick = completedTricks[currentCount - 1] ?? null;
+      if (lastTrick) {
+        setFrozenTrick(lastTrick);
+        const timer = setTimeout(() => {
+          setFrozenTrick(null);
+        }, 2000);
+        prevCompletedCountRef.current = currentCount;
+        return () => clearTimeout(timer);
+      }
+    }
+    prevCompletedCountRef.current = currentCount;
+  }, [game?.completedTricks]);
+
+  const isFrozen = frozenTrick !== null;
   const activeSeat: Seat = (game ? game.players[game.currentPlayerId] : actingSeat) ?? actingSeat;
-  const playerIsActing = activeSeat === playerSeat;
+  const playerIsActing = !isFrozen && activeSeat === playerSeat;
   const actions = playerIsActing ? legalActions : [];
   const hokumSuits = actions.includes("BUY_HOKUM") ? availableHokumSuits(exposedCard?.suit ?? null) : [];
   const trickCards = game?.currentTrick ?? [];
@@ -85,6 +115,9 @@ export function GameTable({
   const activeContract = selectedContract?.contract ?? contract ?? game?.contract ?? null;
   const activeTrumpSuit = selectedContract?.trumpSuit ?? trumpSuit ?? game?.trumpSuit ?? null;
   const purchaserSeat = selectedContract?.purchaserSeat ?? null;
+
+  // Effective legal card IDs (frozen during 2s trick hold)
+  const effectiveLegalCardIds = isFrozen ? [] : (playerIsActing ? legalCardIds : []);
 
   return (
     <View style={styles.screen}>
@@ -122,7 +155,7 @@ export function GameTable({
           {game ? (
             <View style={styles.trickCounterBadge}>
               <Text style={styles.trickCounterText}>
-                الأكلة {game.trickNumber} من 8
+                الأكلة {isFrozen && frozenTrick ? frozenTrick.trickNumber : game.trickNumber} من 8
               </Text>
             </View>
           ) : null}
@@ -133,7 +166,7 @@ export function GameTable({
           label="NORTH"
           seatRole={seatRoleLabel("NORTH", playerSeat)}
           team={teamOfSeat("NORTH") === "NORTH_SOUTH" ? "LANA" : "LAHUM"}
-          active={activeSeat === "NORTH"}
+          active={!isFrozen && activeSeat === "NORTH"}
           isDealer={dealerSeat === "NORTH"}
           cardCount={cardCountForSeat(game, "NORTH")}
           style={styles.north}
@@ -144,7 +177,7 @@ export function GameTable({
           label="WEST"
           seatRole={seatRoleLabel("WEST", playerSeat)}
           team={teamOfSeat("WEST") === "NORTH_SOUTH" ? "LANA" : "LAHUM"}
-          active={activeSeat === "WEST"}
+          active={!isFrozen && activeSeat === "WEST"}
           isDealer={dealerSeat === "WEST"}
           cardCount={cardCountForSeat(game, "WEST")}
           style={styles.west}
@@ -155,7 +188,7 @@ export function GameTable({
           label="EAST"
           seatRole={seatRoleLabel("EAST", playerSeat)}
           team={teamOfSeat("EAST") === "NORTH_SOUTH" ? "LANA" : "LAHUM"}
-          active={activeSeat === "EAST"}
+          active={!isFrozen && activeSeat === "EAST"}
           isDealer={dealerSeat === "EAST"}
           cardCount={cardCountForSeat(game, "EAST")}
           style={styles.east}
@@ -207,17 +240,18 @@ export function GameTable({
             </View>
           ) : null}
 
-          {/* Trick Taking Arena (authoritative plays) */}
-          {game && !isRoundComplete ? (
+          {/* Trick Taking Arena (authoritative plays with 2-second completed trick freeze) */}
+          {game && (!isRoundComplete || isFrozen) ? (
             <TrickView
               plays={trickCards}
               activeSeat={activeSeat}
               lastCompletedTrick={lastCompletedTrick}
+              frozenTrick={frozenTrick}
             />
           ) : null}
 
-          {/* Round Score Recap Dialog */}
-          {isRoundComplete && roundScore ? (
+          {/* Round Score Recap Dialog (shown only after final trick freeze clears) */}
+          {isRoundComplete && roundScore && !isFrozen ? (
             <RoundResult
               score={roundScore}
               matchScore={matchScore ?? { NORTH_SOUTH: 0, EAST_WEST: 0 }}
@@ -231,9 +265,27 @@ export function GameTable({
         <View style={styles.south}>
           {/* Turn indicator ribbon above hand */}
           <View style={styles.southTurnRibbon}>
-            <View style={[styles.turnDot, playerIsActing ? styles.turnDotActive : styles.turnDotInactive]} />
-            <Text style={[styles.southTurnText, playerIsActing && styles.southTurnTextActive]}>
-              {playerIsActing ? "دورك الآن — اختر ورقة للعب" : `في انتظار ${seatArabicName(activeSeat)}...`}
+            <View
+              style={[
+                styles.turnDot,
+                isFrozen
+                  ? styles.turnDotFrozen
+                  : playerIsActing
+                    ? styles.turnDotActive
+                    : styles.turnDotInactive,
+              ]}
+            />
+            <Text
+              style={[
+                styles.southTurnText,
+                (playerIsActing || isFrozen) && styles.southTurnTextActive,
+              ]}
+            >
+              {isFrozen
+                ? "جاري احتساب الفائز بالأكلة..."
+                : playerIsActing
+                  ? "دورك الآن — اختر ورقة للعب"
+                  : `في انتظار ${seatArabicName(activeSeat)}...`}
             </Text>
           </View>
 
@@ -257,7 +309,7 @@ export function GameTable({
                 card={card}
                 index={index}
                 total={hand.length}
-                enabled={legalCardIds.includes(card.id)}
+                enabled={effectiveLegalCardIds.includes(card.id)}
                 onPress={onCardPlay}
               />
             ))}
@@ -272,17 +324,31 @@ function TrickView({
   plays,
   activeSeat,
   lastCompletedTrick,
+  frozenTrick,
 }: {
   plays: readonly GameState["currentTrick"][number][];
   activeSeat: Seat;
   lastCompletedTrick: CompletedTrick | null;
+  frozenTrick: CompletedTrick | null;
 }) {
   const seats: readonly Seat[] = ["NORTH", "EAST", "SOUTH", "WEST"] as const;
+  const isFrozen = frozenTrick !== null;
+  const currentPlays = isFrozen ? frozenTrick.plays : plays;
+  const winnerSeat = isFrozen ? frozenTrick.winnerSeat : null;
+  const trickNum = isFrozen
+    ? frozenTrick.trickNumber
+    : (lastCompletedTrick ? lastCompletedTrick.trickNumber : null);
 
   return (
     <View style={styles.trickContainer}>
-      {/* Last completed trick winner banner */}
-      {lastCompletedTrick && plays.length === 0 ? (
+      {/* Completed trick winner banner during 2-second hold */}
+      {isFrozen && winnerSeat ? (
+        <View style={styles.frozenWinnerBanner}>
+          <Text style={styles.frozenWinnerText}>
+            🏆 الأكلة {trickNum} — فاز بها: <Text style={styles.frozenWinnerHighlight}>{seatArabicName(winnerSeat)}</Text> ({teamLabel(teamOfSeat(winnerSeat))})
+          </Text>
+        </View>
+      ) : lastCompletedTrick && plays.length === 0 ? (
         <View style={styles.lastWinnerBadge}>
           <Text style={styles.lastWinnerText}>
             الأكلة {lastCompletedTrick.trickNumber} فاز بها: <Text style={styles.lastWinnerHighlight}>{seatArabicName(lastCompletedTrick.winnerSeat)}</Text> ({teamLabel(teamOfSeat(lastCompletedTrick.winnerSeat))})
@@ -293,18 +359,37 @@ function TrickView({
       {/* 4-Compass Trick Arena */}
       <View style={styles.trickArena}>
         {seats.map((seat) => {
-          const play = plays.find((p) => p.seat === seat);
-          const isSeatActive = activeSeat === seat && !play;
+          const play = currentPlays.find((p) => p.seat === seat);
+          const isSeatActive = !isFrozen && activeSeat === seat && !play;
+          const isWinnerCard = isFrozen && winnerSeat === seat;
           const slotStyle = getTrickSlotStyle(seat);
           const isLana = teamOfSeat(seat) === "NORTH_SOUTH";
 
           if (play) {
             return (
               <View key={seat} style={[styles.trickCardSlot, slotStyle]}>
-                <View style={[styles.trickSeatTag, isLana ? styles.seatTagLana : styles.seatTagLahum]}>
-                  <Text style={styles.trickSeatTagText}>{seatArabicName(seat)}</Text>
+                <View
+                  style={[
+                    styles.trickSeatTag,
+                    isLana ? styles.seatTagLana : styles.seatTagLahum,
+                    isWinnerCard && styles.seatTagWinner,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.trickSeatTagText,
+                      isWinnerCard && styles.trickSeatTagTextWinner,
+                    ]}
+                  >
+                    {isWinnerCard ? `👑 ${seatArabicName(seat)}` : seatArabicName(seat)}
+                  </Text>
                 </View>
-                <CardView card={play.card} size="medium" />
+                <CardView
+                  card={play.card}
+                  size="medium"
+                  highlight={isWinnerCard}
+                  winnerGlow={isWinnerCard}
+                />
               </View>
             );
           }
@@ -484,14 +569,23 @@ function CardView({
   card,
   size = "standard",
   highlight = false,
+  winnerGlow = false,
 }: {
   card: Card | null;
   size?: "standard" | "medium" | "compact";
   highlight?: boolean;
+  winnerGlow?: boolean;
 }) {
   if (!card) {
     return (
-      <View style={[styles.card, size === "medium" && styles.mediumCard, size === "compact" && styles.compactCard, styles.emptyCard]}>
+      <View
+        style={[
+          styles.card,
+          size === "medium" && styles.mediumCard,
+          size === "compact" && styles.compactCard,
+          styles.emptyCard,
+        ]}
+      >
         <Text style={styles.emptyCardText}>—</Text>
       </View>
     );
@@ -506,6 +600,7 @@ function CardView({
         size === "medium" && styles.mediumCard,
         size === "compact" && styles.compactCard,
         highlight && styles.cardHighlight,
+        winnerGlow && styles.cardWinnerGlow,
       ]}
     >
       {/* Top corner rank and suit */}
@@ -519,7 +614,14 @@ function CardView({
       </View>
 
       {/* Center suit symbol */}
-      <Text style={[styles.centerSuit, size === "medium" && styles.mediumCenterSuit, size === "compact" && styles.compactCenterSuit, red && styles.redColor]}>
+      <Text
+        style={[
+          styles.centerSuit,
+          size === "medium" && styles.mediumCenterSuit,
+          size === "compact" && styles.compactCenterSuit,
+          red && styles.redColor,
+        ]}
+      >
         {suitSymbol(card.suit)}
       </Text>
 
@@ -933,6 +1035,24 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  frozenWinnerBanner: {
+    marginBottom: 4,
+    backgroundColor: "rgba(245, 158, 11, 0.25)",
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: "#F59E0B",
+  },
+  frozenWinnerText: {
+    color: "#FEF3C7",
+    fontSize: 10,
+    fontWeight: "900",
+  },
+  frozenWinnerHighlight: {
+    color: "#FDE68A",
+    fontWeight: "900",
+  },
   lastWinnerBadge: {
     marginBottom: 4,
     backgroundColor: "rgba(5, 18, 14, 0.85)",
@@ -1021,10 +1141,19 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(239, 68, 68, 0.2)",
     borderColor: "rgba(248, 113, 113, 0.4)",
   },
+  seatTagWinner: {
+    backgroundColor: "rgba(245, 158, 11, 0.35)",
+    borderColor: "#F59E0B",
+    borderWidth: 1.5,
+  },
   trickSeatTagText: {
     color: "#F8FAFC",
     fontSize: 7,
     fontWeight: "800",
+  },
+  trickSeatTagTextWinner: {
+    color: "#FFFBEB",
+    fontWeight: "900",
   },
   seatPod: {
     position: "absolute",
@@ -1070,6 +1199,9 @@ const styles = StyleSheet.create({
   },
   turnDotInactive: {
     backgroundColor: "#94A3B8",
+  },
+  turnDotFrozen: {
+    backgroundColor: "#F59E0B",
   },
   southTurnText: {
     color: "#94A3B8",
@@ -1223,6 +1355,11 @@ const styles = StyleSheet.create({
   cardHighlight: {
     borderColor: "#D4AF37",
     borderWidth: 2,
+  },
+  cardWinnerGlow: {
+    borderColor: "#F59E0B",
+    borderWidth: 2.5,
+    backgroundColor: "#FFFDF5",
   },
   emptyCard: {
     backgroundColor: "rgba(255, 255, 255, 0.05)",
