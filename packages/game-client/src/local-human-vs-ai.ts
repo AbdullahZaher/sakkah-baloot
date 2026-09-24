@@ -236,7 +236,7 @@ export function createLocalHumanVsAISession(
     const humanPlayerId = playerIdForSeat(humanSeat);
     const hand = round.game
       ? round.game.hands[humanPlayerId] ?? []
-      : round.deal.hands[humanSeat].map((id) => CARD_MAP[id]!);
+      : round.deal.hands[humanSeat].map((id) => getCardById(id));
 
     const exposedCard = round.deal.exposedCardId === null
       ? null
