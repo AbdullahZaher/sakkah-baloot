@@ -27,20 +27,37 @@ export function GameTableScreen() {
     }
   };
 
+  const matchScore = preview.matchScore ?? { NORTH_SOUTH: 0, EAST_WEST: 0 };
+
   return (
     <View style={styles.root}>
+      {/* Top Compact HUD Header */}
       <View style={styles.header}>
-        <View>
+        <View style={styles.titleBlock}>
           <Text style={styles.title}>صكّة بلوت</Text>
-          <Text style={styles.subtitle}>
-            أنت الجنوب • 3 لاعبين بالذكاء الاصطناعي
-          </Text>
         </View>
+
+        {/* Match Scores: Lana vs Lahum */}
+        <View style={styles.scoreHud}>
+          <View style={styles.scoreBox}>
+            <Text style={styles.scoreLabelLana}>لنا</Text>
+            <Text style={styles.scoreNumberLana}>{matchScore.NORTH_SOUTH}</Text>
+          </View>
+          <View style={styles.scoreDivider} />
+          <View style={styles.scoreBox}>
+            <Text style={styles.scoreNumberLahum}>{matchScore.EAST_WEST}</Text>
+            <Text style={styles.scoreLabelLahum}>لهم</Text>
+          </View>
+        </View>
+
+        {/* Turn & Status Indicator */}
         <View style={styles.status}>
-          <Text style={styles.statusText}>
-            {preview.humanTurn ? "دورك" : `دور ${seatLabel(preview.actingSeat)}`}
-          </Text>
-          <Text style={styles.version}>v{preview.protocol.stateVersion}</Text>
+          <View style={[styles.turnBadge, preview.humanTurn ? styles.turnBadgeHuman : styles.turnBadgeAi]}>
+            <View style={[styles.turnDot, preview.humanTurn ? styles.turnDotHuman : styles.turnDotAi]} />
+            <Text style={styles.turnBadgeText}>
+              {preview.humanTurn ? "دورك" : `دور ${seatLabel(preview.actingSeat)}`}
+            </Text>
+          </View>
         </View>
       </View>
 
@@ -93,48 +110,117 @@ function seatLabel(seat: string): string {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "#07120F",
+    backgroundColor: "#05130E",
   },
   header: {
-    minHeight: 76,
-    paddingHorizontal: 18,
-    paddingTop: 12,
-    paddingBottom: 10,
+    height: 40,
+    paddingHorizontal: 12,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    backgroundColor: "rgba(10, 30, 22, 0.95)",
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(212, 175, 55, 0.2)",
+  },
+  titleBlock: {
+    flexDirection: "row",
+    alignItems: "center",
   },
   title: {
     color: "#F5E7C8",
-    fontSize: 24,
+    fontSize: 15,
+    fontWeight: "900",
+  },
+  scoreHud: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.45)",
+    paddingHorizontal: 10,
+    paddingVertical: 2,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(212, 175, 55, 0.3)",
+    gap: 6,
+  },
+  scoreBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  scoreLabelLana: {
+    color: "#34D399",
+    fontSize: 10,
     fontWeight: "800",
   },
-  subtitle: {
-    color: "#AEBDB6",
-    marginTop: 3,
-    fontSize: 12,
+  scoreNumberLana: {
+    color: "#34D399",
+    fontSize: 14,
+    fontWeight: "900",
+  },
+  scoreDivider: {
+    width: 1,
+    height: 12,
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
+  },
+  scoreLabelLahum: {
+    color: "#F87171",
+    fontSize: 10,
+    fontWeight: "800",
+  },
+  scoreNumberLahum: {
+    color: "#F87171",
+    fontSize: 14,
+    fontWeight: "900",
   },
   status: {
     alignItems: "flex-end",
   },
-  statusText: {
-    color: "#D8B56A",
+  turnBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  turnBadgeHuman: {
+    backgroundColor: "rgba(212, 175, 55, 0.18)",
+    borderColor: "#D4AF37",
+  },
+  turnBadgeAi: {
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    borderColor: "rgba(255, 255, 255, 0.15)",
+  },
+  turnDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  turnDotHuman: {
+    backgroundColor: "#34D399",
+  },
+  turnDotAi: {
+    backgroundColor: "#94A3B8",
+  },
+  turnBadgeText: {
+    color: "#F5E6BF",
+    fontSize: 10,
     fontWeight: "800",
   },
-  version: {
-    color: "#64736D",
-    fontSize: 10,
-    marginTop: 2,
-  },
   error: {
-    marginHorizontal: 16,
-    marginBottom: 8,
-    padding: 10,
-    borderRadius: 10,
-    backgroundColor: "#3B1717",
+    marginHorizontal: 12,
+    marginVertical: 4,
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: "rgba(239, 68, 68, 0.2)",
+    borderWidth: 1,
+    borderColor: "#EF4444",
   },
   errorText: {
-    color: "#FFD0D0",
+    color: "#FCA5A5",
+    fontSize: 11,
+    fontWeight: "700",
     textAlign: "center",
   },
 });
