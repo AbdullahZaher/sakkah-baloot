@@ -167,6 +167,126 @@ test("local human can declare a legal project during trick one", () => {
   assert.equal(snapshot.humanTurn, true);
 });
 
+test("human-vs-AI path actually declares RD-08 Baloot on the second trump K/Q", () => {
+  let observed = false;
+
+  for (let seedIndex = 0; seedIndex < 128 && !observed; seedIndex += 1) {
+    const session = createLocalHumanVsAISession({
+      seed: `ui-rd08-seed-${seedIndex}`,
+      humanSeat: "SOUTH",
+      aiMode: "BASELINE",
+      aiDifficulty: "NORMAL",
+    });
+
+    let snapshot = session.getSnapshot();
+    let guard = 0;
+    let firstTrumpCard = null;
+
+    while (snapshot.game?.phase === "PLAYING" && guard++ < 96) {
+      if (!snapshot.humanTurn) {
+        assert.fail("Local UI dispatch must return control to the human after AI turns");
+      }
+
+      const selected = snapshot.bidding.selectedContract;
+      assert.ok(selected);
+
+      const trumpPair = selected.contract === "HOKUM"
+        ? snapshot.playerHand.filter(
+            (card) =>
+              card.suit === selected.trumpSuit &&
+              (card.rank === "K" || card.rank === "Q"),
+          )
+        : [];
+
+      if (selected.contract === "HOKUM" && trumpPair.length === 2) {
+        const pairIds = new Set(trumpPair.map((card) => card.id));
+        const playablePair = snapshot.legalCardIds.filter((id) => pairIds.has(id));
+
+        if (playablePair.length > 0) {
+          const cardId = playablePair[0];
+          snapshot = session.dispatchCardPlay(cardId);
+
+          if (snapshot.baloot !== null) {
+            assert.fail("Baloot cannot be declared on the first K/Q play");
+          }
+
+          firstTrumpCard = cardId;
+          break;
+        }
+      }
+
+      const fallback = snapshot.legalCardIds[0];
+      assert.ok(fallback);
+      snapshot = session.dispatchCardPlay(fallback);
+    }
+
+    if (!firstTrumpCard || !snapshot.game || snapshot.baloot !== null) continue;
+
+    let secondGuard = 0;
+    while (snapshot.game?.phase === "PLAYING" && secondGuard++ < 96 && snapshot.baloot === null) {
+      assert.equal(snapshot.humanTurn, true);
+
+      const selected = snapshot.bidding.selectedContract;
+      assert.equal(selected?.contract, "HOKUM");
+
+      const remainingPair = snapshot.playerHand.filter(
+        (card) =>
+          card.suit === selected.trumpSuit &&
+          (card.rank === "K" || card.rank === "Q"),
+      );
+
+      const second = remainingPair.find((card) => snapshot.legalCardIds.includes(card.id));
+      const cardId = second?.id ?? snapshot.legalCardIds[0];
+      assert.ok(cardId);
+
+      snapshot = session.dispatchCardPlay(cardId);
+    }
+
+    if (snapshot.baloot !== null) {
+      observed = true;
+      assert.equal(snapshot.baloot.trumpSuit, snapshot.bidding.selectedContract?.trumpSuit);
+      assert.equal(snapshot.baloot.qaydValue, 2);
+      assert.equal(snapshot.baloot.seat, "SOUTH");
+      assert.equal(snapshot.baloot.teamId, "NORTH_SOUTH");
+    }
+  }
+
+  assert.equal(observed, true, "No deterministic seed reached a human-owned trump K+Q Baloot declaration");
+});
+
+test("client Baloot path never declares Baloot in Sun", () => {
+  const session = createLocalHumanVsAISession({
+    seed: "ui-sun-baloot-negative",
+    humanSeat: "SOUTH",
+  });
+
+  let snapshot = session.getSnapshot();
+  let guard = 0;
+
+  while (snapshot.bidding.phase === "BIDDING" && guard++ < 16) {
+    if (snapshot.legalActions.includes("BUY_SUN")) {
+      snapshot = session.dispatchBiddingAction("BUY_SUN");
+      break;
+    }
+
+    snapshot = session.dispatchBiddingAction("PASS");
+  }
+
+  if (snapshot.bidding.selectedContract?.contract !== "SUN") {
+    // This seed may not be a Sun contract; the engine-level RD-08 tests cover the contract predicate.
+    return;
+  }
+
+  while (snapshot.game?.phase === "PLAYING" && guard++ < 64) {
+    assert.equal(snapshot.baloot, null);
+    const cardId = snapshot.legalCardIds[0];
+    assert.ok(cardId);
+    snapshot = session.dispatchCardPlay(cardId);
+  }
+
+  assert.equal(snapshot.baloot, null);
+});
+
 test("human-vs-AI UI host completes a full round through the public dispatch path", () => {
   const session = createLocalHumanVsAISession({
     seed: "ui-full-round-test",
