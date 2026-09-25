@@ -902,10 +902,10 @@ function createRound(
 // This function must NEVER be used for game-rule decisions (legality, scoring,
 // project/Baloot detection, trick winner). It is purely visual.
 //
-// Suit order: SPADES → HEARTS → DIAMONDS → CLUBS (conventional Baloot display)
+// Suit order: SPADES → HEARTS → CLUBS → DIAMONDS (♠ ♥ ♣ ♦)
 // Rank order within each suit: A → K → Q → J → 10 → 9 → 8 → 7 (high-to-low)
 
-const DISPLAY_SUIT_ORDER: readonly Suit[] = ["SPADES", "HEARTS", "DIAMONDS", "CLUBS"];
+const DISPLAY_SUIT_ORDER: readonly Suit[] = ["SPADES", "HEARTS", "CLUBS", "DIAMONDS"];
 const DISPLAY_RANK_ORDER: readonly Rank[] = ["A", "K", "Q", "J", "10", "9", "8", "7"];
 
 export function sortHandForDisplay(hand: readonly Card[]): readonly Card[] {

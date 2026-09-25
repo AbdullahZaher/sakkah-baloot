@@ -23,7 +23,7 @@ import {
   sortHandForDisplay,
 } from "../packages/game-client/dist/index.js";
 
-const SUIT_ORDER = ["SPADES", "HEARTS", "DIAMONDS", "CLUBS"];
+const SUIT_ORDER = ["SPADES", "HEARTS", "CLUBS", "DIAMONDS"];
 const RANK_ORDER = ["A", "K", "Q", "J", "10", "9", "8", "7"];
 
 const N = 10;
@@ -145,7 +145,7 @@ for (let i = 0; i < N; i++) {
   }
 }
 console.log(`✅ [5] sortHandForDisplay returns a new array (no reference mutation)`);
-console.log(`✅ [6] Suit order: SPADES → HEARTS → DIAMONDS → CLUBS`);
+console.log(`✅ [6] Suit order: SPADES → HEARTS → CLUBS → DIAMONDS (♠ ♥ ♣ ♦)`);
 console.log(`✅ [7] Rank order within suit: A K Q J 10 9 8 7`);
 console.log(`✅ [8] All card IDs present and unchanged after sort`);
 

@@ -550,7 +550,7 @@ test("sortHandForDisplay groups cards by suit and sorts high-to-low within suit"
   const snapshot = session.getSnapshot();
   const sorted = sortHandForDisplay(snapshot.playerHand);
 
-  const SUIT_ORDER = ["SPADES", "HEARTS", "DIAMONDS", "CLUBS"];
+  const SUIT_ORDER = ["SPADES", "HEARTS", "CLUBS", "DIAMONDS"];
   const RANK_ORDER = ["A", "K", "Q", "J", "10", "9", "8", "7"];
 
   for (let i = 1; i < sorted.length; i += 1) {
