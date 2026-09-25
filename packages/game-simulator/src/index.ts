@@ -217,6 +217,7 @@ export function simulateMatch(
   policy: CardPolicy = firstLegalCard,
   maxRounds = 200,
   policies?: Readonly<Record<PlayerId, CardPolicy>>,
+  biddingDifficulty: AIDifficulty = "NORMAL",
 ): MatchSimulationResult {
   let score: MatchScore = { NORTH_SOUTH: 0, EAST_WEST: 0 };
   let dealerSeat = getFirstDealer(seed);
@@ -236,7 +237,7 @@ export function simulateMatch(
       deal.dealerSeat,
       deal,
       roundSeed,
-      "NORMAL",
+      biddingDifficulty,
     );
     if (bidding.phase === "CANCELLED") {
       // ALL_PASS is authoritative: the engine ends the bidding round and the
@@ -426,6 +427,7 @@ export function simulateMatchBatch(config: SimulationConfig): MatchBatchResult {
       config.policy ?? firstLegalCard,
       maxRounds,
       config.policies,
+      config.biddingDifficulty ?? "NORMAL",
     );
     if (result.end.status === "FINISHED") {
       completed += 1;
