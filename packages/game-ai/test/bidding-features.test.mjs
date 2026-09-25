@@ -65,7 +65,7 @@ test("bidding feature model detects void suits without changing the hand", () =>
 
   assert.deepEqual(features.hand.voidSuits, ["DIAMONDS", "SPADES"]);
   assert.equal(features.hand.suits.find((suit) => suit.suit === "HEARTS")?.balootPotential, true);
-  assert.equal(observation.ownHand.map((c) => c.id), hand);
+  assert.deepEqual(observation.ownHand.map((c) => c.id), hand);
 });
 
 test("bidding context exposes only public bidding history and legal actions", () => {
