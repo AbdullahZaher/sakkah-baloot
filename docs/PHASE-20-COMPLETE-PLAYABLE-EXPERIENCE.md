@@ -270,7 +270,7 @@ A `sortHandForDisplay(hand)` helper is implemented in `packages/game-client/src/
 - Engine `Test A–F` (6 tests): determinism, different-seed divergence, 10-deal uniqueness, 32-card integrity, completion deal integrity, redeal freshness
 - Client: same-seed determinism, different-seed divergence, 5-session uniqueness, suit/rank sort correctness, sort-is-copy, card ID dispatch through sort, round-transition freshness (7 tests)
 
-**Runtime verification:**
+**Runtime verification (seeded, 5 sessions):**
 ```
 Deal #1 (South): KS 10S  7H  QD JD 9D 10C 7C
 Deal #2 (South): JS JH   7H  AD QD JD  JC 9C
@@ -278,6 +278,35 @@ Deal #3 (South): QS JS  10S  7S 9H 7D 10C 7C
 Deal #4 (South): QH 9H   8H  QD 10D 7D  AC 7C
 Deal #5 (South): 10S AH  QH 10H 9H    AC 10C 9C
 Unique: 5/5 — PASS ✅
+```
+
+**Production no-seed integration verification:**
+
+`createLocalHumanVsAISession({ humanSeat: "SOUTH" })` — no seed, exact GameTableScreen call.
+10 independent sessions → 10 distinct SOUTH hands (verified by `scripts/verify-production-no-seed.mjs`):
+
+```
+Session # 1: [AS QS AH AD 10D QC 9C 8C]
+Session # 2: [9S 8S 7S KH QH 8H 9C 7C]
+Session # 3: [AS JS QH AD 9D 7D KC 8C]
+Session # 4: [AS 9S 8S KH 10H 9D 8D 9C]
+Session # 5: [9S AH KH 9H JD 8D AC KC]
+Session # 6: [AS 10S JH 8H 7D KC QC 10C]
+Session # 7: [AS KS 10S 7S QH 9D 7D 8C]
+Session # 8: [AS JS 10S 9S 7H AD JD QC]
+Session # 9: [QS 8S AH 10H 8D 7D AC KC]
+Session #10: [KS 9S 8S AD 8D 7D JC 10C]
+
+Assertions:
+✅ [1] All 10 hands are distinct (10/10 unique)
+✅ [2] All 10 hands have valid card count (all returned 8 — post-completion deal)
+✅ [3] No duplicate card IDs in any hand
+✅ [4] Session uniqueness proved by distinct hands
+✅ [5] sortHandForDisplay returns a new array (no reference mutation)
+✅ [6] Suit order: SPADES → HEARTS → DIAMONDS → CLUBS
+✅ [7] Rank order within suit: A K Q J 10 9 8 7
+✅ [8] All card IDs present and unchanged after sort
+✅ [9] GameTableScreen call site confirmed: no 'seed:' property
 ```
 
 **Test totals after slice:**
