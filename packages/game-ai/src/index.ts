@@ -211,6 +211,8 @@ export { evaluateSunBid } from "./bidding/sun-evaluator.js";
 export type { BidConfidence, SunBidEvaluation } from "./bidding/sun-evaluator.js";
 export { evaluateHokumBid } from "./bidding/hokum-evaluator.js";
 export type { HokumBidEvaluation, HokumSuitEvaluation } from "./bidding/hokum-evaluator.js";
+export { rankBiddingContracts } from "./bidding/contract-ranking.js";
+export type { ContractRanking, RankedBid } from "./bidding/contract-ranking.js";
 export { chooseBaselineAction } from "./baseline-policy.js";
 export type { AIDifficulty, BaselineDecision, BaselinePolicyConfig } from "./baseline-policy.js";
 
