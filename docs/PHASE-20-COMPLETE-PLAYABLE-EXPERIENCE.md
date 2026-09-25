@@ -218,3 +218,73 @@ If an authoritative capability is missing, add the smallest engine API required 
 - Apple App Store — Baloot Majlis
 - ElBlot — How to Play
 - ElBlot — Rulebook
+
+---
+
+## Slice — Deal Randomization & Hand Presentation
+
+### Problem
+
+The playable game dealt the same cards to the same players on every session. The human hand was also displayed in arbitrary deal-order rather than by suit.
+
+**Root cause:** `createLocalHumanVsAISession` defaulted `seed` to the hard-coded string `"sakkah-local"`. The client's `createRound` helper then derived a fully deterministic RNG from `createSeededRandom("sakkah-local:round:1")`, producing identical hands on every browser session.
+
+Additionally, `GameTableScreen` hard-coded `seed: "local-human-vs-ai"`, making even the session matchId identical between launches.
+
+### Architecture
+
+The deal engine already accepted a `RandomSource` injection interface. The fix is minimal: add a `createFreshRandom()` backed by `Math.random` and route production callers through it.
+
+#### Production gameplay
+- `createLocalHumanVsAISession()` with no `seed` → `createFreshRandom()` → different deal each launch
+- `matchId` includes `Date.now()` + random suffix to guarantee a unique identifier even if two tabs open simultaneously
+- `GameTableScreen` passes no `seed` — fresh random is the default
+
+#### Deterministic tests / simulator
+- All tests pass an explicit `seed` string (e.g. `seed: "ui-playable-test"`) → `createSeededRandom(seed)` → reproducible deal
+- The 10,000-match simulator gate remains fully deterministic
+- Server (`game-server`) uses its own seed derived from `matchId` for authorized replay
+
+### Hand Presentation Ordering
+
+A `sortHandForDisplay(hand)` helper is implemented in `packages/game-client/src/local-human-vs-ai.ts` and re-exported from the client index.
+
+**Suit order:** `SPADES → HEARTS → DIAMONDS → CLUBS`  
+**Rank order within each suit:** `A → K → Q → J → 10 → 9 → 8 → 7` (high-to-low)
+
+`sortHandForDisplay` creates a **sorted copy** via `[...hand].sort(...)`. The authoritative hand array is never mutated. Card identity (`card.id`) is used for all dispatch calls.
+
+### Separation: display order ≠ game-rule order
+
+| Context | Ordering |
+|---|---|
+| `sortHandForDisplay` | High-to-low, SHDC — **display only** |
+| `cardStrength()` | SUN_ORDER / HOKUM_ORDER — **engine authority** |
+| `compareCards()` | Trump/led-suit rules — **engine authority** |
+| `getLegalMoves()` | Engine legality — **engine authority** |
+| AI hand | Never sorted for display — authoritative only |
+
+### Validation
+
+**Tests added:**
+- Engine `Test A–F` (6 tests): determinism, different-seed divergence, 10-deal uniqueness, 32-card integrity, completion deal integrity, redeal freshness
+- Client: same-seed determinism, different-seed divergence, 5-session uniqueness, suit/rank sort correctness, sort-is-copy, card ID dispatch through sort, round-transition freshness (7 tests)
+
+**Runtime verification:**
+```
+Deal #1 (South): KS 10S  7H  QD JD 9D 10C 7C
+Deal #2 (South): JS JH   7H  AD QD JD  JC 9C
+Deal #3 (South): QS JS  10S  7S 9H 7D 10C 7C
+Deal #4 (South): QH 9H   8H  QD 10D 7D  AC 7C
+Deal #5 (South): 10S AH  QH 10H 9H    AC 10C 9C
+Unique: 5/5 — PASS ✅
+```
+
+**Test totals after slice:**
+| Package | Tests | Pass |
+|---|---|---|
+| `game-engine` | 61 | 61 |
+| `game-client` | 22 | 22 |
+| `game-simulator` | 11 | 11 |
+| `game-server` | 34 | 34 |
+| **Total** | **128** | **128** |
