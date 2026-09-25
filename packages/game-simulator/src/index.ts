@@ -196,6 +196,7 @@ export interface SimulationConfig {
   readonly maxRoundsPerGame?: number;
   readonly policy?: CardPolicy;
   readonly policies?: Readonly<Record<PlayerId, CardPolicy>>;
+  readonly biddingDifficulty?: AIDifficulty;
 }
 
 export interface MatchSimulationResult {
@@ -231,9 +232,28 @@ export function simulateMatch(
       createEngineRandom(roundSeed),
     );
 
-    const bidding = runBidding(deal.dealerSeat, deal, roundSeed);
+    const bidding = runBidding(
+      deal.dealerSeat,
+      deal,
+      roundSeed,
+      "NORMAL",
+    );
+    if (bidding.phase === "CANCELLED") {
+      // ALL_PASS is authoritative: the engine ends the bidding round and the
+      // simulator starts the next round with the rotated dealer. No scoring,
+      // card play, or contract completion is performed for the cancelled round.
+      dealerSeat = rotateDealer(dealerSeat);
+      roundDigests.push([
+        roundNumber,
+        dealerSeat,
+        "CANCELLED",
+        "NONE",
+        "NONE",
+      ].join(":"));
+      continue;
+    }
     if (bidding.phase !== "CONTRACT_SELECTED" || !bidding.selectedContract) {
-      throw new Error("Simulation bidding policy failed to select a contract");
+      throw new Error("Simulation bidding policy ended in an unexpected phase");
     }
 
     const completedDeal = completeDeal(
@@ -517,6 +537,7 @@ function runBidding(
   dealerSeat: Seat,
   deal: ReturnType<typeof createInitialDeal>,
   seed: string,
+  difficulty: AIDifficulty = "NORMAL",
 ) {
   let state = createBiddingState(deal.roundId, dealerSeat);
   let turn = 0;
@@ -524,19 +545,51 @@ function runBidding(
   const cards = CARD_BY_ID;
 
   while (state.phase === "FIRST_ROUND" || state.phase === "SECOND_ROUND") {
-    const exposedSuit = deal.exposedCardId === null ? null : cards[deal.exposedCardId]!.suit;
-    const legal = legalBiddingActions(state, dealerSeat, exposedSuit, hands);
-    const actionType = chooseBiddingAction(legal, turn, seed);
-    const action: BiddingAction = actionType === "BUY_HOKUM"
-      ? {
-          type: actionType,
-          actionId: `sim:${seed}:bid:${turn}`,
-          suit: chooseHokumSuit(legal, exposedSuit, turn),
-        }
-      : {
-          type: actionType,
-          actionId: `sim:${seed}:bid:${turn}`,
-        };
+    const exposedCard = deal.exposedCardId === null ? null : cards[deal.exposedCardId]!;
+    const legal = legalBiddingActions(
+      state,
+      dealerSeat,
+      exposedCard?.suit ?? null,
+      hands,
+    );
+    if (legal.length === 0) {
+      throw new Error("Simulator reached a bidding state with no legal actions");
+    }
+
+    const actingSeat = state.actingSeat;
+    const playerId = PLAYER_BY_SEAT[actingSeat];
+    const observation: AIRoundObservation = {
+      matchId: `sim:${seed}`,
+      roundId: deal.roundId,
+      roundNumber: 1,
+      playerId,
+      seat: actingSeat,
+      teamId: teamOfSeat(actingSeat),
+      phase: "BIDDING",
+      score: { NORTH_SOUTH: 0, EAST_WEST: 0 },
+      bidding: {
+        ...state,
+      },
+      ownHand: (hands[actingSeat] ?? []).map((id) => cards[id]!),
+      exposedCard,
+      legalActions: legal,
+      projects: [],
+      baloot: null,
+      stateVersion: turn,
+    };
+
+    const decision = chooseBaselineAction(observation, { difficulty });
+    if (decision.action.type !== "BID") {
+      throw new Error("Baseline bidding policy did not return a BID action");
+    }
+
+    const action = decision.action.action;
+    if (!legal.includes(action.type)) {
+      throw new Error(`Bidding policy selected illegal action ${action.type}`);
+    }
+    if (action.type === "BUY_HOKUM" && action.suit === exposedCard?.suit) {
+      throw new Error("Bidding policy selected exposed suit during second-round Hokum");
+    }
 
     state = applyBiddingAction(
       state,
@@ -550,27 +603,6 @@ function runBidding(
   }
 
   return state;
-}
-
-function chooseBiddingAction(
-  legal: readonly BiddingAction["type"][],
-  turn: number,
-  seed: string,
-): BiddingAction["type"] {
-  const preferred: readonly BiddingAction["type"][] = turn % 2 === 0
-    ? ["BUY_HOKUM_EXPOSED", "BUY_SUN", "BUY_ASHKAL", "BUY_HOKUM"]
-    : ["BUY_SUN", "BUY_HOKUM", "BUY_HOKUM_EXPOSED", "BUY_ASHKAL"];
-  return preferred.find((type) => legal.includes(type)) ?? legal[0]!;
-}
-
-function chooseHokumSuit(
-  legal: readonly BiddingAction["type"][],
-  exposedSuit: Suit | null,
-  turn: number,
-): Suit {
-  void turn;
-  const suits: readonly Suit[] = ["CLUBS", "DIAMONDS", "HEARTS", "SPADES"];
-  return suits.find((suit) => legal.includes("BUY_HOKUM") && suit !== exposedSuit) ?? suits[0]!;
 }
 
 function selectProjects(
