@@ -513,7 +513,11 @@ test("round lifecycle preserves score and stops advancing after match completion
 
 // ─── Dealing randomness & hand-sort tests ─────────────────────────────────────
 
-import { sortHandForDisplay } from "../src/index.ts";
+import { getDisplaySuitOrder, sortHandForDisplay } from "../src/index.ts";
+
+function makeCard(suit, rank) {
+  return { id: `${suit}-${rank}`, suit, rank };
+}
 
 test("same explicit seed produces identical initial hand", () => {
   const s1 = createLocalHumanVsAISession({ seed: "determinism-check", humanSeat: "SOUTH" });
@@ -545,24 +549,146 @@ test("no-seed sessions produce unique deals across 5 launches", () => {
   assert.ok(unique.size > 1, "Multiple launches must not all yield identical hands");
 });
 
-test("sortHandForDisplay groups cards by suit and sorts high-to-low within suit", () => {
-  const session = createLocalHumanVsAISession({ seed: "sort-test", humanSeat: "SOUTH" });
-  const snapshot = session.getSnapshot();
-  const sorted = sortHandForDisplay(snapshot.playerHand);
+test("sortHandForDisplay - Four suits: BLACK → RED → BLACK → RED (♠ → ♥ → ♣ → ♦)", () => {
+  const hand = [
+    makeCard("DIAMONDS", "8"),
+    makeCard("HEARTS", "A"),
+    makeCard("SPADES", "K"),
+    makeCard("CLUBS", "10"),
+    makeCard("HEARTS", "J"),
+    makeCard("SPADES", "7"),
+    makeCard("CLUBS", "Q"),
+    makeCard("DIAMONDS", "A"),
+  ];
+  const sorted = sortHandForDisplay(hand);
+  const distinctSuits = [...new Set(sorted.map((c) => c.suit))];
+  assert.deepEqual(distinctSuits, ["SPADES", "HEARTS", "CLUBS", "DIAMONDS"]);
+  assert.deepEqual(
+    sorted.map((c) => c.id),
+    [
+      "SPADES-K", "SPADES-7",
+      "HEARTS-A", "HEARTS-J",
+      "CLUBS-Q", "CLUBS-10",
+      "DIAMONDS-A", "DIAMONDS-8",
+    ],
+  );
+});
 
-  const SUIT_ORDER = ["SPADES", "HEARTS", "CLUBS", "DIAMONDS"];
-  const RANK_ORDER = ["A", "K", "Q", "J", "10", "9", "8", "7"];
+test("sortHandForDisplay - Two red + one black: RED → BLACK → RED", () => {
+  // Case A: Hearts (Red), Spades (Black), Diamonds (Red) -> ♥ → ♠ → ♦
+  const handA = [
+    makeCard("DIAMONDS", "K"),
+    makeCard("SPADES", "A"),
+    makeCard("HEARTS", "10"),
+    makeCard("HEARTS", "Q"),
+    makeCard("DIAMONDS", "7"),
+    makeCard("SPADES", "9"),
+  ];
+  const sortedA = sortHandForDisplay(handA);
+  const distinctSuitsA = [...new Set(sortedA.map((c) => c.suit))];
+  assert.deepEqual(distinctSuitsA, ["HEARTS", "SPADES", "DIAMONDS"]);
+  assert.deepEqual(
+    sortedA.map((c) => c.id),
+    [
+      "HEARTS-Q", "HEARTS-10",
+      "SPADES-A", "SPADES-9",
+      "DIAMONDS-K", "DIAMONDS-7",
+    ],
+  );
 
-  for (let i = 1; i < sorted.length; i += 1) {
-    const prev = sorted[i - 1];
-    const curr = sorted[i];
-    const suitDiff = SUIT_ORDER.indexOf(prev.suit) - SUIT_ORDER.indexOf(curr.suit);
-    if (suitDiff < 0) continue; // earlier suit comes first — correct
-    if (suitDiff > 0) assert.fail(`Suit order violated: ${prev.suit} before ${curr.suit}`);
-    // Same suit: rank must be non-decreasing in index (high → low)
-    const rankDiff = RANK_ORDER.indexOf(prev.rank) - RANK_ORDER.indexOf(curr.rank);
-    assert.ok(rankDiff <= 0, `Rank order violated within ${prev.suit}: ${prev.rank} before ${curr.rank}`);
-  }
+  // Case B: Hearts (Red), Clubs (Black), Diamonds (Red) -> ♥ → ♣ → ♦
+  const handB = [
+    makeCard("DIAMONDS", "J"),
+    makeCard("CLUBS", "8"),
+    makeCard("HEARTS", "K"),
+  ];
+  const sortedB = sortHandForDisplay(handB);
+  const distinctSuitsB = [...new Set(sortedB.map((c) => c.suit))];
+  assert.deepEqual(distinctSuitsB, ["HEARTS", "CLUBS", "DIAMONDS"]);
+});
+
+test("sortHandForDisplay - Two black + one red: BLACK → RED → BLACK", () => {
+  // Case A: Spades (Black), Hearts (Red), Clubs (Black) -> ♠ → ♥ → ♣
+  const handA = [
+    makeCard("CLUBS", "A"),
+    makeCard("SPADES", "J"),
+    makeCard("HEARTS", "K"),
+    makeCard("CLUBS", "7"),
+    makeCard("SPADES", "10"),
+  ];
+  const sortedA = sortHandForDisplay(handA);
+  const distinctSuitsA = [...new Set(sortedA.map((c) => c.suit))];
+  assert.deepEqual(distinctSuitsA, ["SPADES", "HEARTS", "CLUBS"]);
+  assert.deepEqual(
+    sortedA.map((c) => c.id),
+    [
+      "SPADES-J", "SPADES-10",
+      "HEARTS-K",
+      "CLUBS-A", "CLUBS-7",
+    ],
+  );
+
+  // Case B: Spades (Black), Diamonds (Red), Clubs (Black) -> ♠ → ♦ → ♣
+  const handB = [
+    makeCard("CLUBS", "Q"),
+    makeCard("DIAMONDS", "9"),
+    makeCard("SPADES", "8"),
+  ];
+  const sortedB = sortHandForDisplay(handB);
+  const distinctSuitsB = [...new Set(sortedB.map((c) => c.suit))];
+  assert.deepEqual(distinctSuitsB, ["SPADES", "DIAMONDS", "CLUBS"]);
+});
+
+test("sortHandForDisplay - One black + one red: BLACK → RED", () => {
+  // Spades + Hearts -> ♠ → ♥
+  const hand1 = [makeCard("HEARTS", "A"), makeCard("SPADES", "K")];
+  const sorted1 = sortHandForDisplay(hand1);
+  assert.deepEqual([...new Set(sorted1.map((c) => c.suit))], ["SPADES", "HEARTS"]);
+
+  // Clubs + Diamonds -> ♣ → ♦
+  const hand2 = [makeCard("DIAMONDS", "10"), makeCard("CLUBS", "A")];
+  const sorted2 = sortHandForDisplay(hand2);
+  assert.deepEqual([...new Set(sorted2.map((c) => c.suit))], ["CLUBS", "DIAMONDS"]);
+});
+
+test("sortHandForDisplay - Missing suits: No empty visual gaps", () => {
+  // 3 suits present: ♠, ♥, ♦ (no ♣) -> 1 black, 2 red -> RED → BLACK → RED
+  const hand = [
+    makeCard("HEARTS", "10"),
+    makeCard("SPADES", "A"),
+    makeCard("DIAMONDS", "7"),
+  ];
+  const sorted = sortHandForDisplay(hand);
+  // Must have exactly 3 cards, exactly the 3 present suits, no undefined/null
+  assert.equal(sorted.length, 3);
+  assert.deepEqual([...new Set(sorted.map((c) => c.suit))], ["HEARTS", "SPADES", "DIAMONDS"]);
+
+  // Single suit hand (only Clubs)
+  const singleSuitHand = [makeCard("CLUBS", "7"), makeCard("CLUBS", "A"), makeCard("CLUBS", "10")];
+  const sortedSingle = sortHandForDisplay(singleSuitHand);
+  assert.equal(sortedSingle.length, 3);
+  assert.deepEqual(sortedSingle.map((c) => c.id), ["CLUBS-A", "CLUBS-10", "CLUBS-7"]);
+
+  // Empty hand
+  assert.deepEqual(sortHandForDisplay([]), []);
+});
+
+test("sortHandForDisplay - Same suit: Cards remain sorted A K Q J 10 9 8 7", () => {
+  const fullSuit = [
+    makeCard("SPADES", "7"),
+    makeCard("SPADES", "8"),
+    makeCard("SPADES", "9"),
+    makeCard("SPADES", "10"),
+    makeCard("SPADES", "J"),
+    makeCard("SPADES", "Q"),
+    makeCard("SPADES", "K"),
+    makeCard("SPADES", "A"),
+  ];
+  const sorted = sortHandForDisplay(fullSuit);
+  assert.deepEqual(
+    sorted.map((c) => c.rank),
+    ["A", "K", "Q", "J", "10", "9", "8", "7"],
+  );
 });
 
 test("sortHandForDisplay returns a copy — authoritative hand is not mutated", () => {

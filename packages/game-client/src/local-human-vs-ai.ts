@@ -902,16 +902,83 @@ function createRound(
 // This function must NEVER be used for game-rule decisions (legality, scoring,
 // project/Baloot detection, trick winner). It is purely visual.
 //
-// Suit order: SPADES → HEARTS → CLUBS → DIAMONDS (♠ ♥ ♣ ♦)
-// Rank order within each suit: A → K → Q → J → 10 → 9 → 8 → 7 (high-to-low)
+// Dynamic Black/Red alternating suit ordering:
+// - BLACK suits: SPADES (♠), CLUBS (♣)
+// - RED suits: HEARTS (♥), DIAMONDS (♦)
+// - Alternation rules maximize black/red visual separation:
+//   * 4 suits: BLACK → RED → BLACK → RED (♠ → ♥ → ♣ → ♦)
+//   * 2 red + 1 black: RED → BLACK → RED (♥ → ♠/♣ → ♦)
+//   * 2 black + 1 red: BLACK → RED → BLACK (♠ → ♥/♦ → ♣)
+//   * 1 black + 1 red: BLACK → RED (e.g. ♠ → ♥)
+//   * Same-color only: canonical order (♠ → ♣, or ♥ → ♦)
+//   * Empty suits are omitted without placeholders/gaps.
+// - Rank order within each suit: A → K → Q → J → 10 → 9 → 8 → 7 (high-to-low)
 
-const DISPLAY_SUIT_ORDER: readonly Suit[] = ["SPADES", "HEARTS", "CLUBS", "DIAMONDS"];
+const CANONICAL_BLACK_SUITS: readonly Suit[] = ["SPADES", "CLUBS"];
+const CANONICAL_RED_SUITS: readonly Suit[] = ["HEARTS", "DIAMONDS"];
 const DISPLAY_RANK_ORDER: readonly Rank[] = ["A", "K", "Q", "J", "10", "9", "8", "7"];
 
-export function sortHandForDisplay(hand: readonly Card[]): readonly Card[] {
-  return [...hand].sort((a, b) => {
-    const suitDiff = DISPLAY_SUIT_ORDER.indexOf(a.suit) - DISPLAY_SUIT_ORDER.indexOf(b.suit);
-    if (suitDiff !== 0) return suitDiff;
-    return DISPLAY_RANK_ORDER.indexOf(a.rank) - DISPLAY_RANK_ORDER.indexOf(b.rank);
-  });
+export function getDisplaySuitOrder(presentSuits: readonly Suit[]): Suit[] {
+  const uniqueSuits = Array.from(new Set(presentSuits));
+  const blackSuits = CANONICAL_BLACK_SUITS.filter((s) => uniqueSuits.includes(s));
+  const redSuits = CANONICAL_RED_SUITS.filter((s) => uniqueSuits.includes(s));
+
+  // Rule 4: Four suits -> BLACK → RED → BLACK → RED (♠ → ♥ → ♣ → ♦)
+  if (blackSuits.length === 2 && redSuits.length === 2) {
+    return [blackSuits[0]!, redSuits[0]!, blackSuits[1]!, redSuits[1]!];
+  }
+
+  // Rule 2: Two red + one black -> RED → BLACK → RED (♥ → ♠/♣ → ♦)
+  if (redSuits.length === 2 && blackSuits.length === 1) {
+    return [redSuits[0]!, blackSuits[0]!, redSuits[1]!];
+  }
+
+  // Rule 3: Two black + one red -> BLACK → RED → BLACK (♠ → ♥/♦ → ♣)
+  if (blackSuits.length === 2 && redSuits.length === 1) {
+    return [blackSuits[0]!, redSuits[0]!, blackSuits[1]!];
+  }
+
+  // Rule 5: One black + one red -> BLACK → RED
+  if (blackSuits.length === 1 && redSuits.length === 1) {
+    return [blackSuits[0]!, redSuits[0]!];
+  }
+
+  // Only black suits (♠ → ♣), only red suits (♥ → ♦), or single suit
+  return [...blackSuits, ...redSuits];
 }
+
+export function sortHandForDisplay(hand: readonly Card[]): readonly Card[] {
+  if (hand.length <= 1) {
+    return [...hand];
+  }
+
+  // 1. Group cards by suit
+  const cardsBySuit = new Map<Suit, Card[]>();
+  for (const card of hand) {
+    const list = cardsBySuit.get(card.suit);
+    if (list) {
+      list.push(card);
+    } else {
+      cardsBySuit.set(card.suit, [card]);
+    }
+  }
+
+  // 2. Identify present suits and determine dynamic alternating order
+  // Empty suits (suits with 0 cards) are omitted (no empty gaps)
+  const presentSuits = Array.from(cardsBySuit.keys());
+  const orderedSuits = getDisplaySuitOrder(presentSuits);
+
+  // 3. Assemble result: each suit group together, sorted A → K → Q → J → 10 → 9 → 8 → 7
+  const result: Card[] = [];
+  for (const suit of orderedSuits) {
+    const cards = cardsBySuit.get(suit);
+    if (!cards) continue;
+    const sortedGroup = [...cards].sort(
+      (a, b) => DISPLAY_RANK_ORDER.indexOf(a.rank) - DISPLAY_RANK_ORDER.indexOf(b.rank),
+    );
+    result.push(...sortedGroup);
+  }
+
+  return result;
+}
+

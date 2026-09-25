@@ -12,7 +12,7 @@
  *   3. No duplicate card IDs within any hand
  *   4. Every session has a unique matchId
  *   5. sortHandForDisplay does not mutate the original array
- *   6. Sort order: SPADES → HEARTS → DIAMONDS → CLUBS
+ *   6. Dynamic alternating suit order (BLACK/RED alternation with complete suit groups)
  *   7. Rank order within suit: A K Q J 10 9 8 7
  *   8. Card IDs remain identical before/after sort
  */
@@ -20,10 +20,10 @@
 import assert from "node:assert/strict";
 import {
   createLocalHumanVsAISession,
+  getDisplaySuitOrder,
   sortHandForDisplay,
 } from "../packages/game-client/dist/index.js";
 
-const SUIT_ORDER = ["SPADES", "HEARTS", "CLUBS", "DIAMONDS"];
 const RANK_ORDER = ["A", "K", "Q", "J", "10", "9", "8", "7"];
 
 const N = 10;
@@ -123,14 +123,18 @@ for (let i = 0; i < N; i++) {
   assert.equal(afterSortIds, authIds.join(","), `FAIL: Session ${i + 1} sort mutated the original array`);
 
   // 6+7. Suit and rank order
+  const presentSuits = [...new Set(sorted.map((c) => c.suit))];
+  const expectedSuitOrder = getDisplaySuitOrder(presentSuits);
+  assert.deepEqual(
+    presentSuits,
+    expectedSuitOrder,
+    `Session ${i + 1}: Suit order mismatch: ${presentSuits} vs expected ${expectedSuitOrder}`,
+  );
+
   for (let j = 1; j < sorted.length; j++) {
     const a = sorted[j - 1];
     const b = sorted[j];
-    const suitDiff = SUIT_ORDER.indexOf(a.suit) - SUIT_ORDER.indexOf(b.suit);
-    if (suitDiff > 0) {
-      assert.fail(`Session ${i + 1}: Suit order violation: ${a.suit} before ${b.suit}`);
-    }
-    if (suitDiff === 0) {
+    if (a.suit === b.suit) {
       const rankDiff = RANK_ORDER.indexOf(a.rank) - RANK_ORDER.indexOf(b.rank);
       if (rankDiff > 0) {
         assert.fail(`Session ${i + 1}: Rank order violation in ${a.suit}: ${a.rank} before ${b.rank}`);
@@ -145,7 +149,7 @@ for (let i = 0; i < N; i++) {
   }
 }
 console.log(`✅ [5] sortHandForDisplay returns a new array (no reference mutation)`);
-console.log(`✅ [6] Suit order: SPADES → HEARTS → CLUBS → DIAMONDS (♠ ♥ ♣ ♦)`);
+console.log(`✅ [6] Dynamic alternating suit order: BLACK/RED alternation with complete suit groups`);
 console.log(`✅ [7] Rank order within suit: A K Q J 10 9 8 7`);
 console.log(`✅ [8] All card IDs present and unchanged after sort`);
 
