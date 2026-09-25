@@ -205,6 +205,8 @@ export {
 export type { CardMemory, CardMemoryInput } from "./card-memory.js";
 export { extractStrategyFeatures } from "./strategy-features.js";
 export type { StrategyFeatures } from "./strategy-features.js";
+export { extractBiddingFeatures } from "./bidding/bid-features.js";
+export type { BidContextFeatures, BidHandFeatures, BiddingFeatures, SuitBidFeatures } from "./bidding/bid-features.js";
 export { chooseBaselineAction } from "./baseline-policy.js";
 export type { AIDifficulty, BaselineDecision, BaselinePolicyConfig } from "./baseline-policy.js";
 
