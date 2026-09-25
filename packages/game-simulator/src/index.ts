@@ -243,14 +243,15 @@ export function simulateMatch(
       // ALL_PASS is authoritative: the engine ends the bidding round and the
       // simulator starts the next round with the rotated dealer. No scoring,
       // card play, or contract completion is performed for the cancelled round.
-      dealerSeat = rotateDealer(dealerSeat);
+      const cancelledDealer = dealerSeat;
       roundDigests.push([
         roundNumber,
-        dealerSeat,
+        cancelledDealer,
         "CANCELLED",
         "NONE",
         "NONE",
       ].join(":"));
+      dealerSeat = rotateDealer(dealerSeat);
       continue;
     }
     if (bidding.phase !== "CONTRACT_SELECTED" || !bidding.selectedContract) {
