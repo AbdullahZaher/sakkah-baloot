@@ -209,6 +209,8 @@ export { extractBiddingFeatures } from "./bidding/bid-features.js";
 export type { BidContextFeatures, BidHandFeatures, BiddingFeatures, SuitBidFeatures } from "./bidding/bid-features.js";
 export { evaluateSunBid } from "./bidding/sun-evaluator.js";
 export type { BidConfidence, SunBidEvaluation } from "./bidding/sun-evaluator.js";
+export { evaluateHokumBid } from "./bidding/hokum-evaluator.js";
+export type { HokumBidEvaluation, HokumSuitEvaluation } from "./bidding/hokum-evaluator.js";
 export { chooseBaselineAction } from "./baseline-policy.js";
 export type { AIDifficulty, BaselineDecision, BaselinePolicyConfig } from "./baseline-policy.js";
 
