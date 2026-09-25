@@ -6,7 +6,6 @@ import {
   createInitialDeal,
   createSeededRandom,
   legalBiddingActions,
-  type BiddingAction,
 } from "@sakkah-baloot/game-engine";
 import { rankBiddingContracts } from "../dist/index.js";
 
