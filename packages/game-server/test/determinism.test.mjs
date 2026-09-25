@@ -40,7 +40,10 @@ test("two independent match hosts with the same seed produce identical trajector
   );
 
   // Run full round with AI on both hosts
-  while (hostA.getMatchState().round.phase === "BIDDING") {
+  while (
+    hostA.getMatchState().round?.phase === "BIDDING" &&
+    hostA.getMatchState().round.bidding.phase !== "CANCELLED"
+  ) {
     const seatA = hostA.getMatchState().round.bidding.actingSeat;
     const seatB = hostB.getMatchState().round.bidding.actingSeat;
     assert.equal(seatA, seatB);

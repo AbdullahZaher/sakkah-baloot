@@ -97,3 +97,22 @@ test("contract ranking is deterministic on ties", () => {
   ]);
   assert.deepEqual(rankBiddingContracts(input), rankBiddingContracts(input));
 });
+
+test("contract ranking reports NO_LEGAL_PURCHASE when only PASS is in the legal action set", () => {
+  const input = observation([
+    "HEARTS-A",
+    "HEARTS-10",
+    "CLUBS-A",
+    "CLUBS-10",
+    "DIAMONDS-K",
+    "DIAMONDS-Q",
+    "SPADES-K",
+    "SPADES-Q",
+  ], ["PASS"]);
+
+  const ranking = rankBiddingContracts(input);
+  assert.equal(ranking.selected, null);
+  assert.equal(ranking.shouldPass, true);
+  assert.equal(ranking.candidates.length, 0);
+  assert.ok(ranking.reasonCodes.includes("NO_LEGAL_PURCHASE"));
+});

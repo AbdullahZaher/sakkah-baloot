@@ -109,7 +109,7 @@ export function rankBiddingContracts(
     selected && next ? selected.score - next.score : selected ? selected.margin : 0;
 
   const reasons: string[] = [];
-  if (selected === null) reasons.push("NO_LEGAL_PURCHASE");
+  if (candidates.length === 0) reasons.push("NO_LEGAL_PURCHASE");
   else if (shouldPass) reasons.push("NO_CONTRACT_CLEARS_THRESHOLD");
   else reasons.push("CONTRACT_CLEARS_THRESHOLD");
 

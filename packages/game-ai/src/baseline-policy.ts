@@ -29,7 +29,7 @@ export function chooseBaselineAction(
   config: BaselinePolicyConfig = {},
 ): BaselineDecision {
   if (observation.phase === "BIDDING" && observation.bidding) {
-    return chooseBid(observation);
+    return chooseBid(observation, config);
   }
   if (observation.phase === "PLAYING" && observation.playing) {
     return chooseCard(observation, config);
@@ -62,16 +62,18 @@ function chooseBid(
     reasonCodes.push("PASS_POLICY");
   }
 
+  const turn = bidding.bidding.turnNumber ?? observation.stateVersion;
+
   const action: BiddingAction = {
     type: selectedType,
-    actionId: `ai-bidding:${observation.roundId}:${observation.playerId}:${selectedType}`,
+    actionId: `ai-bidding:${observation.roundId}:t${turn}:${observation.playerId}:${selectedType}`,
     ...(selectedType === "BUY_HOKUM" && selectedSuit ? { suit: selectedSuit } : {}),
   } as BiddingAction;
 
   const candidates = ranking.candidates.map((candidate) => {
     const candidateAction: BiddingAction = {
       type: candidate.action,
-      actionId: `ai-bidding:${observation.roundId}:${observation.playerId}:${candidate.action}`,
+      actionId: `ai-bidding:${observation.roundId}:t${turn}:${observation.playerId}:${candidate.action}`,
       ...(candidate.action === "BUY_HOKUM" ? { suit: candidate.suit } : {}),
     } as BiddingAction;
 

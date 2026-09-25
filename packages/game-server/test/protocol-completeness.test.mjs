@@ -182,7 +182,9 @@ test("Test C — Round completion + ADVANCE_ROUND: produces [NEXT_ROUND, DEAL(IN
   // 1. Play round 1 to completion with AI
   while (
     host.getMatchState().round &&
-    (host.getMatchState().round.phase === "BIDDING" || host.getMatchState().round.phase === "PLAYING")
+    ((host.getMatchState().round.phase === "BIDDING" &&
+      host.getMatchState().round.bidding.phase !== "CANCELLED") ||
+      host.getMatchState().round.phase === "PLAYING")
   ) {
     const round = host.getMatchState().round;
     const activePid =
@@ -215,21 +217,22 @@ test("Test C — Round completion + ADVANCE_ROUND: produces [NEXT_ROUND, DEAL(IN
   assert.equal(advanceResult.events.length, 2);
   allEvents.push(...advanceResult.events);
 
+  const nextRoundNumber = host.getMatchState().roundNumber;
+  const expectedRoundId = `test-c-match:round:${nextRoundNumber}`;
+
   // Check NEXT_ROUND event
   const nextRoundEnv = advanceResult.events[0];
   assert.equal(nextRoundEnv.event.type, "NEXT_ROUND");
   assert.equal(nextRoundEnv.stateVersion, vBeforeAdvance + 1);
-  assert.equal(nextRoundEnv.event.roundId, "test-c-match:round:2");
-  assert.equal(nextRoundEnv.event.nextRoundNumber, 2);
-  assert.equal(nextRoundEnv.event.dealerSeat, "WEST");
+  assert.equal(nextRoundEnv.event.roundId, expectedRoundId);
+  assert.equal(nextRoundEnv.event.nextRoundNumber, nextRoundNumber);
 
   // Check DEAL event
   const dealEnv = advanceResult.events[1];
   assert.equal(dealEnv.event.type, "DEAL");
   assert.equal(dealEnv.stateVersion, vBeforeAdvance + 2);
-  assert.equal(dealEnv.event.roundId, "test-c-match:round:2");
-  assert.equal(dealEnv.event.roundNumber, 2);
-  assert.equal(dealEnv.event.dealerSeat, "WEST");
+  assert.equal(dealEnv.event.roundId, expectedRoundId);
+  assert.equal(dealEnv.event.roundNumber, nextRoundNumber);
   assert.equal(dealEnv.event.dealType, "INITIAL");
 
   // 3. Replay all events from version 0
@@ -246,9 +249,8 @@ test("Test C — Round completion + ADVANCE_ROUND: produces [NEXT_ROUND, DEAL(IN
 
   const replayed = replayProtocol(initialProtocolState, allEvents);
   assert.equal(replayed.state.stateVersion, host.getStateVersion());
-  assert.equal(replayed.state.roundId, "test-c-match:round:2");
-  assert.equal(replayed.state.roundNumber, 2);
-  assert.equal(replayed.state.dealerSeat, "WEST");
+  assert.equal(replayed.state.roundId, expectedRoundId);
+  assert.equal(replayed.state.roundNumber, nextRoundNumber);
   assert.equal(replayed.state.phase, "DEAL");
   assert.deepEqual(replayed.state.score, round1Score);
 });

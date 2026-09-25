@@ -20,10 +20,10 @@ function observation(deal, state, legal) {
   const hand = deal.hands[state.actingSeat].map(cardFromId);
   return {
     phase: "BIDDING",
+    bidding: state,
     ownHand: hand,
     exposedCard: deal.exposedCardId ? cardFromId(deal.exposedCardId) : null,
     legalActions: legal,
-    bidding: state,
   };
 }
 
@@ -41,9 +41,19 @@ function chooseAction(deal, state, index, difficulty = "NORMAL") {
   const ranking = rankBiddingContracts(observed, { difficulty });
   const decision = chooseBaselineAction(
     {
-      ...observed,
+      matchId: `test:${deal.roundId}`,
       roundId: deal.roundId,
+      roundNumber: 1,
       playerId: `${state.actingSeat}_PLAYER`,
+      seat: state.actingSeat,
+      teamId: state.actingSeat === "NORTH" || state.actingSeat === "SOUTH" ? "NORTH_SOUTH" : "EAST_WEST",
+      phase: "BIDDING",
+      score: { NORTH_SOUTH: 0, EAST_WEST: 0 },
+      bidding: observed,
+      playing: null,
+      projects: [],
+      baloot: null,
+      stateVersion: state.stateVersion,
     },
     { difficulty },
   );

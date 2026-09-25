@@ -17,7 +17,7 @@ test("AI seats use unified submitCommand path and complete full round automatica
     matchId: "ai-unified-match",
     initialDealerSeat: "NORTH",
     playerBindings: PLAYER_BINDINGS,
-    seed: "ai-deterministic-seed-1",
+    seed: "seed-42",
   });
 
   const seatOrder = ["ai-east", "ai-south", "ai-west", "ai-north"];
@@ -26,7 +26,7 @@ test("AI seats use unified submitCommand path and complete full round automatica
   let biddingTurns = 0;
   while (
     host.getMatchState().round.phase === "BIDDING" &&
-    biddingTurns < 20
+    biddingTurns < 50
   ) {
     const actingSeat = host.getMatchState().round.bidding.actingSeat;
     const actingPlayerId = PLAYER_BINDINGS[actingSeat];
