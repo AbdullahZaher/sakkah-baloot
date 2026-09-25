@@ -7,7 +7,8 @@
 **20-A2 — Sun Evaluator:** COMPLETE
 **20-A3 — Hokum Evaluator:** COMPLETE
 **20-A4 — Contract Ranking + Pass Policy:** COMPLETE
-**20-A5 — Difficulty + Context:** NEXT  
+**20-A5 — Difficulty + Context:** COMPLETE
+**20-A6 — Full-match Validation:** NEXT  
 **20-A3 — Hokum Evaluator:** PLANNED
 
 Branch: `phase-20a-bidding-intelligence`
