@@ -9,7 +9,8 @@ import { GameTable } from "@sakkah-baloot/ui";
 export function GameTableScreen() {
   const [session] = useState<LocalPlayableSession>(() =>
     createLocalHumanVsAISession({
-      seed: "local-human-vs-ai",
+      // No seed — each session gets a genuinely random deal.
+      // Tests/simulator should pass an explicit seed string for reproducibility.
       humanSeat: "SOUTH",
       aiMode: "BASELINE",
       aiDifficulty: "NORMAL",
@@ -65,7 +66,7 @@ export function GameTableScreen() {
           <View
             style={[
               styles.turnBadge,
-              preview.completedTrickPresentation
+              preview.completedTrickPresentation || preview.roundScore
                 ? styles.turnBadgeFrozen
                 : preview.humanTurn
                   ? styles.turnBadgeHuman
@@ -85,9 +86,13 @@ export function GameTableScreen() {
             <Text style={styles.turnBadgeText}>
               {preview.completedTrickPresentation
                 ? `فاز ${seatLabel(preview.completedTrickPresentation.winnerSeat)}`
-                : preview.humanTurn
-                  ? "دورك"
-                  : `دور ${seatLabel(preview.actingSeat)}`}
+                : preview.roundScore
+                  ? preview.matchEnd.status === "FINISHED"
+                    ? "انتهت الصكة"
+                    : "انتهت الجولة"
+                  : preview.humanTurn
+                    ? "دورك"
+                    : `دور ${seatLabel(preview.actingSeat)}`}
             </Text>
           </View>
         </View>
@@ -106,6 +111,7 @@ export function GameTableScreen() {
         exposedCard={preview.exposedCard}
         hand={preview.playerHand}
         legalActions={preview.humanTurn ? preview.legalActions : []}
+        biddingHistory={preview.bidding.history}
         legalCardIds={preview.humanTurn ? preview.legalCardIds : []}
         game={preview.game}
         playerSeat={preview.playerSeat}
@@ -127,6 +133,7 @@ export function GameTableScreen() {
         baloot={preview.baloot}
         onProject={(projectId) => run(() => session.dispatchProject(projectId))}
         completedTrickPresentation={preview.completedTrickPresentation}
+        actionFeedback={preview.actionFeedback}
       />
     </View>
   );

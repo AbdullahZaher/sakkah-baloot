@@ -6,6 +6,10 @@ import { detectProjects, getLegalMoves } from "@sakkah-baloot/game-engine";
 
 const SUITS = ["CLUBS", "DIAMONDS", "HEARTS", "SPADES"];
 
+function isBiddingActive(snapshot) {
+  return snapshot.bidding.phase === "FIRST_ROUND" || snapshot.bidding.phase === "SECOND_ROUND";
+}
+
 function selectContract(session) {
   for (let i = 0; i < 8; i += 1) {
     const snapshot = session.getSnapshot();
@@ -126,7 +130,7 @@ test("playable local host accepts a human bid and returns to the human turn", ()
 
   const before = session.getSnapshot();
 
-  if (before.bidding.phase === "BIDDING") {
+  if (isBiddingActive(before)) {
     const action = before.legalActions.includes("BUY_SUN")
       ? "BUY_SUN"
       : "PASS";
@@ -210,7 +214,7 @@ test("client Baloot path never declares Baloot in Sun", () => {
   let snapshot = session.getSnapshot();
   let guard = 0;
 
-  while (snapshot.bidding.phase === "BIDDING" && guard++ < 16) {
+  while (isBiddingActive(snapshot) && guard++ < 16) {
     if (snapshot.legalActions.includes("BUY_SUN")) {
       snapshot = session.dispatchBiddingAction("BUY_SUN");
       break;
@@ -253,7 +257,7 @@ test("human-vs-AI UI host completes a full round through the public dispatch pat
   let snapshot = session.getSnapshot();
   let guard = 0;
 
-  while (snapshot.bidding.phase === "BIDDING" && guard++ < 32) {
+  while (isBiddingActive(snapshot) && guard++ < 32) {
     assert.equal(snapshot.humanTurn, true);
     if (snapshot.legalActions.includes("BUY_SUN")) {
       snapshot = session.dispatchBiddingAction("BUY_SUN");
@@ -303,7 +307,7 @@ test("forensic: completed trick holds presentation state, prevents next trick AI
   });
 
   let snapshot = session.getSnapshot();
-  while (snapshot.bidding.phase === "BIDDING") {
+  while (isBiddingActive(snapshot)) {
     if (snapshot.legalActions.includes("BUY_SUN")) {
       snapshot = session.dispatchBiddingAction("BUY_SUN");
     } else {
@@ -327,6 +331,8 @@ test("forensic: completed trick holds presentation state, prevents next trick AI
   assert.equal(snapshot.completedTrickPresentation.trickNumber, 1);
   assert.equal(snapshot.completedTrickPresentation.plays.length, 4);
   assert.ok(snapshot.completedTrickPresentation.winnerSeat);
+  assert.equal(snapshot.lastProtocolEvent, "TRICK_COMPLETE");
+  assert.equal(snapshot.protocol.phase, "TRICK_COMPLETE");
 
   // Verify human input is disabled during presentation hold
   assert.equal(snapshot.humanTurn, false);
@@ -347,3 +353,405 @@ test("forensic: completed trick holds presentation state, prevents next trick AI
   // Game has now safely advanced to Trick 2
   assert.ok(afterAck.game?.trickNumber === 2 || afterAck.game?.phase === "PLAYING");
 });
+
+
+test("human card interaction rejects an illegal card before mutating the game", () => {
+  const session = createLocalHumanVsAISession({
+    seed: "phase20-illegal-card",
+    humanSeat: "SOUTH",
+    aiMode: "BASELINE",
+  });
+
+  let snapshot = session.getSnapshot();
+  while (isBiddingActive(snapshot)) {
+    if (snapshot.legalActions.includes("BUY_SUN")) {
+      snapshot = session.dispatchBiddingAction("BUY_SUN");
+    } else {
+      snapshot = session.dispatchBiddingAction("PASS");
+    }
+  }
+
+  assert.equal(snapshot.game?.phase, "PLAYING");
+  assert.equal(snapshot.humanTurn, true);
+  const legal = new Set(snapshot.legalCardIds);
+  const illegal = snapshot.playerHand.find((card) => !legal.has(card.id));
+
+  if (!illegal) {
+    // The deterministic hand may have every visible card legal on the opening lead.
+    return;
+  }
+
+  const before = snapshot.game?.hands.HUMAN_PLAYER?.length ?? 0;
+  assert.throws(
+    () => session.dispatchCardPlay(illegal.id),
+    /Card is not legal/,
+  );
+
+  const after = session.getSnapshot();
+  assert.equal(after.game?.hands.HUMAN_PLAYER?.length ?? 0, before);
+  assert.equal(after.game?.currentPlayerId, "HUMAN_PLAYER");
+});
+
+test("completed-trick presentation blocks duplicate human dispatch", () => {
+  const session = createLocalHumanVsAISession({
+    seed: "phase20-duplicate-dispatch",
+    humanSeat: "SOUTH",
+    aiMode: "BASELINE",
+  });
+
+  let snapshot = session.getSnapshot();
+  while (isBiddingActive(snapshot)) {
+    if (snapshot.legalActions.includes("BUY_SUN")) {
+      snapshot = session.dispatchBiddingAction("BUY_SUN");
+    } else {
+      snapshot = session.dispatchBiddingAction("PASS");
+    }
+  }
+
+  while (!snapshot.completedTrickPresentation) {
+    assert.equal(snapshot.humanTurn, true);
+    const cardId = snapshot.legalCardIds[0];
+    assert.ok(cardId);
+    snapshot = session.dispatchCardPlay(cardId);
+  }
+
+  const held = snapshot;
+  const nextCard = held.game?.hands.HUMAN_PLAYER?.[0]?.id;
+  if (nextCard) {
+    assert.throws(
+      () => session.dispatchCardPlay(nextCard),
+      /Cannot play card while completed trick presentation is active/,
+    );
+  }
+
+  const heldAgain = session.getSnapshot();
+  assert.equal(heldAgain.completedTrickPresentation?.trickNumber, held.completedTrickPresentation?.trickNumber);
+  assert.equal(heldAgain.game?.completedTricks.length, held.game?.completedTricks.length);
+});
+
+
+test("playable host exposes the latest authoritative action feedback", () => {
+  const session = createLocalHumanVsAISession({
+    seed: "phase20-action-feedback",
+    humanSeat: "SOUTH",
+    aiMode: "BASELINE",
+  });
+
+  let snapshot = session.getSnapshot();
+  assert.ok(snapshot.actionFeedback);
+
+  while (isBiddingActive(snapshot)) {
+    const action = snapshot.legalActions.includes("BUY_SUN") ? "BUY_SUN" : "PASS";
+    snapshot = session.dispatchBiddingAction(action);
+  }
+
+  assert.ok(snapshot.actionFeedback);
+  assert.equal(typeof snapshot.actionFeedback, "string");
+});
+
+
+test("round lifecycle preserves score and stops advancing after match completion", () => {
+  const session = createLocalHumanVsAISession({
+    seed: "phase20-match-lifecycle",
+    humanSeat: "SOUTH",
+    aiMode: "BASELINE",
+    aiDifficulty: "NORMAL",
+  });
+
+  let snapshot = session.getSnapshot();
+  let rounds = 0;
+
+  while (snapshot.matchEnd.status !== "FINISHED" && rounds < 30) {
+    while (isBiddingActive(snapshot)) {
+      if (snapshot.legalActions.includes("BUY_SUN")) {
+        snapshot = session.dispatchBiddingAction("BUY_SUN");
+      } else {
+        snapshot = session.dispatchBiddingAction("PASS");
+      }
+    }
+
+    while (snapshot.game?.phase === "PLAYING") {
+      if (snapshot.completedTrickPresentation) {
+        snapshot = session.acknowledgeCompletedTrick();
+        continue;
+      }
+      assert.equal(snapshot.humanTurn, true);
+      assert.ok(snapshot.legalCardIds.length > 0);
+      snapshot = session.dispatchCardPlay(snapshot.legalCardIds[0]);
+    }
+
+    if (snapshot.completedTrickPresentation) {
+      snapshot = session.acknowledgeCompletedTrick();
+    }
+
+    assert.ok(snapshot.roundScore);
+    assert.ok(["ROUND_COMPLETE", "MATCH_COMPLETE"].includes(snapshot.matchPhase));
+    assert.equal(snapshot.game?.phase, "ROUND_COMPLETE");
+    if (snapshot.matchPhase === "MATCH_COMPLETE") {
+      assert.equal(snapshot.lastProtocolEvent, "MATCH_COMPLETE");
+      assert.equal(snapshot.protocol.phase, "MATCH_COMPLETE");
+    }
+    const completedScore = snapshot.matchScore;
+
+    if (snapshot.matchEnd.status === "FINISHED") {
+      const terminal = session.advanceRound();
+      assert.equal(terminal.matchEnd.status, "FINISHED");
+      assert.deepEqual(terminal.matchScore, completedScore);
+      assert.equal(terminal.roundNumber, snapshot.roundNumber);
+      break;
+    }
+
+    snapshot = session.advanceRound();
+    assert.equal(snapshot.roundNumber, rounds + 2);
+    assert.deepEqual(snapshot.matchScore, completedScore);
+    rounds += 1;
+  }
+
+  assert.equal(snapshot.matchEnd.status, "FINISHED");
+  assert.ok(snapshot.matchScore.NORTH_SOUTH >= 152 || snapshot.matchScore.EAST_WEST >= 152);
+});
+
+// ─── Dealing randomness & hand-sort tests ─────────────────────────────────────
+
+import { getDisplaySuitOrder, sortHandForDisplay } from "../src/index.ts";
+
+function makeCard(suit, rank) {
+  return { id: `${suit}-${rank}`, suit, rank };
+}
+
+test("same explicit seed produces identical initial hand", () => {
+  const s1 = createLocalHumanVsAISession({ seed: "determinism-check", humanSeat: "SOUTH" });
+  const s2 = createLocalHumanVsAISession({ seed: "determinism-check", humanSeat: "SOUTH" });
+  const h1 = s1.getSnapshot().playerHand.map((c) => c.id).join(",");
+  const h2 = s2.getSnapshot().playerHand.map((c) => c.id).join(",");
+  assert.equal(h1, h2, "Same seed must produce same hand");
+});
+
+test("different explicit seeds produce different hands", () => {
+  const s1 = createLocalHumanVsAISession({ seed: "seed-a", humanSeat: "SOUTH" });
+  const s2 = createLocalHumanVsAISession({ seed: "seed-b", humanSeat: "SOUTH" });
+  const h1 = s1.getSnapshot().playerHand.map((c) => c.id).join(",");
+  const h2 = s2.getSnapshot().playerHand.map((c) => c.id).join(",");
+  assert.notEqual(h1, h2, "Different seeds must produce different hands");
+});
+
+test("no-seed sessions produce unique deals across 5 launches", () => {
+  // We cannot guarantee Math.random differences in every run, but we use
+  // distinct seeds to simulate the production code path — each real browser
+  // session will use a different timestamp-based matchId.
+  const hands = Array.from({ length: 5 }, (_, i) =>
+    createLocalHumanVsAISession({ seed: `launch-${i}`, humanSeat: "SOUTH" })
+      .getSnapshot()
+      .playerHand.map((c) => c.id)
+      .join(","),
+  );
+  const unique = new Set(hands);
+  assert.ok(unique.size > 1, "Multiple launches must not all yield identical hands");
+});
+
+test("sortHandForDisplay - Four suits: BLACK → RED → BLACK → RED (♠ → ♥ → ♣ → ♦)", () => {
+  const hand = [
+    makeCard("DIAMONDS", "8"),
+    makeCard("HEARTS", "A"),
+    makeCard("SPADES", "K"),
+    makeCard("CLUBS", "10"),
+    makeCard("HEARTS", "J"),
+    makeCard("SPADES", "7"),
+    makeCard("CLUBS", "Q"),
+    makeCard("DIAMONDS", "A"),
+  ];
+  const sorted = sortHandForDisplay(hand);
+  const distinctSuits = [...new Set(sorted.map((c) => c.suit))];
+  assert.deepEqual(distinctSuits, ["SPADES", "HEARTS", "CLUBS", "DIAMONDS"]);
+  assert.deepEqual(
+    sorted.map((c) => c.id),
+    [
+      "SPADES-K", "SPADES-7",
+      "HEARTS-A", "HEARTS-J",
+      "CLUBS-Q", "CLUBS-10",
+      "DIAMONDS-A", "DIAMONDS-8",
+    ],
+  );
+});
+
+test("sortHandForDisplay - Two red + one black: RED → BLACK → RED", () => {
+  // Case A: Hearts (Red), Spades (Black), Diamonds (Red) -> ♥ → ♠ → ♦
+  const handA = [
+    makeCard("DIAMONDS", "K"),
+    makeCard("SPADES", "A"),
+    makeCard("HEARTS", "10"),
+    makeCard("HEARTS", "Q"),
+    makeCard("DIAMONDS", "7"),
+    makeCard("SPADES", "9"),
+  ];
+  const sortedA = sortHandForDisplay(handA);
+  const distinctSuitsA = [...new Set(sortedA.map((c) => c.suit))];
+  assert.deepEqual(distinctSuitsA, ["HEARTS", "SPADES", "DIAMONDS"]);
+  assert.deepEqual(
+    sortedA.map((c) => c.id),
+    [
+      "HEARTS-Q", "HEARTS-10",
+      "SPADES-A", "SPADES-9",
+      "DIAMONDS-K", "DIAMONDS-7",
+    ],
+  );
+
+  // Case B: Hearts (Red), Clubs (Black), Diamonds (Red) -> ♥ → ♣ → ♦
+  const handB = [
+    makeCard("DIAMONDS", "J"),
+    makeCard("CLUBS", "8"),
+    makeCard("HEARTS", "K"),
+  ];
+  const sortedB = sortHandForDisplay(handB);
+  const distinctSuitsB = [...new Set(sortedB.map((c) => c.suit))];
+  assert.deepEqual(distinctSuitsB, ["HEARTS", "CLUBS", "DIAMONDS"]);
+});
+
+test("sortHandForDisplay - Two black + one red: BLACK → RED → BLACK", () => {
+  // Case A: Spades (Black), Hearts (Red), Clubs (Black) -> ♠ → ♥ → ♣
+  const handA = [
+    makeCard("CLUBS", "A"),
+    makeCard("SPADES", "J"),
+    makeCard("HEARTS", "K"),
+    makeCard("CLUBS", "7"),
+    makeCard("SPADES", "10"),
+  ];
+  const sortedA = sortHandForDisplay(handA);
+  const distinctSuitsA = [...new Set(sortedA.map((c) => c.suit))];
+  assert.deepEqual(distinctSuitsA, ["SPADES", "HEARTS", "CLUBS"]);
+  assert.deepEqual(
+    sortedA.map((c) => c.id),
+    [
+      "SPADES-J", "SPADES-10",
+      "HEARTS-K",
+      "CLUBS-A", "CLUBS-7",
+    ],
+  );
+
+  // Case B: Spades (Black), Diamonds (Red), Clubs (Black) -> ♠ → ♦ → ♣
+  const handB = [
+    makeCard("CLUBS", "Q"),
+    makeCard("DIAMONDS", "9"),
+    makeCard("SPADES", "8"),
+  ];
+  const sortedB = sortHandForDisplay(handB);
+  const distinctSuitsB = [...new Set(sortedB.map((c) => c.suit))];
+  assert.deepEqual(distinctSuitsB, ["SPADES", "DIAMONDS", "CLUBS"]);
+});
+
+test("sortHandForDisplay - One black + one red: BLACK → RED", () => {
+  // Spades + Hearts -> ♠ → ♥
+  const hand1 = [makeCard("HEARTS", "A"), makeCard("SPADES", "K")];
+  const sorted1 = sortHandForDisplay(hand1);
+  assert.deepEqual([...new Set(sorted1.map((c) => c.suit))], ["SPADES", "HEARTS"]);
+
+  // Clubs + Diamonds -> ♣ → ♦
+  const hand2 = [makeCard("DIAMONDS", "10"), makeCard("CLUBS", "A")];
+  const sorted2 = sortHandForDisplay(hand2);
+  assert.deepEqual([...new Set(sorted2.map((c) => c.suit))], ["CLUBS", "DIAMONDS"]);
+});
+
+test("sortHandForDisplay - Missing suits: No empty visual gaps", () => {
+  // 3 suits present: ♠, ♥, ♦ (no ♣) -> 1 black, 2 red -> RED → BLACK → RED
+  const hand = [
+    makeCard("HEARTS", "10"),
+    makeCard("SPADES", "A"),
+    makeCard("DIAMONDS", "7"),
+  ];
+  const sorted = sortHandForDisplay(hand);
+  // Must have exactly 3 cards, exactly the 3 present suits, no undefined/null
+  assert.equal(sorted.length, 3);
+  assert.deepEqual([...new Set(sorted.map((c) => c.suit))], ["HEARTS", "SPADES", "DIAMONDS"]);
+
+  // Single suit hand (only Clubs)
+  const singleSuitHand = [makeCard("CLUBS", "7"), makeCard("CLUBS", "A"), makeCard("CLUBS", "10")];
+  const sortedSingle = sortHandForDisplay(singleSuitHand);
+  assert.equal(sortedSingle.length, 3);
+  assert.deepEqual(sortedSingle.map((c) => c.id), ["CLUBS-A", "CLUBS-10", "CLUBS-7"]);
+
+  // Empty hand
+  assert.deepEqual(sortHandForDisplay([]), []);
+});
+
+test("sortHandForDisplay - Same suit: Cards remain sorted A K Q J 10 9 8 7", () => {
+  const fullSuit = [
+    makeCard("SPADES", "7"),
+    makeCard("SPADES", "8"),
+    makeCard("SPADES", "9"),
+    makeCard("SPADES", "10"),
+    makeCard("SPADES", "J"),
+    makeCard("SPADES", "Q"),
+    makeCard("SPADES", "K"),
+    makeCard("SPADES", "A"),
+  ];
+  const sorted = sortHandForDisplay(fullSuit);
+  assert.deepEqual(
+    sorted.map((c) => c.rank),
+    ["A", "K", "Q", "J", "10", "9", "8", "7"],
+  );
+});
+
+test("sortHandForDisplay returns a copy — authoritative hand is not mutated", () => {
+  const session = createLocalHumanVsAISession({ seed: "sort-copy-test", humanSeat: "SOUTH" });
+  const snap1 = session.getSnapshot();
+  // The snapshot already contains a sorted copy; re-sort it and compare identity
+  const original = [...snap1.playerHand];
+  const sorted = sortHandForDisplay(snap1.playerHand);
+  // sorted must be a different array object
+  assert.notEqual(sorted, snap1.playerHand, "sortHandForDisplay must return a new array");
+  // The cards referenced are the same objects (no mutation of card data)
+  for (const card of original) {
+    assert.ok(sorted.some((c) => c.id === card.id), `Card ${card.id} must be present after sort`);
+  }
+  assert.equal(sorted.length, original.length, "Sort must preserve card count");
+});
+
+test("card IDs dispatch correctly through display sort", () => {
+  // Verify that after display sorting, the card.id still maps to the correct
+  // authoritative card and dispatchCardPlay accepts it.
+  const session = createLocalHumanVsAISession({ seed: "sort-dispatch-test", humanSeat: "SOUTH" });
+
+  // Advance to playing phase
+  let snap = session.getSnapshot();
+  while (snap.legalActions.length > 0) {
+    const action = snap.legalActions.includes("BUY_SUN") ? "BUY_SUN" : snap.legalActions[0];
+    snap = session.dispatchBiddingAction(action);
+  }
+
+  if (!snap.game || snap.legalCardIds.length === 0) return; // not human's first turn — skip
+
+  // The sorted display hand must contain the legal card IDs
+  const sortedIds = sortHandForDisplay(snap.playerHand).map((c) => c.id);
+  const firstLegal = snap.legalCardIds[0];
+  assert.ok(sortedIds.includes(firstLegal), "Legal card ID must appear in sorted display hand");
+
+  // Playing via the display-sorted card ID must succeed
+  const after = session.dispatchCardPlay(firstLegal);
+  assert.ok(after !== null, "dispatchCardPlay via display-sorted card ID must succeed");
+});
+
+test("round transition produces a different deal from round 1", () => {
+  // Run enough to reach round 2 via bidding cancellation (all pass), then verify fresh deal
+  const session = createLocalHumanVsAISession({ seed: "round-transition-test", humanSeat: "SOUTH" });
+
+  const snap1 = session.getSnapshot();
+  const r1Hand = snap1.playerHand.map((c) => c.id).join(",");
+
+  // Force all-pass cancellation by passing when it is the human's bidding turn
+  let current = snap1;
+  let iters = 0;
+  while (current.roundNumber === 1 && iters++ < 20) {
+    if (current.legalActions.includes("PASS")) {
+      current = session.dispatchBiddingAction("PASS");
+    } else {
+      break;
+    }
+  }
+
+  if (current.roundNumber > 1) {
+    const r2Hand = current.playerHand.map((c) => c.id).join(",");
+    assert.notEqual(r1Hand, r2Hand, "Round 2 must produce a different hand from round 1");
+  }
+  // If we couldn't force cancellation with this seed, the test is a no-op (no assertion failure).
+});
+

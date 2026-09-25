@@ -9,6 +9,8 @@ import {
   completeMatchRound,
   completeRoundState,
   createSeededRandom,
+  createFreshRandom,
+  type RandomSource,
   getCardById,
   detectProjects,
   declareProject,
@@ -16,6 +18,7 @@ import {
   legalBiddingActions,
   nextCounterClockwise,
   scoreCompletedRound,
+  startNextRound,
   teamOfSeat,
   withRoundBaloot,
   withRoundGame,
@@ -35,6 +38,7 @@ import {
   type RoundScoreBreakdown,
   type Seat,
   type Suit,
+  type Rank,
 } from "@sakkah-baloot/game-engine";
 import {
   applyAuthoritativeBid,
@@ -71,6 +75,7 @@ const PLAYERS: Readonly<Record<PlayerId, Seat>> = {
 export interface LocalPlayablePreview {
   readonly dealerSeat: Seat;
   readonly roundNumber: number;
+  readonly matchPhase: MatchState["phase"];
   readonly playerSeat: Seat;
   readonly playerHand: readonly Card[];
   readonly exposedCard: Card | null;
@@ -89,6 +94,7 @@ export interface LocalPlayablePreview {
   readonly protocol: MatchProtocolState;
   readonly lastProtocolEvent: MatchProtocolEvent["type"] | null;
   readonly completedTrickPresentation: CompletedTrick | null;
+  readonly actionFeedback: string | null;
 }
 
 export interface LocalPlayableSession {
@@ -107,6 +113,8 @@ export interface LocalPlayableSession {
 }
 
 export interface LocalPlayableConfig {
+  /** Explicit seed string. When omitted, a fresh random deal is generated for each session.
+   *  Pass a fixed string in tests/simulator to ensure deterministic, reproducible deals. */
   readonly seed?: string;
   readonly humanSeat?: Seat;
   readonly aiMode?: AIControllerMode;
@@ -208,23 +216,28 @@ function applyProtocol(
 export function createLocalHumanVsAISession(
   config: LocalPlayableConfig = {},
 ): LocalPlayableSession {
-  const seed = config.seed ?? "sakkah-local";
+  // When an explicit seed is provided (tests / simulator), use it for deterministic deals.
+  // When no seed is provided (production gameplay), use a fresh random source so every
+  // match produces genuinely different cards.
+  const seed = config.seed ?? null;
+  const freshRandom: RandomSource | null = seed === null ? createFreshRandom() : null;
   const humanSeat = config.humanSeat ?? "SOUTH";
   const aiMode = config.aiMode ?? "BASELINE";
   const aiDifficulty = config.aiDifficulty ?? "NORMAL";
   const mctsIterations = config.mctsIterations ?? 32;
 
-  const matchId = `${seed}:match`;
+  const matchId = seed !== null ? `${seed}:match` : `fresh:${Date.now()}:${Math.random().toString(36).slice(2)}`;
   let match = createMatchState(
     matchId,
     "NORTH",
     1,
-    createRound(matchId, 1, "NORTH", seed),
+    createRound(matchId, 1, "NORTH", seed, freshRandom),
   );
   let protocol = initialProtocol(match);
   let lastProtocolEvent: MatchProtocolEvent["type"] | null = null;
   let completedTrickPresentation: CompletedTrick | null = null;
   let pendingRoundComplete = false;
+  let actionFeedback: string | null = null;
 
   protocol = applyProtocol(protocol, {
     type: "DEAL",
@@ -290,8 +303,11 @@ export function createLocalHumanVsAISession(
     return {
       dealerSeat: match.dealerSeat,
       roundNumber: match.roundNumber,
+      matchPhase: match.phase,
       playerSeat: humanSeat,
-      playerHand: hand,
+      // sortHandForDisplay produces a sorted copy — presentation only.
+      // The authoritative hand array (used for legality/scoring) is never mutated.
+      playerHand: sortHandForDisplay(hand),
       exposedCard,
       bidding: round.bidding,
       game: round.game,
@@ -299,7 +315,9 @@ export function createLocalHumanVsAISession(
       legalCardIds,
       actingSeat,
       humanTurn,
-      roundScore: pendingRoundComplete ? null : round.score,
+      roundScore: pendingRoundComplete
+        ? null
+        : match.lastRoundScore ?? round.score,
       matchScore: match.score,
       matchEnd: match.end,
       projects: round.projects,
@@ -308,6 +326,7 @@ export function createLocalHumanVsAISession(
       protocol,
       lastProtocolEvent,
       completedTrickPresentation,
+      actionFeedback,
     };
   }
 
@@ -354,7 +373,7 @@ export function createLocalHumanVsAISession(
     } else if (authoritative.state.phase === "CANCELLED") {
       const nextRoundNumber = match.roundNumber + 1;
       const nextDealer = nextCounterClockwise(round.dealerSeat);
-      nextRound = createRound(matchId, nextRoundNumber, nextDealer, seed);
+      nextRound = createRound(matchId, nextRoundNumber, nextDealer, seed, freshRandom);
       match = {
         ...match,
         round: nextRound,
@@ -394,6 +413,7 @@ export function createLocalHumanVsAISession(
       protocol = applyProtocol(protocol, protocolEvent);
       lastProtocolEvent = protocolEvent.type;
     }
+    actionFeedback = `${seatForPlayer(playerId)}: ${action.type}`;
   }
 
   function commitProject(playerId: PlayerId, project: ProjectDeclaration): void {
@@ -422,6 +442,7 @@ export function createLocalHumanVsAISession(
     match = { ...match, round: nextRound };
     protocol = applyProtocol(protocol, event);
     lastProtocolEvent = event.type;
+    actionFeedback = `${seatForPlayer(playerId)} أعلن مشروعًا`;
   }
 
   function commitCard(
@@ -456,12 +477,36 @@ export function createLocalHumanVsAISession(
     }
 
     match = { ...match, round: nextRound };
+    if (authoritative.baloot && round.baloot === null) {
+      const balootEvent: MatchProtocolEvent = {
+        type: "BALOOT",
+        roundId: round.roundId,
+        playerId,
+        cardId,
+        trumpSuit: authoritative.baloot.trumpSuit,
+      };
+      protocol = applyProtocol(protocol, balootEvent);
+      lastProtocolEvent = balootEvent.type;
+    }
+
     protocol = applyProtocol(protocol, event);
     lastProtocolEvent = event.type;
+    const playedCard = round.game.hands[playerId]?.find((card) => card.id === cardId);
+    actionFeedback = playedCard
+      ? `${seatForPlayer(playerId)} لعب ${playedCard.rank} ${playedCard.suit}`
+      : `${seatForPlayer(playerId)} لعب ورقة`;
 
     if (authoritative.state.completedTricks.length > prevCompletedCount) {
-      const completed = authoritative.state.completedTricks[authoritative.state.completedTricks.length - 1] ?? null;
+      const completed = authoritative.state.completedTricks[authoritative.state.completedTricks.length - 1];
+      if (!completed) throw new Error("Completed trick result is missing");
       completedTrickPresentation = completed;
+      protocol = applyProtocol(protocol, {
+        type: "TRICK_COMPLETE",
+        roundId: round.roundId,
+        trickNumber: completed.trickNumber,
+        winnerSeat: completed.winnerSeat,
+      });
+      lastProtocolEvent = "TRICK_COMPLETE";
       if (authoritative.state.phase === "ROUND_COMPLETE") {
         pendingRoundComplete = true;
       }
@@ -476,28 +521,43 @@ export function createLocalHumanVsAISession(
     if (pendingRoundComplete) {
       pendingRoundComplete = false;
       const round = match.round;
-      if (round && round.game?.phase === "ROUND_COMPLETE") {
-        const score = calculateRoundScore(round);
-        const completedRound = completeRoundState(round, score);
-        const completedMatch = completeMatchRound(match, score, completedRound);
+      if (!round) {
+        throw new Error("Cannot complete a trick without an active round");
+      }
+      if (round.game?.phase !== "ROUND_COMPLETE") {
+        throw new Error("Final trick presentation ended before the engine marked the round complete");
+      }
 
-        const roundCompleteEvent: MatchProtocolEvent = {
-          type: "ROUND_COMPLETE",
-          roundId: round.roundId,
+      const score = calculateRoundScore(round);
+      const completedRound = completeRoundState(round, score);
+      const completedMatch = completeMatchRound(match, score, completedRound);
+
+      const roundCompleteEvent: MatchProtocolEvent = {
+        type: "ROUND_COMPLETE",
+        roundId: round.roundId,
+        score: completedMatch.score,
+        matchEnd: completedMatch.end,
+      };
+
+      applyAuthoritativeRoundComplete(
+        match,
+        round,
+        score,
+        roundCompleteEvent,
+      );
+
+      match = completedMatch;
+      protocol = applyProtocol(protocol, roundCompleteEvent);
+      lastProtocolEvent = roundCompleteEvent.type;
+
+      if (completedMatch.phase === "MATCH_COMPLETE" && completedMatch.end.status === "FINISHED") {
+        const matchCompleteEvent: MatchProtocolEvent = {
+          type: "MATCH_COMPLETE",
           score: completedMatch.score,
-          matchEnd: completedMatch.end,
+          winnerTeamId: completedMatch.end.winnerTeamId,
         };
-
-        applyAuthoritativeRoundComplete(
-          match,
-          round,
-          score,
-          roundCompleteEvent,
-        );
-
-        match = completedMatch;
-        protocol = applyProtocol(protocol, roundCompleteEvent);
-        lastProtocolEvent = roundCompleteEvent.type;
+        protocol = applyProtocol(protocol, matchCompleteEvent);
+        lastProtocolEvent = matchCompleteEvent.type;
       }
     } else {
       if (
@@ -770,14 +830,14 @@ export function createLocalHumanVsAISession(
   }
 
   function advanceRound(): LocalPlayablePreview {
+    if (match.end.status === "FINISHED") return snapshot();
     if (match.phase !== "ROUND_COMPLETE") {
       throw new Error("Round is not complete");
     }
-    if (match.end.status === "FINISHED") return snapshot();
 
     const nextRoundNumber = match.roundNumber + 1;
     const nextDealer = nextCounterClockwise(match.dealerSeat);
-    const nextRound = createRound(matchId, nextRoundNumber, nextDealer, seed);
+    const nextRound = createRound(matchId, nextRoundNumber, nextDealer, seed, freshRandom);
 
     const event: MatchProtocolEvent = {
       type: "NEXT_ROUND",
@@ -786,17 +846,7 @@ export function createLocalHumanVsAISession(
       dealerSeat: nextDealer,
     };
 
-    match = {
-      ...match,
-      round: nextRound,
-      roundId: nextRound.roundId,
-      roundNumber: nextRoundNumber,
-      dealerSeat: nextDealer,
-      phase: "ROUND_ACTIVE",
-      stateVersion: match.stateVersion + 1,
-      lastRoundScore: null,
-      end: { status: "ONGOING", score: match.score },
-    };
+    match = startNextRound(match, nextRound);
 
     protocol = applyProtocol(protocol, event);
     lastProtocolEvent = event.type;
@@ -830,17 +880,105 @@ function createRound(
   matchId: string,
   roundNumber: number,
   dealerSeat: Seat,
-  seed: string,
+  seed: string | null,
+  freshRandom: RandomSource | null = null,
 ) {
   const roundId = `${matchId}:round:${roundNumber}`;
-  const deal = createInitialDeal(
-    roundId,
-    dealerSeat,
-    createSeededRandom(`${seed}:round:${roundNumber}`),
-  );
+  // Use the pre-created freshRandom source in production (seed === null),
+  // or create a deterministic seeded RNG for tests/simulator.
+  const rng = seed !== null
+    ? createSeededRandom(`${seed}:round:${roundNumber}`)
+    : (freshRandom ?? createFreshRandom());
+  const deal = createInitialDeal(roundId, dealerSeat, rng);
   return createRoundState(
     deal,
     createBiddingState(roundId, dealerSeat),
     roundNumber,
   );
 }
+
+// ── Presentation-only hand sorter ─────────────────────────────────────────────
+//
+// This function must NEVER be used for game-rule decisions (legality, scoring,
+// project/Baloot detection, trick winner). It is purely visual.
+//
+// Dynamic Black/Red alternating suit ordering:
+// - BLACK suits: SPADES (♠), CLUBS (♣)
+// - RED suits: HEARTS (♥), DIAMONDS (♦)
+// - Alternation rules maximize black/red visual separation:
+//   * 4 suits: BLACK → RED → BLACK → RED (♠ → ♥ → ♣ → ♦)
+//   * 2 red + 1 black: RED → BLACK → RED (♥ → ♠/♣ → ♦)
+//   * 2 black + 1 red: BLACK → RED → BLACK (♠ → ♥/♦ → ♣)
+//   * 1 black + 1 red: BLACK → RED (e.g. ♠ → ♥)
+//   * Same-color only: canonical order (♠ → ♣, or ♥ → ♦)
+//   * Empty suits are omitted without placeholders/gaps.
+// - Rank order within each suit: A → K → Q → J → 10 → 9 → 8 → 7 (high-to-low)
+
+const CANONICAL_BLACK_SUITS: readonly Suit[] = ["SPADES", "CLUBS"];
+const CANONICAL_RED_SUITS: readonly Suit[] = ["HEARTS", "DIAMONDS"];
+const DISPLAY_RANK_ORDER: readonly Rank[] = ["A", "K", "Q", "J", "10", "9", "8", "7"];
+
+export function getDisplaySuitOrder(presentSuits: readonly Suit[]): Suit[] {
+  const uniqueSuits = Array.from(new Set(presentSuits));
+  const blackSuits = CANONICAL_BLACK_SUITS.filter((s) => uniqueSuits.includes(s));
+  const redSuits = CANONICAL_RED_SUITS.filter((s) => uniqueSuits.includes(s));
+
+  // Rule 4: Four suits -> BLACK → RED → BLACK → RED (♠ → ♥ → ♣ → ♦)
+  if (blackSuits.length === 2 && redSuits.length === 2) {
+    return [blackSuits[0]!, redSuits[0]!, blackSuits[1]!, redSuits[1]!];
+  }
+
+  // Rule 2: Two red + one black -> RED → BLACK → RED (♥ → ♠/♣ → ♦)
+  if (redSuits.length === 2 && blackSuits.length === 1) {
+    return [redSuits[0]!, blackSuits[0]!, redSuits[1]!];
+  }
+
+  // Rule 3: Two black + one red -> BLACK → RED → BLACK (♠ → ♥/♦ → ♣)
+  if (blackSuits.length === 2 && redSuits.length === 1) {
+    return [blackSuits[0]!, redSuits[0]!, blackSuits[1]!];
+  }
+
+  // Rule 5: One black + one red -> BLACK → RED
+  if (blackSuits.length === 1 && redSuits.length === 1) {
+    return [blackSuits[0]!, redSuits[0]!];
+  }
+
+  // Only black suits (♠ → ♣), only red suits (♥ → ♦), or single suit
+  return [...blackSuits, ...redSuits];
+}
+
+export function sortHandForDisplay(hand: readonly Card[]): readonly Card[] {
+  if (hand.length <= 1) {
+    return [...hand];
+  }
+
+  // 1. Group cards by suit
+  const cardsBySuit = new Map<Suit, Card[]>();
+  for (const card of hand) {
+    const list = cardsBySuit.get(card.suit);
+    if (list) {
+      list.push(card);
+    } else {
+      cardsBySuit.set(card.suit, [card]);
+    }
+  }
+
+  // 2. Identify present suits and determine dynamic alternating order
+  // Empty suits (suits with 0 cards) are omitted (no empty gaps)
+  const presentSuits = Array.from(cardsBySuit.keys());
+  const orderedSuits = getDisplaySuitOrder(presentSuits);
+
+  // 3. Assemble result: each suit group together, sorted A → K → Q → J → 10 → 9 → 8 → 7
+  const result: Card[] = [];
+  for (const suit of orderedSuits) {
+    const cards = cardsBySuit.get(suit);
+    if (!cards) continue;
+    const sortedGroup = [...cards].sort(
+      (a, b) => DISPLAY_RANK_ORDER.indexOf(a.rank) - DISPLAY_RANK_ORDER.indexOf(b.rank),
+    );
+    result.push(...sortedGroup);
+  }
+
+  return result;
+}
+

@@ -38,6 +38,13 @@ function assertUnique(ids: readonly CardId[]): void {
   if (new Set(ids).size !== ids.length) throw new Error("Duplicate card detected");
 }
 
+/** Creates a non-deterministic RandomSource backed by Math.random.
+ *  Use this for production gameplay so every deal is genuinely random.
+ *  Tests and simulators must use createSeededRandom() to remain reproducible. */
+export function createFreshRandom(): RandomSource {
+  return { next: () => Math.random() };
+}
+
 export function createSeededRandom(seed: MatchSeed): RandomSource {
   let state = hashSeed(seed);
   return {

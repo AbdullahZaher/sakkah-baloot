@@ -28,6 +28,14 @@ export interface GameTableProps {
   readonly exposedCard: Card | null;
   readonly hand: readonly Card[];
   readonly legalActions: readonly BiddingActionType[];
+  readonly biddingHistory?: readonly {
+    readonly actionId: string;
+    readonly turnNumber: number;
+    readonly seat: Seat;
+    readonly phase: "FIRST_ROUND" | "SECOND_ROUND";
+    readonly action: BiddingActionType;
+    readonly stateVersion: number;
+  }[];
   readonly legalCardIds?: readonly CardId[];
   readonly game?: GameState | null;
   readonly playerSeat?: Seat;
@@ -45,6 +53,7 @@ export interface GameTableProps {
   readonly baloot?: BalootDeclaration | null;
   readonly onProject?: (projectId: string) => void;
   readonly completedTrickPresentation?: CompletedTrick | null;
+  readonly actionFeedback?: string | null;
 }
 
 export function GameTable({
@@ -54,6 +63,7 @@ export function GameTable({
   exposedCard,
   hand,
   legalActions,
+  biddingHistory = [],
   legalCardIds = [],
   game = null,
   playerSeat = "SOUTH",
@@ -71,19 +81,21 @@ export function GameTable({
   baloot = null,
   onProject,
   completedTrickPresentation = null,
+  actionFeedback = null,
 }: GameTableProps) {
   const isFrozen = Boolean(completedTrickPresentation);
   const frozenTrick = completedTrickPresentation ?? null;
+  const isRoundFinished = roundScore !== null && !isFrozen;
 
   const activeSeat: Seat = isFrozen && frozenTrick
     ? frozenTrick.winnerSeat
     : ((game ? game.players[game.currentPlayerId] : actingSeat) ?? actingSeat);
 
-  const playerIsActing = !isFrozen && activeSeat === playerSeat;
+  const playerIsActing = !isFrozen && !isRoundFinished && activeSeat === playerSeat;
   const actions = playerIsActing ? legalActions : [];
   const hokumSuits = actions.includes("BUY_HOKUM") ? availableHokumSuits(exposedCard?.suit ?? null) : [];
   const trickCards = game?.currentTrick ?? [];
-  const isRoundComplete = game?.phase === "ROUND_COMPLETE";
+  const isRoundComplete = roundScore !== null && !isFrozen;
   const lastCompletedTrick: CompletedTrick | null =
     game?.completedTricks && game.completedTricks.length > 0
       ? game.completedTricks[game.completedTricks.length - 1] ?? null
@@ -139,12 +151,18 @@ export function GameTable({
           ) : null}
         </View>
 
+        {actionFeedback ? (
+          <View style={styles.actionFeedback} pointerEvents="none">
+            <Text style={styles.actionFeedbackText}>{formatActionFeedback(actionFeedback)}</Text>
+          </View>
+        ) : null}
+
         {/* North Player (AI Partner - Top) */}
         <SeatView
           label="NORTH"
           seatRole={seatRoleLabel("NORTH", playerSeat)}
           team={teamOfSeat("NORTH") === "NORTH_SOUTH" ? "LANA" : "LAHUM"}
-          active={!isFrozen && activeSeat === "NORTH"}
+          active={!isFrozen && !isRoundFinished && activeSeat === "NORTH"}
           isDealer={dealerSeat === "NORTH"}
           cardCount={cardCountForSeat(game, "NORTH")}
           style={styles.north}
@@ -155,7 +173,7 @@ export function GameTable({
           label="WEST"
           seatRole={seatRoleLabel("WEST", playerSeat)}
           team={teamOfSeat("WEST") === "NORTH_SOUTH" ? "LANA" : "LAHUM"}
-          active={!isFrozen && activeSeat === "WEST"}
+          active={!isFrozen && !isRoundFinished && activeSeat === "WEST"}
           isDealer={dealerSeat === "WEST"}
           cardCount={cardCountForSeat(game, "WEST")}
           style={styles.west}
@@ -166,7 +184,7 @@ export function GameTable({
           label="EAST"
           seatRole={seatRoleLabel("EAST", playerSeat)}
           team={teamOfSeat("EAST") === "NORTH_SOUTH" ? "LANA" : "LAHUM"}
-          active={!isFrozen && activeSeat === "EAST"}
+          active={!isFrozen && !isRoundFinished && activeSeat === "EAST"}
           isDealer={dealerSeat === "EAST"}
           cardCount={cardCountForSeat(game, "EAST")}
           style={styles.east}
@@ -209,6 +227,10 @@ export function GameTable({
           ) : null}
 
           {/* Bidding Phase: Exposed Card Container */}
+          {!game && biddingHistory.length > 0 ? (
+            <BidHistory history={biddingHistory} />
+          ) : null}
+
           {!game ? (
             <View style={styles.exposedContainer}>
               <View style={styles.exposedBadge}>
@@ -261,9 +283,13 @@ export function GameTable({
             >
               {isFrozen
                 ? "جاري احتساب الفائز بالأكلة..."
-                : playerIsActing
-                  ? "دورك الآن — اختر ورقة للعب"
-                  : `في انتظار ${seatArabicName(activeSeat)}...`}
+                : isRoundFinished
+                  ? matchEnd?.status === "FINISHED"
+                    ? "انتهت الصكة"
+                    : "انتهت الجولة"
+                  : playerIsActing
+                    ? "دورك الآن — اختر ورقة للعب"
+                    : `في انتظار ${seatArabicName(activeSeat)}...`}
             </Text>
           </View>
 
@@ -296,6 +322,63 @@ export function GameTable({
       </View>
     </View>
   );
+}
+
+function formatActionFeedback(value: string): string {
+  return value
+    .replace("NORTH", "الشمال")
+    .replace("EAST", "الشرق")
+    .replace("SOUTH", "الجنوب")
+    .replace("WEST", "الغرب")
+    .replace("BUY_HOKUM_EXPOSED", "حكم المكشوف")
+    .replace("BUY_ASHKAL", "أشكال")
+    .replace("BUY_SUN", "صن")
+    .replace("BUY_HOKUM", "حكم")
+    .replace("DECLARE_KASHO", "كاشو")
+    .replace("PASS", "بس")
+    .replace("CLUBS", "كلوب")
+    .replace("DIAMONDS", "ديمن")
+    .replace("HEARTS", "هارت")
+    .replace("SPADES", "سبيد");
+}
+
+function BidHistory({
+  history,
+}: {
+  history: readonly {
+    readonly actionId: string;
+    readonly turnNumber: number;
+    readonly seat: Seat;
+    readonly phase: "FIRST_ROUND" | "SECOND_ROUND";
+    readonly action: BiddingActionType;
+    readonly stateVersion: number;
+  }[];
+}) {
+  if (history.length === 0) return null;
+  return (
+    <View style={styles.bidHistory}>
+      <Text style={styles.bidHistoryTitle}>سجل المزايدة</Text>
+      <View style={styles.bidHistoryRows}>
+        {history.slice(-6).map((item) => (
+          <View key={item.actionId} style={styles.bidHistoryRow}>
+            <Text style={styles.bidHistorySeat}>{seatArabicName(item.seat)}</Text>
+            <Text style={styles.bidHistoryAction}>{biddingActionArabic(item.action)}</Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+function biddingActionArabic(action: BiddingActionType): string {
+  switch (action) {
+    case "PASS": return "بس";
+    case "BUY_SUN": return "صن";
+    case "BUY_HOKUM_EXPOSED": return "حكم المكشوف";
+    case "BUY_HOKUM": return "حكم";
+    case "BUY_ASHKAL": return "أشكال";
+    case "DECLARE_KASHO": return "كاشو";
+  }
 }
 
 function TrickView({
@@ -415,12 +498,16 @@ function CardButton({
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={`ورقة ${card.rank} ${suitArabic(card.suit)}`}
+      accessibilityHint={enabled ? "اضغط للعب هذه الورقة" : "هذه الورقة غير قانونية في الدور الحالي"}
+      accessibilityState={{ disabled: !enabled }}
       disabled={!enabled}
       onPress={() => onPress?.(card.id)}
-      style={[
+      style={({ pressed }) => [
         styles.cardButton,
-        { transform },
+        { transform: [{ rotate: rotation }, { translateY: pressed && enabled ? -16 : translateY }] },
         enabled ? styles.cardEnabled : styles.cardDisabled,
+        pressed && enabled ? styles.cardPressed : null,
       ]}
     >
       <CardView card={card} highlight={enabled} />
@@ -777,8 +864,12 @@ function RoundResult({
         </Text>
       </View>
 
-      {matchEnd.status === "FINISHED" ? <Text style={styles.finishedStatus}>انتهت الصكّة</Text> : null}
-      {matchEnd.status === "EXTRA_DEAL" ? <Text style={styles.extraDealStatus}>تعادل فوق 152 — توزيع إضافي</Text> : null}
+      {matchEnd.status === "FINISHED" ? (
+        <Text style={styles.finishedStatus}>
+          انتهت الصكّة · الفائز: {matchEnd.winnerTeamId === "NORTH_SOUTH" ? "لنا" : "لهم"}
+        </Text>
+      ) : null}
+      {matchEnd.status === "EXTRA_DEAL" ? <Text style={styles.extraDealStatus}>تعادل — توزيع إضافي</Text> : null}
 
       {canContinue ? (
         <Pressable accessibilityRole="button" onPress={onNextRound} style={styles.nextRoundBtn}>
@@ -1305,6 +1396,9 @@ const styles = StyleSheet.create({
   cardEnabled: {
     opacity: 1,
   },
+  cardPressed: {
+    opacity: 0.92,
+  },
   cardDisabled: {
     opacity: 0.45,
   },
@@ -1393,7 +1487,63 @@ const styles = StyleSheet.create({
   redColor: {
     color: "#DC2626",
   },
-  actionDock: {
+  actionFeedback: {
+    position: "absolute",
+    top: 44,
+    alignSelf: "center",
+    zIndex: 40,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 9,
+    backgroundColor: "rgba(5, 18, 14, 0.94)",
+    borderWidth: 1,
+    borderColor: "rgba(212, 175, 55, 0.55)",
+  },
+  actionFeedbackText: {
+    color: "#F5E6BF",
+    fontSize: 9,
+    fontWeight: "900",
+  },
+  bidHistory: {
+    marginTop: 4,
+    maxWidth: 250,
+    alignSelf: "center",
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 10,
+    backgroundColor: "rgba(5, 18, 14, 0.88)",
+    borderWidth: 1,
+    borderColor: "rgba(212, 175, 55, 0.25)",
+  },
+  bidHistoryTitle: {
+    color: "#F5E6BF",
+    fontSize: 9,
+    fontWeight: "900",
+    textAlign: "center",
+    marginBottom: 3,
+  },
+  bidHistoryRows: {
+    gap: 2,
+  },
+  bidHistoryRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 5,
+  },
+  bidHistorySeat: {
+    color: "#CBD5E1",
+    fontSize: 8,
+    fontWeight: "800",
+    minWidth: 38,
+    textAlign: "right",
+  },
+  bidHistoryAction: {
+    color: "#FDE68A",
+    fontSize: 8,
+    fontWeight: "900",
+  },
+    actionDock: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 4,
