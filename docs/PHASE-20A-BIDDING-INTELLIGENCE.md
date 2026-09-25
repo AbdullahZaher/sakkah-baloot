@@ -147,12 +147,13 @@ bid frequencies.
 `chooseAuthoritativeAIAction`, which reaches `chooseBaselineAction` during bidding.
 Therefore Phase 20-A bidding intelligence is on the playable Human-vs-3-AI runtime path.
 
-The full-match simulator still has a separate historical bidding policy in
-`packages/game-simulator/src/index.ts`; it is not counted as A6 evidence. Replacing
-that policy and adding redeal-aware simulation coverage is a subsequent integration
-slice, not a claim made by the current A6 gate.
+The full-match simulator now routes bidding through the same Phase 20-A baseline
+policy and handles authoritative `CANCELLED` / ALL_PASS rounds as redeals. This
+removes the previous duplicate bidding heuristic from the full-match simulation
+path. The simulator remains a separate integration/scale-validation boundary and
+does not turn the A6 lifecycle suite into a claim of competitive optimality.
 
 ## 7. Exit Status
 
-20-A0 through 20-A6 are implemented. The next work should focus on empirical calibration,
-full-match simulator integration, and the remaining Phase 20 playable-experience slices.
+20-A0 through 20-A6 are implemented. The next work should focus on empirical calibration, larger full-match bidding
+validation, and the remaining Phase 20 playable-experience slices.
