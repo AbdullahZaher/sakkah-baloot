@@ -95,8 +95,12 @@ export function rankBiddingContracts(
   }
 
   const ordered = [...candidates].sort(compareRankedBid);
-  const selected = ordered[0] ?? null;
-  const next = ordered[1] ?? null;
+  // Keep below-threshold evaluations visible as candidates, but never expose
+  // them as the selected contract. The selected contract must already clear
+  // the authoritative evaluator threshold.
+  const qualified = ordered.filter((candidate) => candidate.margin >= 0);
+  const selected = qualified[0] ?? null;
+  const next = qualified[1] ?? null;
 
   // Difficulty changes preference/risk among already-legal, threshold-clearing
   // contracts. It never bypasses the authoritative contract threshold.
