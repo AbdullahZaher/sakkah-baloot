@@ -7,7 +7,7 @@ import {
   createSeededRandom,
   legalBiddingActions,
 } from "@sakkah-baloot/game-engine";
-import { rankBiddingContracts } from "../dist/index.js";
+import { chooseBaselineAction, rankBiddingContracts } from "../dist/index.js";
 
 const SEATS = ["NORTH", "EAST", "SOUTH", "WEST"];
 
@@ -37,25 +37,20 @@ function chooseAction(deal, state, index, difficulty = "NORMAL") {
     exposedSuit,
     deal.hands,
   );
-  const ranking = rankBiddingContracts(observation(deal, state, legal), { difficulty });
-
-  if (ranking.selected && !ranking.shouldPass) {
-    const selected = ranking.selected;
-    const action = {
-      type: selected.action,
-      actionId: `a6:${index}:${state.turnNumber}:${selected.action}`,
-      ...(selected.action === "BUY_HOKUM" && selected.suit
-        ? { suit: selected.suit }
-        : {}),
-    };
-    return { action, legal, ranking };
-  }
-
-  return {
-    action: {
-      type: "PASS",
-      actionId: `a6:${index}:${state.turnNumber}:PASS`,
+  const observed = observation(deal, state, legal);
+  const ranking = rankBiddingContracts(observed, { difficulty });
+  const decision = chooseBaselineAction(
+    {
+      ...observed,
+      roundId: deal.roundId,
+      playerId: `${state.actingSeat}_PLAYER`,
     },
+    { difficulty },
+  );
+
+  assert.equal(decision.action.type, "BID");
+  return {
+    action: decision.action.action,
     legal,
     ranking,
   };
