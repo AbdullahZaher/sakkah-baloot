@@ -4,7 +4,8 @@
 
 **20-A0 — Forensic Baseline:** COMPLETE  
 **20-A1 — Bid Feature Model:** COMPLETE  
-**20-A2 — Sun Evaluator:** NEXT  
+**20-A2 — Sun Evaluator:** COMPLETE
+**20-A3 — Hokum Evaluator:** NEXT  
 **20-A3 — Hokum Evaluator:** PLANNED
 
 Branch: `phase-20a-bidding-intelligence`
