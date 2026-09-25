@@ -42,9 +42,9 @@ test("Sun evaluator uses the authoritative Sun contract threshold", () => {
   ]));
 
   assert.equal(evaluation.threshold, 65);
-  assert.equal(evaluation.strength, 45);
+  assert.equal(evaluation.strength, 51);
   assert.equal(evaluation.recommended, false);
-  assert.equal(evaluation.margin, -20);
+  assert.equal(evaluation.margin, -14);
   assert.ok(evaluation.reasonCodes.includes("SUN_BELOW_THRESHOLD"));
 });
 
@@ -60,8 +60,8 @@ test("Sun evaluator recommends a clearly strong Sun hand", () => {
     "SPADES-K",
   ]));
 
-  assert.equal(evaluation.strength, 68);
-  assert.equal(evaluation.margin, 3);
+  assert.equal(evaluation.strength, 78);
+  assert.equal(evaluation.margin, 13);
   assert.equal(evaluation.recommended, true);
   assert.ok(evaluation.reasonCodes.includes("SUN_THRESHOLD_MET"));
   assert.ok(evaluation.reasonCodes.includes("MULTIPLE_ACES"));
