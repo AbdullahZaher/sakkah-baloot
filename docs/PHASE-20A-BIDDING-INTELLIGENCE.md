@@ -6,7 +6,8 @@
 **20-A1 — Bid Feature Model:** COMPLETE  
 **20-A2 — Sun Evaluator:** COMPLETE
 **20-A3 — Hokum Evaluator:** COMPLETE
-**20-A4 — Contract Ranking + Pass Policy:** NEXT  
+**20-A4 — Contract Ranking + Pass Policy:** COMPLETE
+**20-A5 — Difficulty + Context:** NEXT  
 **20-A3 — Hokum Evaluator:** PLANNED
 
 Branch: `phase-20a-bidding-intelligence`
