@@ -61,7 +61,7 @@ test("first-round exposed Hokum evaluates the exposed suit, not an unrelated bes
   const result = rankBiddingContracts(observation({
     hand: [
       "CLUBS-J", "CLUBS-9", "CLUBS-A", "CLUBS-K",
-      "HEARTS-7", "DIAMONDS-7", "SPADES-7", "HEARTS-8",
+      "HEARTS-7", "DIAMONDS-A", "SPADES-10", "HEARTS-8",
     ],
     phase: "FIRST_ROUND",
     legalActions: ["PASS", "BUY_HOKUM_EXPOSED"],
