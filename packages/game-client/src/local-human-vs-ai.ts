@@ -9,6 +9,8 @@ import {
   completeMatchRound,
   completeRoundState,
   createSeededRandom,
+  createFreshRandom,
+  type RandomSource,
   getCardById,
   detectProjects,
   declareProject,
@@ -36,6 +38,7 @@ import {
   type RoundScoreBreakdown,
   type Seat,
   type Suit,
+  type Rank,
 } from "@sakkah-baloot/game-engine";
 import {
   applyAuthoritativeBid,
@@ -110,6 +113,8 @@ export interface LocalPlayableSession {
 }
 
 export interface LocalPlayableConfig {
+  /** Explicit seed string. When omitted, a fresh random deal is generated for each session.
+   *  Pass a fixed string in tests/simulator to ensure deterministic, reproducible deals. */
   readonly seed?: string;
   readonly humanSeat?: Seat;
   readonly aiMode?: AIControllerMode;
@@ -211,18 +216,22 @@ function applyProtocol(
 export function createLocalHumanVsAISession(
   config: LocalPlayableConfig = {},
 ): LocalPlayableSession {
-  const seed = config.seed ?? "sakkah-local";
+  // When an explicit seed is provided (tests / simulator), use it for deterministic deals.
+  // When no seed is provided (production gameplay), use a fresh random source so every
+  // match produces genuinely different cards.
+  const seed = config.seed ?? null;
+  const freshRandom: RandomSource | null = seed === null ? createFreshRandom() : null;
   const humanSeat = config.humanSeat ?? "SOUTH";
   const aiMode = config.aiMode ?? "BASELINE";
   const aiDifficulty = config.aiDifficulty ?? "NORMAL";
   const mctsIterations = config.mctsIterations ?? 32;
 
-  const matchId = `${seed}:match`;
+  const matchId = seed !== null ? `${seed}:match` : `fresh:${Date.now()}:${Math.random().toString(36).slice(2)}`;
   let match = createMatchState(
     matchId,
     "NORTH",
     1,
-    createRound(matchId, 1, "NORTH", seed),
+    createRound(matchId, 1, "NORTH", seed, freshRandom),
   );
   let protocol = initialProtocol(match);
   let lastProtocolEvent: MatchProtocolEvent["type"] | null = null;
@@ -296,7 +305,9 @@ export function createLocalHumanVsAISession(
       roundNumber: match.roundNumber,
       matchPhase: match.phase,
       playerSeat: humanSeat,
-      playerHand: hand,
+      // sortHandForDisplay produces a sorted copy — presentation only.
+      // The authoritative hand array (used for legality/scoring) is never mutated.
+      playerHand: sortHandForDisplay(hand),
       exposedCard,
       bidding: round.bidding,
       game: round.game,
@@ -362,7 +373,7 @@ export function createLocalHumanVsAISession(
     } else if (authoritative.state.phase === "CANCELLED") {
       const nextRoundNumber = match.roundNumber + 1;
       const nextDealer = nextCounterClockwise(round.dealerSeat);
-      nextRound = createRound(matchId, nextRoundNumber, nextDealer, seed);
+      nextRound = createRound(matchId, nextRoundNumber, nextDealer, seed, freshRandom);
       match = {
         ...match,
         round: nextRound,
@@ -826,7 +837,7 @@ export function createLocalHumanVsAISession(
 
     const nextRoundNumber = match.roundNumber + 1;
     const nextDealer = nextCounterClockwise(match.dealerSeat);
-    const nextRound = createRound(matchId, nextRoundNumber, nextDealer, seed);
+    const nextRound = createRound(matchId, nextRoundNumber, nextDealer, seed, freshRandom);
 
     const event: MatchProtocolEvent = {
       type: "NEXT_ROUND",
@@ -869,17 +880,38 @@ function createRound(
   matchId: string,
   roundNumber: number,
   dealerSeat: Seat,
-  seed: string,
+  seed: string | null,
+  freshRandom: RandomSource | null = null,
 ) {
   const roundId = `${matchId}:round:${roundNumber}`;
-  const deal = createInitialDeal(
-    roundId,
-    dealerSeat,
-    createSeededRandom(`${seed}:round:${roundNumber}`),
-  );
+  // Use the pre-created freshRandom source in production (seed === null),
+  // or create a deterministic seeded RNG for tests/simulator.
+  const rng = seed !== null
+    ? createSeededRandom(`${seed}:round:${roundNumber}`)
+    : (freshRandom ?? createFreshRandom());
+  const deal = createInitialDeal(roundId, dealerSeat, rng);
   return createRoundState(
     deal,
     createBiddingState(roundId, dealerSeat),
     roundNumber,
   );
+}
+
+// ── Presentation-only hand sorter ─────────────────────────────────────────────
+//
+// This function must NEVER be used for game-rule decisions (legality, scoring,
+// project/Baloot detection, trick winner). It is purely visual.
+//
+// Suit order: SPADES → HEARTS → DIAMONDS → CLUBS (conventional Baloot display)
+// Rank order within each suit: A → K → Q → J → 10 → 9 → 8 → 7 (high-to-low)
+
+const DISPLAY_SUIT_ORDER: readonly Suit[] = ["SPADES", "HEARTS", "DIAMONDS", "CLUBS"];
+const DISPLAY_RANK_ORDER: readonly Rank[] = ["A", "K", "Q", "J", "10", "9", "8", "7"];
+
+export function sortHandForDisplay(hand: readonly Card[]): readonly Card[] {
+  return [...hand].sort((a, b) => {
+    const suitDiff = DISPLAY_SUIT_ORDER.indexOf(a.suit) - DISPLAY_SUIT_ORDER.indexOf(b.suit);
+    if (suitDiff !== 0) return suitDiff;
+    return DISPLAY_RANK_ORDER.indexOf(a.rank) - DISPLAY_RANK_ORDER.indexOf(b.rank);
+  });
 }

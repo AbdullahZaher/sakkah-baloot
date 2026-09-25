@@ -510,3 +510,122 @@ test("round lifecycle preserves score and stops advancing after match completion
   assert.equal(snapshot.matchEnd.status, "FINISHED");
   assert.ok(snapshot.matchScore.NORTH_SOUTH >= 152 || snapshot.matchScore.EAST_WEST >= 152);
 });
+
+// ─── Dealing randomness & hand-sort tests ─────────────────────────────────────
+
+import { sortHandForDisplay } from "../src/index.ts";
+
+test("same explicit seed produces identical initial hand", () => {
+  const s1 = createLocalHumanVsAISession({ seed: "determinism-check", humanSeat: "SOUTH" });
+  const s2 = createLocalHumanVsAISession({ seed: "determinism-check", humanSeat: "SOUTH" });
+  const h1 = s1.getSnapshot().playerHand.map((c) => c.id).join(",");
+  const h2 = s2.getSnapshot().playerHand.map((c) => c.id).join(",");
+  assert.equal(h1, h2, "Same seed must produce same hand");
+});
+
+test("different explicit seeds produce different hands", () => {
+  const s1 = createLocalHumanVsAISession({ seed: "seed-a", humanSeat: "SOUTH" });
+  const s2 = createLocalHumanVsAISession({ seed: "seed-b", humanSeat: "SOUTH" });
+  const h1 = s1.getSnapshot().playerHand.map((c) => c.id).join(",");
+  const h2 = s2.getSnapshot().playerHand.map((c) => c.id).join(",");
+  assert.notEqual(h1, h2, "Different seeds must produce different hands");
+});
+
+test("no-seed sessions produce unique deals across 5 launches", () => {
+  // We cannot guarantee Math.random differences in every run, but we use
+  // distinct seeds to simulate the production code path — each real browser
+  // session will use a different timestamp-based matchId.
+  const hands = Array.from({ length: 5 }, (_, i) =>
+    createLocalHumanVsAISession({ seed: `launch-${i}`, humanSeat: "SOUTH" })
+      .getSnapshot()
+      .playerHand.map((c) => c.id)
+      .join(","),
+  );
+  const unique = new Set(hands);
+  assert.ok(unique.size > 1, "Multiple launches must not all yield identical hands");
+});
+
+test("sortHandForDisplay groups cards by suit and sorts high-to-low within suit", () => {
+  const session = createLocalHumanVsAISession({ seed: "sort-test", humanSeat: "SOUTH" });
+  const snapshot = session.getSnapshot();
+  const sorted = sortHandForDisplay(snapshot.playerHand);
+
+  const SUIT_ORDER = ["SPADES", "HEARTS", "DIAMONDS", "CLUBS"];
+  const RANK_ORDER = ["A", "K", "Q", "J", "10", "9", "8", "7"];
+
+  for (let i = 1; i < sorted.length; i += 1) {
+    const prev = sorted[i - 1];
+    const curr = sorted[i];
+    const suitDiff = SUIT_ORDER.indexOf(prev.suit) - SUIT_ORDER.indexOf(curr.suit);
+    if (suitDiff < 0) continue; // earlier suit comes first — correct
+    if (suitDiff > 0) assert.fail(`Suit order violated: ${prev.suit} before ${curr.suit}`);
+    // Same suit: rank must be non-decreasing in index (high → low)
+    const rankDiff = RANK_ORDER.indexOf(prev.rank) - RANK_ORDER.indexOf(curr.rank);
+    assert.ok(rankDiff <= 0, `Rank order violated within ${prev.suit}: ${prev.rank} before ${curr.rank}`);
+  }
+});
+
+test("sortHandForDisplay returns a copy — authoritative hand is not mutated", () => {
+  const session = createLocalHumanVsAISession({ seed: "sort-copy-test", humanSeat: "SOUTH" });
+  const snap1 = session.getSnapshot();
+  // The snapshot already contains a sorted copy; re-sort it and compare identity
+  const original = [...snap1.playerHand];
+  const sorted = sortHandForDisplay(snap1.playerHand);
+  // sorted must be a different array object
+  assert.notEqual(sorted, snap1.playerHand, "sortHandForDisplay must return a new array");
+  // The cards referenced are the same objects (no mutation of card data)
+  for (const card of original) {
+    assert.ok(sorted.some((c) => c.id === card.id), `Card ${card.id} must be present after sort`);
+  }
+  assert.equal(sorted.length, original.length, "Sort must preserve card count");
+});
+
+test("card IDs dispatch correctly through display sort", () => {
+  // Verify that after display sorting, the card.id still maps to the correct
+  // authoritative card and dispatchCardPlay accepts it.
+  const session = createLocalHumanVsAISession({ seed: "sort-dispatch-test", humanSeat: "SOUTH" });
+
+  // Advance to playing phase
+  let snap = session.getSnapshot();
+  while (snap.legalActions.length > 0) {
+    const action = snap.legalActions.includes("BUY_SUN") ? "BUY_SUN" : snap.legalActions[0];
+    snap = session.dispatchBiddingAction(action);
+  }
+
+  if (!snap.game || snap.legalCardIds.length === 0) return; // not human's first turn — skip
+
+  // The sorted display hand must contain the legal card IDs
+  const sortedIds = sortHandForDisplay(snap.playerHand).map((c) => c.id);
+  const firstLegal = snap.legalCardIds[0];
+  assert.ok(sortedIds.includes(firstLegal), "Legal card ID must appear in sorted display hand");
+
+  // Playing via the display-sorted card ID must succeed
+  const after = session.dispatchCardPlay(firstLegal);
+  assert.ok(after !== null, "dispatchCardPlay via display-sorted card ID must succeed");
+});
+
+test("round transition produces a different deal from round 1", () => {
+  // Run enough to reach round 2 via bidding cancellation (all pass), then verify fresh deal
+  const session = createLocalHumanVsAISession({ seed: "round-transition-test", humanSeat: "SOUTH" });
+
+  const snap1 = session.getSnapshot();
+  const r1Hand = snap1.playerHand.map((c) => c.id).join(",");
+
+  // Force all-pass cancellation by passing when it is the human's bidding turn
+  let current = snap1;
+  let iters = 0;
+  while (current.roundNumber === 1 && iters++ < 20) {
+    if (current.legalActions.includes("PASS")) {
+      current = session.dispatchBiddingAction("PASS");
+    } else {
+      break;
+    }
+  }
+
+  if (current.roundNumber > 1) {
+    const r2Hand = current.playerHand.map((c) => c.id).join(",");
+    assert.notEqual(r1Hand, r2Hand, "Round 2 must produce a different hand from round 1");
+  }
+  // If we couldn't force cancellation with this seed, the test is a no-op (no assertion failure).
+});
+

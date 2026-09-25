@@ -9,7 +9,8 @@ import { GameTable } from "@sakkah-baloot/ui";
 export function GameTableScreen() {
   const [session] = useState<LocalPlayableSession>(() =>
     createLocalHumanVsAISession({
-      seed: "local-human-vs-ai",
+      // No seed — each session gets a genuinely random deal.
+      // Tests/simulator should pass an explicit seed string for reproducibility.
       humanSeat: "SOUTH",
       aiMode: "BASELINE",
       aiDifficulty: "NORMAL",
