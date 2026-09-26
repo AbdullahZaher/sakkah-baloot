@@ -293,16 +293,16 @@ export function GameTable({
             </Text>
           </View>
 
-          {/* Bidding Action Dock */}
+          {/* Professional Bidding Decision Dock */}
           {actions.length > 0 ? (
-            <View style={styles.actionDock}>
-              {actions.filter((action) => action !== "BUY_HOKUM").map((action) => (
-                <Action key={action} action={action} onPress={onBiddingAction} />
-              ))}
-              {hokumSuits.map((suit) => (
-                <Action key={`BUY_HOKUM-${suit}`} action="BUY_HOKUM" suit={suit} onPress={onBiddingAction} />
-              ))}
-            </View>
+            <BiddingPanel
+              phase={phase}
+              exposedCard={exposedCard}
+              actions={actions}
+              hokumSuits={hokumSuits}
+              history={biddingHistory}
+              onBiddingAction={onBiddingAction}
+            />
           ) : null}
 
           {/* Hand Cards Fan */}
@@ -703,6 +703,103 @@ function CardView({
   );
 }
 
+function BiddingPanel({
+  phase,
+  exposedCard,
+  actions,
+  hokumSuits,
+  history,
+  onBiddingAction,
+}: {
+  phase: string;
+  exposedCard: Card | null;
+  actions: readonly BiddingActionType[];
+  hokumSuits: readonly Suit[];
+  history: readonly {
+    readonly seat: Seat;
+    readonly phase: "FIRST_ROUND" | "SECOND_ROUND";
+    readonly action: BiddingActionType;
+    readonly actionId: string;
+    readonly turnNumber: number;
+    readonly stateVersion: number;
+  }[];
+  onBiddingAction?: ((action: BiddingActionType, suit?: Suit) => void) | undefined;
+}) {
+  const hasSun = actions.includes("BUY_SUN");
+  const hasExposedHokum = actions.includes("BUY_HOKUM_EXPOSED");
+  const hasHokum = actions.includes("BUY_HOKUM");
+  const hasAshkal = actions.includes("BUY_ASHKAL");
+  const hasKasho = actions.includes("DECLARE_KASHO");
+  const hasPass = actions.includes("PASS");
+  const recent = history.slice(-4);
+
+  return (
+    <View style={styles.biddingPanel}>
+      <View style={styles.biddingPanelHeader}>
+        <View>
+          <Text style={styles.biddingPanelTitle}>قرار المزايدة</Text>
+          <Text style={styles.biddingPanelPhase}>{formatPhase(phase)}</Text>
+        </View>
+        {phase === "SECOND_ROUND" && exposedCard ? (
+          <View style={styles.biddingExposedMini}>
+            <Text style={styles.biddingExposedMiniLabel}>المكشوف</Text>
+            <Text style={[styles.biddingExposedMiniValue, isRedSuit(exposedCard) && styles.redColor]}>
+              {exposedCard.rank}{suitSymbol(exposedCard.suit)}
+            </Text>
+          </View>
+        ) : null}
+      </View>
+
+      <Text style={styles.biddingPanelHint}>
+        اختر العقد المتاح لك أو مرّر الدور بـ «بس»
+      </Text>
+
+      <View style={styles.biddingPrimaryRow}>
+        {hasSun ? <Action action="BUY_SUN" onPress={onBiddingAction} /> : null}
+        {hasExposedHokum ? <Action action="BUY_HOKUM_EXPOSED" onPress={onBiddingAction} /> : null}
+        {hasAshkal ? <Action action="BUY_ASHKAL" onPress={onBiddingAction} /> : null}
+        {hasKasho ? <Action action="DECLARE_KASHO" onPress={onBiddingAction} /> : null}
+      </View>
+
+      {hasHokum ? (
+        <View style={styles.biddingSuitSection}>
+          <Text style={styles.biddingSectionLabel}>اختر لون الحكم</Text>
+          <View style={styles.biddingSuitRow}>
+            {hokumSuits.map((suit) => (
+              <Action
+                key={`BUY_HOKUM-${suit}`}
+                action="BUY_HOKUM"
+                suit={suit}
+                onPress={onBiddingAction}
+              />
+            ))}
+          </View>
+        </View>
+      ) : null}
+
+      {hasPass ? (
+        <View style={styles.biddingPassRow}>
+          <Action action="PASS" onPress={onBiddingAction} />
+        </View>
+      ) : null}
+
+      {recent.length > 0 ? (
+        <View style={styles.biddingRecent}>
+          <Text style={styles.biddingRecentTitle}>آخر المزايدات</Text>
+          <View style={styles.biddingRecentRows}>
+            {recent.map((item) => (
+              <View key={item.actionId} style={styles.biddingRecentRow}>
+                <Text style={styles.biddingRecentSeat}>{seatArabicName(item.seat)}</Text>
+                <Text style={styles.biddingRecentAction}>{biddingActionArabic(item.action)}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
 function Action({
   action,
   suit,
@@ -716,12 +813,22 @@ function Action({
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={actionAccessibilityLabel(action, suit)}
+      accessibilityHint="اضغط لتأكيد قرار المزايدة"
       onPress={() => onPress?.(action, suit)}
-      style={[styles.actionBtn, buttonStyle]}
+      style={({ pressed }) => [
+        styles.actionBtn,
+        buttonStyle,
+        pressed && styles.actionBtnPressed,
+      ]}
     >
       <Text style={styles.actionBtnText}>{actionLabel(action, suit)}</Text>
     </Pressable>
   );
+}
+
+function actionAccessibilityLabel(action: BiddingActionType, suit?: Suit): string {
+  return `اختيار ${actionLabel(action, suit)} في المزايدة`;
 }
 
 function getActionButtonStyle(action: BiddingActionType) {
@@ -1543,18 +1650,127 @@ const styles = StyleSheet.create({
     fontSize: 8,
     fontWeight: "900",
   },
-    actionDock: {
+    biddingPanel: {
+    width: 292,
+    maxWidth: "94%",
+    marginBottom: 3,
+    paddingHorizontal: 9,
+    paddingVertical: 7,
+    borderRadius: 14,
+    backgroundColor: "rgba(5, 18, 14, 0.96)",
+    borderWidth: 1,
+    borderColor: "rgba(212, 175, 55, 0.45)",
+    alignItems: "stretch",
+    gap: 5,
+  },
+  biddingPanelHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  biddingPanelTitle: {
+    color: "#F5E6BF",
+    fontSize: 11,
+    fontWeight: "900",
+  },
+  biddingPanelPhase: {
+    color: "#94A3B8",
+    fontSize: 8,
+    fontWeight: "700",
+    marginTop: 1,
+  },
+  biddingExposedMini: {
+    minWidth: 44,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 7,
+    backgroundColor: "rgba(212, 175, 55, 0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(212, 175, 55, 0.3)",
+    alignItems: "center",
+  },
+  biddingExposedMiniLabel: {
+    color: "#D8C28A",
+    fontSize: 7,
+    fontWeight: "700",
+  },
+  biddingExposedMiniValue: {
+    color: "#F8FAFC",
+    fontSize: 10,
+    fontWeight: "900",
+    marginTop: 1,
+  },
+  biddingPanelHint: {
+    color: "#CBD5E1",
+    fontSize: 8,
+    fontWeight: "700",
+    textAlign: "center",
+  },
+  biddingPrimaryRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 4,
-    marginBottom: 3,
     justifyContent: "center",
-    backgroundColor: "rgba(5, 18, 14, 0.92)",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "rgba(212, 175, 55, 0.35)",
+    gap: 4,
+  },
+  biddingSuitSection: {
+    gap: 3,
+  },
+  biddingSectionLabel: {
+    color: "#D8C28A",
+    fontSize: 8,
+    fontWeight: "800",
+    textAlign: "center",
+  },
+  biddingSuitRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: 4,
+  },
+  biddingPassRow: {
+    alignItems: "center",
+    paddingTop: 1,
+  },
+  biddingRecent: {
+    paddingTop: 4,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255, 255, 255, 0.08)",
+  },
+  biddingRecentTitle: {
+    color: "#94A3B8",
+    fontSize: 7,
+    fontWeight: "800",
+    textAlign: "center",
+    marginBottom: 2,
+  },
+  biddingRecentRows: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: 3,
+  },
+  biddingRecentRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    borderRadius: 4,
+    backgroundColor: "rgba(255, 255, 255, 0.04)",
+  },
+  biddingRecentSeat: {
+    color: "#CBD5E1",
+    fontSize: 7,
+    fontWeight: "700",
+  },
+  biddingRecentAction: {
+    color: "#FDE68A",
+    fontSize: 7,
+    fontWeight: "900",
+  },
+  actionBtnPressed: {
+    opacity: 0.72,
+    transform: [{ scale: 0.97 }],
   },
   actionBtn: {
     paddingHorizontal: 8,
