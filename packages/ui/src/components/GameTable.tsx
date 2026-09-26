@@ -3,6 +3,7 @@ import {
   teamOfSeat,
   type BalootDeclaration,
   type BiddingAction,
+  type BiddingActionOption,
   type Card,
   type CardId,
   type CompletedTrick,
@@ -18,6 +19,7 @@ import {
   type Suit,
   type TeamId,
 } from "@sakkah-baloot/game-engine";
+import { BiddingPanel } from "./BiddingPanel";
 
 type BiddingActionType = BiddingAction["type"];
 
@@ -28,6 +30,7 @@ export interface GameTableProps {
   readonly exposedCard: Card | null;
   readonly hand: readonly Card[];
   readonly legalActions: readonly BiddingActionType[];
+  readonly legalOptions?: readonly BiddingActionOption[];
   readonly biddingHistory?: readonly {
     readonly actionId: string;
     readonly turnNumber: number;
@@ -63,6 +66,7 @@ export function GameTable({
   exposedCard,
   hand,
   legalActions,
+  legalOptions = [],
   biddingHistory = [],
   legalCardIds = [],
   game = null,
@@ -93,7 +97,11 @@ export function GameTable({
 
   const playerIsActing = !isFrozen && !isRoundFinished && activeSeat === playerSeat;
   const actions = playerIsActing ? legalActions : [];
-  const hokumSuits = actions.includes("BUY_HOKUM") ? availableHokumSuits(exposedCard?.suit ?? null) : [];
+  const effectiveBiddingOptions: readonly BiddingActionOption[] = playerIsActing && !game
+    ? (legalOptions && legalOptions.length > 0
+        ? legalOptions
+        : actions.map((type) => ({ type, label: type } as BiddingActionOption)))
+    : [];
   const trickCards = game?.currentTrick ?? [];
   const isRoundComplete = roundScore !== null && !isFrozen;
   const lastCompletedTrick: CompletedTrick | null =
@@ -284,18 +292,17 @@ export function GameTable({
                     ? "انتهت الصكة"
                     : "انتهت الجولة"
                   : playerIsActing
-                    ? "دورك الآن — اختر ورقة للعب"
+                    ? (game ? "دورك الآن — اختر ورقة للعب" : "دورك في المزايدة — اختر العقد المناسب")
                     : `في انتظار ${seatArabicName(activeSeat)}...`}
             </Text>
           </View>
 
           {/* Professional Bidding Decision Dock */}
-          {actions.length > 0 ? (
+          {effectiveBiddingOptions.length > 0 ? (
             <BiddingPanel
               phase={phase}
               exposedCard={exposedCard}
-              actions={actions}
-              hokumSuits={hokumSuits}
+              legalOptions={effectiveBiddingOptions}
               history={biddingHistory}
               onBiddingAction={onBiddingAction}
             />
@@ -699,157 +706,7 @@ function CardView({
   );
 }
 
-function BiddingPanel({
-  phase,
-  exposedCard,
-  actions,
-  hokumSuits,
-  history,
-  onBiddingAction,
-}: {
-  phase: string;
-  exposedCard: Card | null;
-  actions: readonly BiddingActionType[];
-  hokumSuits: readonly Suit[];
-  history: readonly {
-    readonly seat: Seat;
-    readonly phase: "FIRST_ROUND" | "SECOND_ROUND";
-    readonly action: BiddingActionType;
-    readonly actionId: string;
-    readonly turnNumber: number;
-    readonly stateVersion: number;
-  }[];
-  onBiddingAction?: ((action: BiddingActionType, suit?: Suit) => void) | undefined;
-}) {
-  const hasSun = actions.includes("BUY_SUN");
-  const hasExposedHokum = actions.includes("BUY_HOKUM_EXPOSED");
-  const hasHokum = actions.includes("BUY_HOKUM");
-  const hasAshkal = actions.includes("BUY_ASHKAL");
-  const hasKasho = actions.includes("DECLARE_KASHO");
-  const hasPass = actions.includes("PASS");
-  const recent = history.slice(-4);
 
-  return (
-    <View style={styles.biddingPanel}>
-      <View style={styles.biddingPanelHeader}>
-        <View>
-          <Text style={styles.biddingPanelTitle}>قرار المزايدة</Text>
-          <Text style={styles.biddingPanelPhase}>{formatPhase(phase)}</Text>
-        </View>
-        {phase === "SECOND_ROUND" && exposedCard ? (
-          <View style={styles.biddingExposedMini}>
-            <Text style={styles.biddingExposedMiniLabel}>المكشوف</Text>
-            <Text style={[styles.biddingExposedMiniValue, isRedSuit(exposedCard) && styles.redColor]}>
-              {exposedCard.rank}{suitSymbol(exposedCard.suit)}
-            </Text>
-          </View>
-        ) : null}
-      </View>
-
-      <Text style={styles.biddingPanelHint}>
-        اختر العقد المتاح لك أو مرّر الدور بـ «بس»
-      </Text>
-
-      <View style={styles.biddingPrimaryRow}>
-        {hasSun ? <Action action="BUY_SUN" onPress={onBiddingAction} /> : null}
-        {hasExposedHokum ? <Action action="BUY_HOKUM_EXPOSED" onPress={onBiddingAction} /> : null}
-        {hasAshkal ? <Action action="BUY_ASHKAL" onPress={onBiddingAction} /> : null}
-        {hasKasho ? <Action action="DECLARE_KASHO" onPress={onBiddingAction} /> : null}
-      </View>
-
-      {hasHokum ? (
-        <View style={styles.biddingSuitSection}>
-          <Text style={styles.biddingSectionLabel}>اختر لون الحكم</Text>
-          <View style={styles.biddingSuitRow}>
-            {hokumSuits.map((suit) => (
-              <Action
-                key={`BUY_HOKUM-${suit}`}
-                action="BUY_HOKUM"
-                suit={suit}
-                onPress={onBiddingAction}
-              />
-            ))}
-          </View>
-        </View>
-      ) : null}
-
-      {hasPass ? (
-        <View style={styles.biddingPassRow}>
-          <Action action="PASS" onPress={onBiddingAction} />
-        </View>
-      ) : null}
-
-      {recent.length > 0 ? (
-        <View style={styles.biddingRecent}>
-          <Text style={styles.biddingRecentTitle}>آخر المزايدات</Text>
-          <View style={styles.biddingRecentRows}>
-            {recent.map((item) => (
-              <View key={item.actionId} style={styles.biddingRecentRow}>
-                <Text style={styles.biddingRecentSeat}>{seatArabicName(item.seat)}</Text>
-                <Text style={styles.biddingRecentAction}>{biddingActionArabic(item.action)}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-      ) : null}
-    </View>
-  );
-}
-
-function Action({
-  action,
-  suit,
-  onPress,
-}: {
-  action: BiddingActionType;
-  suit?: Suit;
-  onPress?: ((action: BiddingActionType, suit?: Suit) => void) | undefined;
-}) {
-  const buttonStyle = getActionButtonStyle(action);
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={actionAccessibilityLabel(action, suit)}
-      accessibilityHint="اضغط لتأكيد قرار المزايدة"
-      onPress={() => onPress?.(action, suit)}
-      style={({ pressed }) => [
-        styles.actionBtn,
-        buttonStyle,
-        pressed && styles.actionBtnPressed,
-      ]}
-    >
-      <Text style={styles.actionBtnText}>{actionLabel(action, suit)}</Text>
-    </Pressable>
-  );
-}
-
-function actionAccessibilityLabel(action: BiddingActionType, suit?: Suit): string {
-  return `اختيار ${actionLabel(action, suit)} في المزايدة`;
-}
-
-function getActionButtonStyle(action: BiddingActionType) {
-  switch (action) {
-    case "BUY_SUN": return styles.actionSun;
-    case "BUY_HOKUM":
-    case "BUY_HOKUM_EXPOSED": return styles.actionHokum;
-    case "BUY_ASHKAL": return styles.actionAshkal;
-    case "PASS": return styles.actionPass;
-    case "DECLARE_KASHO": return styles.actionKasho;
-    default: return styles.actionDefault;
-  }
-}
-
-function actionLabel(action: BiddingActionType, suit?: Suit): string {
-  if (action === "BUY_HOKUM" && suit !== undefined) return `حكم ${suitArabic(suit)} ${suitSymbol(suit)}`;
-  switch (action) {
-    case "PASS": return "بس";
-    case "DECLARE_KASHO": return "كاشو";
-    case "BUY_HOKUM_EXPOSED": return "حكم";
-    case "BUY_SUN": return "صن";
-    case "BUY_ASHKAL": return "أشكال";
-    case "BUY_HOKUM": return "حكم";
-  }
-}
 
 function suitSymbol(suit: Suit): string {
   switch (suit) {

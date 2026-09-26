@@ -138,30 +138,43 @@ function selectContract(
   };
 }
 
+export interface BiddingActionOption {
+  readonly type: BiddingAction["type"];
+  readonly suit?: Suit;
+}
+
+export function legalBiddingActionOptions(
+  state: BiddingState,
+  dealerSeat: Seat,
+  exposedSuit: Suit | null,
+  hands: BiddingHands,
+): readonly BiddingActionOption[] {
+  if (state.phase !== "FIRST_ROUND" && state.phase !== "SECOND_ROUND") return [];
+  const options: BiddingActionOption[] = [{ type: "PASS" }];
+  const actingHand = hands[state.actingSeat] ?? [];
+  const kashoCount = actingHand.filter((id) => /-(7|8|9)$/.test(id)).length;
+  if (state.phase === "FIRST_ROUND" && kashoCount >= 5) options.push({ type: "DECLARE_KASHO" });
+  if (state.phase === "FIRST_ROUND") {
+    if (exposedSuit !== null) options.push({ type: "BUY_HOKUM_EXPOSED", suit: exposedSuit });
+    options.push({ type: "BUY_SUN" });
+    if (firstRoundAshkalEligible(state.actingSeat, dealerSeat)) options.push({ type: "BUY_ASHKAL" });
+  } else {
+    const hasAce = actingHand.some((id) => id.endsWith("-A"));
+    if (state.actingSeat === nextCounterClockwise(dealerSeat) && hasAce) options.push({ type: "BUY_SUN" });
+    for (const suit of ["CLUBS", "DIAMONDS", "HEARTS", "SPADES"] as const) {
+      if (suit !== exposedSuit) options.push({ type: "BUY_HOKUM", suit });
+    }
+  }
+  return options;
+}
+
 export function legalBiddingActions(
   state: BiddingState,
   dealerSeat: Seat,
   exposedSuit: Suit | null,
   hands: BiddingHands,
 ): readonly BiddingAction["type"][] {
-  if (state.phase !== "FIRST_ROUND" && state.phase !== "SECOND_ROUND") return [];
-  const actions: BiddingAction["type"][] = ["PASS"];
-  const actingHand = hands[state.actingSeat] ?? [];
-  const kashoCount = actingHand.filter((id) => /-(7|8|9)$/.test(id)).length;
-  if (state.phase === "FIRST_ROUND" && kashoCount >= 5) actions.push("DECLARE_KASHO");
-  if (state.phase === "FIRST_ROUND") {
-    if (exposedSuit !== null) actions.push("BUY_HOKUM_EXPOSED");
-    actions.push("BUY_SUN");
-    if (firstRoundAshkalEligible(state.actingSeat, dealerSeat)) actions.push("BUY_ASHKAL");
-  } else {
-    const actingHand = hands[state.actingSeat] ?? [];
-    const hasAce = actingHand.some((id) => id.endsWith("-A"));
-    if (state.actingSeat === nextCounterClockwise(dealerSeat) && hasAce) actions.push("BUY_SUN");
-    for (const suit of ["CLUBS", "DIAMONDS", "HEARTS", "SPADES"] as const) {
-      if (suit !== exposedSuit) actions.push("BUY_HOKUM");
-    }
-  }
-  return actions;
+  return legalBiddingActionOptions(state, dealerSeat, exposedSuit, hands).map((option) => option.type);
 }
 
 export function applyBiddingAction(
