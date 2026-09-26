@@ -227,10 +227,6 @@ export function GameTable({
           ) : null}
 
           {/* Bidding Phase: Exposed Card Container */}
-          {!game && biddingHistory.length > 0 ? (
-            <BidHistory history={biddingHistory} />
-          ) : null}
-
           {!game ? (
             <View style={styles.exposedContainer}>
               <View style={styles.exposedBadge}>
