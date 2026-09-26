@@ -59,3 +59,20 @@ test("biddingPresentation: pass in round 1 advances turn or round properly", () 
     assert.ok(snap.biddingPresentation !== null || snap.game !== null);
   }
 });
+
+test("biddingPresentation: aiThinking is false during human turn and actionFeedback is populated", () => {
+  const session = createLocalHumanVsAISession({
+    seed: "phase-20b-test-seed-sun",
+    humanSeat: "SOUTH",
+  });
+
+  const snapshot = session.getSnapshot();
+  if (snapshot.humanTurn && snapshot.biddingPresentation) {
+    assert.equal(snapshot.biddingPresentation.aiThinking, false);
+    const next = session.dispatchBiddingAction("BUY_SUN");
+    assert.ok(next.biddingPresentation !== null);
+    assert.ok(next.biddingPresentation.actionFeedback !== null);
+    assert.equal(next.biddingPresentation.selectedContract?.contract, "SUN");
+  }
+});
+

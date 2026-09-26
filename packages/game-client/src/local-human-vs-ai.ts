@@ -89,6 +89,7 @@ export interface BiddingPresentation {
   readonly selectedContract: SelectedContract | null;
   readonly cancellationReason: "NONE" | "KASHO" | "ALL_PASS";
   readonly actionFeedback: string | null;
+  readonly aiThinking: boolean;
 }
 
 export interface LocalPlayablePreview {
@@ -322,6 +323,7 @@ export function createLocalHumanVsAISession(
           selectedContract: round.bidding.selectedContract,
           cancellationReason: round.bidding.cancellationReason,
           actionFeedback,
+          aiThinking: !isTrickPresentationActive && round.phase === "BIDDING" && round.bidding.actingSeat !== humanSeat,
         }
       : null;
 
@@ -460,7 +462,19 @@ export function createLocalHumanVsAISession(
       protocol = applyProtocol(protocol, protocolEvent);
       lastProtocolEvent = protocolEvent.type;
     }
-    actionFeedback = `${seatForPlayer(playerId)}: ${action.type}`;
+    if (authoritative.state.phase === "CONTRACT_SELECTED" && authoritative.state.selectedContract) {
+      const selected = authoritative.state.selectedContract;
+      const contractLabel = selected.contract === "HOKUM" && selected.trumpSuit
+        ? `حكم ${selected.trumpSuit}`
+        : selected.mode === "ASHKAL"
+          ? "أشكال"
+          : "صن";
+      actionFeedback = `تم اختيار ${contractLabel} — المشتري: ${seatForPlayer(selected.purchaserSeat)}`;
+    } else if (authoritative.state.phase === "CANCELLED") {
+      actionFeedback = "تم إلغاء الجولة وتوزيع أوراق جديدة";
+    } else {
+      actionFeedback = `${seatForPlayer(playerId)}: ${action.type}`;
+    }
   }
 
   function commitProject(playerId: PlayerId, project: ProjectDeclaration): void {
