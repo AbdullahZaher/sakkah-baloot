@@ -397,7 +397,7 @@ export { createAIClientAction } from "./ai-controller.js";
 export type { AIClientActionEnvelope } from "./ai-controller.js";
 
 export { createLocalHumanVsAISession, getDisplaySuitOrder, shouldDeclareBalootForCard, sortHandForDisplay } from "./local-human-vs-ai.js";
-export type { LocalPlayableConfig, LocalPlayablePreview, LocalPlayableSession } from "./local-human-vs-ai.js";
+export type { BiddingPresentation, LocalPlayableConfig, LocalPlayablePreview, LocalPlayableSession } from "./local-human-vs-ai.js";
 
 export { createHumanVsAIController } from "./human-vs-ai.js";
 export type { HumanVsAIConfig, HumanVsAIDecision } from "./human-vs-ai.js";

@@ -3,6 +3,7 @@ import {
   teamOfSeat,
   type BalootDeclaration,
   type BiddingAction,
+  type BiddingActionOption,
   type Card,
   type CardId,
   type CompletedTrick,
@@ -18,6 +19,7 @@ import {
   type Suit,
   type TeamId,
 } from "@sakkah-baloot/game-engine";
+import { BiddingPanel } from "./BiddingPanel";
 
 type BiddingActionType = BiddingAction["type"];
 
@@ -28,6 +30,7 @@ export interface GameTableProps {
   readonly exposedCard: Card | null;
   readonly hand: readonly Card[];
   readonly legalActions: readonly BiddingActionType[];
+  readonly legalOptions?: readonly BiddingActionOption[];
   readonly biddingHistory?: readonly {
     readonly actionId: string;
     readonly turnNumber: number;
@@ -63,6 +66,7 @@ export function GameTable({
   exposedCard,
   hand,
   legalActions,
+  legalOptions = [],
   biddingHistory = [],
   legalCardIds = [],
   game = null,
@@ -93,7 +97,11 @@ export function GameTable({
 
   const playerIsActing = !isFrozen && !isRoundFinished && activeSeat === playerSeat;
   const actions = playerIsActing ? legalActions : [];
-  const hokumSuits = actions.includes("BUY_HOKUM") ? availableHokumSuits(exposedCard?.suit ?? null) : [];
+  const effectiveBiddingOptions: readonly BiddingActionOption[] = playerIsActing && !game
+    ? (legalOptions && legalOptions.length > 0
+        ? legalOptions
+        : actions.map((type) => ({ type, label: type } as BiddingActionOption)))
+    : [];
   const trickCards = game?.currentTrick ?? [];
   const isRoundComplete = roundScore !== null && !isFrozen;
   const lastCompletedTrick: CompletedTrick | null =
@@ -227,10 +235,6 @@ export function GameTable({
           ) : null}
 
           {/* Bidding Phase: Exposed Card Container */}
-          {!game && biddingHistory.length > 0 ? (
-            <BidHistory history={biddingHistory} />
-          ) : null}
-
           {!game ? (
             <View style={styles.exposedContainer}>
               <View style={styles.exposedBadge}>
@@ -288,21 +292,20 @@ export function GameTable({
                     ? "انتهت الصكة"
                     : "انتهت الجولة"
                   : playerIsActing
-                    ? "دورك الآن — اختر ورقة للعب"
+                    ? (game ? "دورك الآن — اختر ورقة للعب" : "دورك في المزايدة — اختر العقد المناسب")
                     : `في انتظار ${seatArabicName(activeSeat)}...`}
             </Text>
           </View>
 
-          {/* Bidding Action Dock */}
-          {actions.length > 0 ? (
-            <View style={styles.actionDock}>
-              {actions.filter((action) => action !== "BUY_HOKUM").map((action) => (
-                <Action key={action} action={action} onPress={onBiddingAction} />
-              ))}
-              {hokumSuits.map((suit) => (
-                <Action key={`BUY_HOKUM-${suit}`} action="BUY_HOKUM" suit={suit} onPress={onBiddingAction} />
-              ))}
-            </View>
+          {/* Professional Bidding Decision Dock */}
+          {effectiveBiddingOptions.length > 0 ? (
+            <BiddingPanel
+              phase={phase}
+              exposedCard={exposedCard}
+              legalOptions={effectiveBiddingOptions}
+              history={biddingHistory}
+              onBiddingAction={onBiddingAction}
+            />
           ) : null}
 
           {/* Hand Cards Fan */}
@@ -703,50 +706,7 @@ function CardView({
   );
 }
 
-function Action({
-  action,
-  suit,
-  onPress,
-}: {
-  action: BiddingActionType;
-  suit?: Suit;
-  onPress?: ((action: BiddingActionType, suit?: Suit) => void) | undefined;
-}) {
-  const buttonStyle = getActionButtonStyle(action);
-  return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={() => onPress?.(action, suit)}
-      style={[styles.actionBtn, buttonStyle]}
-    >
-      <Text style={styles.actionBtnText}>{actionLabel(action, suit)}</Text>
-    </Pressable>
-  );
-}
 
-function getActionButtonStyle(action: BiddingActionType) {
-  switch (action) {
-    case "BUY_SUN": return styles.actionSun;
-    case "BUY_HOKUM":
-    case "BUY_HOKUM_EXPOSED": return styles.actionHokum;
-    case "BUY_ASHKAL": return styles.actionAshkal;
-    case "PASS": return styles.actionPass;
-    case "DECLARE_KASHO": return styles.actionKasho;
-    default: return styles.actionDefault;
-  }
-}
-
-function actionLabel(action: BiddingActionType, suit?: Suit): string {
-  if (action === "BUY_HOKUM" && suit !== undefined) return `حكم ${suitArabic(suit)} ${suitSymbol(suit)}`;
-  switch (action) {
-    case "PASS": return "بس";
-    case "DECLARE_KASHO": return "كاشو";
-    case "BUY_HOKUM_EXPOSED": return "حكم";
-    case "BUY_SUN": return "صن";
-    case "BUY_ASHKAL": return "أشكال";
-    case "BUY_HOKUM": return "حكم";
-  }
-}
 
 function suitSymbol(suit: Suit): string {
   switch (suit) {
@@ -1543,18 +1503,127 @@ const styles = StyleSheet.create({
     fontSize: 8,
     fontWeight: "900",
   },
-    actionDock: {
+    biddingPanel: {
+    width: 292,
+    maxWidth: "94%",
+    marginBottom: 3,
+    paddingHorizontal: 9,
+    paddingVertical: 7,
+    borderRadius: 14,
+    backgroundColor: "rgba(5, 18, 14, 0.96)",
+    borderWidth: 1,
+    borderColor: "rgba(212, 175, 55, 0.45)",
+    alignItems: "stretch",
+    gap: 5,
+  },
+  biddingPanelHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  biddingPanelTitle: {
+    color: "#F5E6BF",
+    fontSize: 11,
+    fontWeight: "900",
+  },
+  biddingPanelPhase: {
+    color: "#94A3B8",
+    fontSize: 8,
+    fontWeight: "700",
+    marginTop: 1,
+  },
+  biddingExposedMini: {
+    minWidth: 44,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 7,
+    backgroundColor: "rgba(212, 175, 55, 0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(212, 175, 55, 0.3)",
+    alignItems: "center",
+  },
+  biddingExposedMiniLabel: {
+    color: "#D8C28A",
+    fontSize: 7,
+    fontWeight: "700",
+  },
+  biddingExposedMiniValue: {
+    color: "#F8FAFC",
+    fontSize: 10,
+    fontWeight: "900",
+    marginTop: 1,
+  },
+  biddingPanelHint: {
+    color: "#CBD5E1",
+    fontSize: 8,
+    fontWeight: "700",
+    textAlign: "center",
+  },
+  biddingPrimaryRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 4,
-    marginBottom: 3,
     justifyContent: "center",
-    backgroundColor: "rgba(5, 18, 14, 0.92)",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "rgba(212, 175, 55, 0.35)",
+    gap: 4,
+  },
+  biddingSuitSection: {
+    gap: 3,
+  },
+  biddingSectionLabel: {
+    color: "#D8C28A",
+    fontSize: 8,
+    fontWeight: "800",
+    textAlign: "center",
+  },
+  biddingSuitRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: 4,
+  },
+  biddingPassRow: {
+    alignItems: "center",
+    paddingTop: 1,
+  },
+  biddingRecent: {
+    paddingTop: 4,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255, 255, 255, 0.08)",
+  },
+  biddingRecentTitle: {
+    color: "#94A3B8",
+    fontSize: 7,
+    fontWeight: "800",
+    textAlign: "center",
+    marginBottom: 2,
+  },
+  biddingRecentRows: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: 3,
+  },
+  biddingRecentRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    borderRadius: 4,
+    backgroundColor: "rgba(255, 255, 255, 0.04)",
+  },
+  biddingRecentSeat: {
+    color: "#CBD5E1",
+    fontSize: 7,
+    fontWeight: "700",
+  },
+  biddingRecentAction: {
+    color: "#FDE68A",
+    fontSize: 7,
+    fontWeight: "900",
+  },
+  actionBtnPressed: {
+    opacity: 0.72,
+    transform: [{ scale: 0.97 }],
   },
   actionBtn: {
     paddingHorizontal: 8,

@@ -16,6 +16,10 @@ import {
   declareProject,
   getLegalMoves,
   legalBiddingActions,
+  legalBiddingActionOptions,
+  type BiddingActionOption,
+  type BiddingActionRecord,
+  type SelectedContract,
   nextCounterClockwise,
   scoreCompletedRound,
   startNextRound,
@@ -72,6 +76,21 @@ const PLAYERS: Readonly<Record<PlayerId, Seat>> = {
   WEST_PLAYER: "WEST",
 };
 
+export interface BiddingPresentation {
+  readonly phase: NonNullable<MatchState["round"]>["bidding"]["phase"];
+  readonly roundNumber: number;
+  readonly dealerSeat: Seat;
+  readonly actingSeat: Seat;
+  readonly humanTurn: boolean;
+  readonly passCount: number;
+  readonly exposedCard: Card | null;
+  readonly history: readonly BiddingActionRecord[];
+  readonly legalOptions: readonly BiddingActionOption[];
+  readonly selectedContract: SelectedContract | null;
+  readonly cancellationReason: "NONE" | "KASHO" | "ALL_PASS";
+  readonly actionFeedback: string | null;
+}
+
 export interface LocalPlayablePreview {
   readonly dealerSeat: Seat;
   readonly roundNumber: number;
@@ -80,6 +99,7 @@ export interface LocalPlayablePreview {
   readonly playerHand: readonly Card[];
   readonly exposedCard: Card | null;
   readonly bidding: NonNullable<MatchState["round"]>["bidding"];
+  readonly biddingPresentation: BiddingPresentation | null;
   readonly game: GameState | null;
   readonly legalActions: readonly BiddingAction["type"][];
   readonly legalCardIds: readonly CardId[];
@@ -271,6 +291,15 @@ export function createLocalHumanVsAISession(
         )
       : [];
 
+    const legalOptions = !isTrickPresentationActive && round.phase === "BIDDING"
+      ? legalBiddingActionOptions(
+          round.bidding,
+          round.dealerSeat,
+          exposedCard?.suit ?? null,
+          round.deal.hands,
+        )
+      : [];
+
     const actingSeat = completedTrickPresentation
       ? completedTrickPresentation.winnerSeat
       : round.game
@@ -278,6 +307,23 @@ export function createLocalHumanVsAISession(
         : round.bidding.actingSeat;
 
     const humanTurn = !isTrickPresentationActive && actingSeat === humanSeat;
+
+    const biddingPresentation: BiddingPresentation | null = round.bidding
+      ? {
+          phase: round.bidding.phase,
+          roundNumber: match.roundNumber,
+          dealerSeat: round.dealerSeat,
+          actingSeat: round.bidding.actingSeat,
+          humanTurn: !isTrickPresentationActive && round.phase === "BIDDING" && round.bidding.actingSeat === humanSeat,
+          passCount: round.bidding.passCount,
+          exposedCard,
+          history: round.bidding.history,
+          legalOptions,
+          selectedContract: round.bidding.selectedContract,
+          cancellationReason: round.bidding.cancellationReason,
+          actionFeedback,
+        }
+      : null;
 
     const legalCardIds = !isTrickPresentationActive &&
       round.game?.phase === "PLAYING" &&
@@ -310,6 +356,7 @@ export function createLocalHumanVsAISession(
       playerHand: sortHandForDisplay(hand),
       exposedCard,
       bidding: round.bidding,
+      biddingPresentation,
       game: round.game,
       legalActions,
       legalCardIds,
@@ -703,27 +750,37 @@ export function createLocalHumanVsAISession(
       throw new Error("It is not the human player's bidding turn");
     }
 
+    const exposedCardSuit = round.deal.exposedCardId ? getCardById(round.deal.exposedCardId).suit : null;
+    const legalOptions = legalBiddingActionOptions(
+      round.bidding,
+      round.dealerSeat,
+      exposedCardSuit,
+      round.deal.hands,
+    );
+
+    const isLegal = legalOptions.some((opt) => {
+      if (opt.type !== type) return false;
+      if (type === "BUY_HOKUM") {
+        return opt.suit === suit;
+      }
+      return true;
+    });
+
+    if (!isLegal) {
+      throw new Error(`Illegal bidding action: ${type}${suit ? ` (${suit})` : ""}`);
+    }
+
+    const actionId = `human:${match.roundNumber}:${round.bidding.turnNumber}:${type}${suit ? `-${suit}` : ""}`;
     const action: BiddingAction = type === "BUY_HOKUM"
       ? {
           type,
-          actionId: `human:${match.roundNumber}:${round.bidding.turnNumber}:${type}`,
+          actionId,
           suit: suit ?? "CLUBS",
         }
       : {
           type,
-          actionId: `human:${match.roundNumber}:${round.bidding.turnNumber}:${type}`,
+          actionId,
         };
-
-    const legal = legalBiddingActions(
-      round.bidding,
-      round.dealerSeat,
-      round.deal.exposedCardId ? getCardById(round.deal.exposedCardId).suit : null,
-      round.deal.hands,
-    );
-
-    if (!legal.includes(type)) {
-      throw new Error(`Illegal bidding action: ${type}`);
-    }
 
     commitBidding(playerId, action);
     runAI();

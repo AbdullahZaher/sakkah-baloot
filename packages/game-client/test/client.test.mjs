@@ -152,6 +152,22 @@ test("local human can declare a legal project during trick one", () => {
   });
 
   let snapshot = session.getSnapshot();
+  let guard = 0;
+  while (isBiddingActive(snapshot) && guard++ < 32) {
+    assert.equal(snapshot.humanTurn, true);
+    if (snapshot.legalActions.includes("BUY_SUN")) {
+      snapshot = session.dispatchBiddingAction("BUY_SUN");
+    } else if (snapshot.legalActions.includes("BUY_HOKUM")) {
+      const exposedSuit = snapshot.exposedCard?.suit;
+      const suit = SUITS.find((candidate) => candidate !== exposedSuit);
+      assert.ok(suit);
+      snapshot = session.dispatchBiddingAction("BUY_HOKUM", suit);
+    } else {
+      assert.ok(snapshot.legalActions.includes("PASS"));
+      snapshot = session.dispatchBiddingAction("PASS");
+    }
+  }
+
   if (snapshot.game?.phase !== "PLAYING" || snapshot.actingSeat !== "SOUTH") {
     assert.fail("Deterministic setup did not reach the human playing turn");
   }

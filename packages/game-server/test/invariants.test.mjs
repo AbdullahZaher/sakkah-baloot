@@ -26,8 +26,9 @@ test("invariants: stateVersion is strictly monotonic and advances once per accep
 
   // Play full round with AI
   while (
-    host.getMatchState().round.phase === "BIDDING" ||
-    host.getMatchState().round.phase === "PLAYING"
+    (host.getMatchState().round?.phase === "BIDDING" &&
+      host.getMatchState().round.bidding.phase !== "CANCELLED") ||
+    host.getMatchState().round?.phase === "PLAYING"
   ) {
     const round = host.getMatchState().round;
     const activePid =

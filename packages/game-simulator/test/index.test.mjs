@@ -74,6 +74,28 @@ test("full-match simulator reaches a stable bounded result", () => {
   assert.ok(result.deterministicDigest.length > 0);
 });
 
+test("Phase 20-A bidding policy is deterministic across all difficulties", () => {
+  for (const difficulty of ["EASY", "NORMAL", "HARD"]) {
+    const a = simulateMatchBatch({
+      seed: `phase20a-bidding-${difficulty}`,
+      games: 20,
+      maxRoundsPerGame: 40,
+      biddingDifficulty: difficulty,
+    });
+    const b = simulateMatchBatch({
+      seed: `phase20a-bidding-${difficulty}`,
+      games: 20,
+      maxRoundsPerGame: 40,
+      biddingDifficulty: difficulty,
+    });
+
+    assert.deepEqual(a, b);
+    assert.equal(a.games, 20);
+    assert.equal(a.illegalActions, 0);
+    assert.equal(a.finishedMatches + a.maxRoundTerminations, 20);
+  }
+});
+
 test("full-match batch is deterministic", () => {
   const config = {
     seed: "full-batch",

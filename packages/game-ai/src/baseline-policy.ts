@@ -3,6 +3,7 @@ import { cardRawValue, cardStrength, compareCards, isTrump } from "@sakkah-baloo
 import type { AIAction, AIRoundObservation } from "./index.js";
 import { createCardMemory } from "./card-memory.js";
 import { extractStrategyFeatures } from "./strategy-features.js";
+import { rankBiddingContracts } from "./bidding/contract-ranking.js";
 
 export type AIDifficulty = "EASY" | "NORMAL" | "HARD";
 
@@ -28,7 +29,7 @@ export function chooseBaselineAction(
   config: BaselinePolicyConfig = {},
 ): BaselineDecision {
   if (observation.phase === "BIDDING" && observation.bidding) {
-    return chooseBid(observation);
+    return chooseBid(observation, config);
   }
   if (observation.phase === "PLAYING" && observation.playing) {
     return chooseCard(observation, config);
@@ -36,83 +37,58 @@ export function chooseBaselineAction(
   throw new Error("No AI action is available in the current observation phase");
 }
 
-function chooseBid(observation: AIRoundObservation): BaselineDecision {
+function chooseBid(
+  observation: AIRoundObservation,
+  config: BaselinePolicyConfig = {},
+): BaselineDecision {
   const bidding = observation.bidding!;
   if (bidding.legalActions.length === 0) {
     throw new Error("Authoritative bidding action space is empty");
   }
 
-  const sunValue = bidding.ownHand.reduce(
-    (sum, card) => sum + cardRawValue(card, "SUN", null),
-    0,
-  );
+  const ranking = rankBiddingContracts(bidding, {
+    difficulty: config.difficulty ?? "NORMAL",
+  });
 
-  const ranked = bidding.legalActions.map((type) => {
-    let score = 0;
-    const reasons: string[] = [];
+  let selectedType: BiddingAction["type"] = "PASS";
+  let selectedSuit: Card["suit"] | null = null;
+  const reasonCodes = [...ranking.reasonCodes];
 
-    switch (type) {
-      case "PASS":
-        score = 0;
-        reasons.push("PASS_BASELINE");
-        break;
-      case "DECLARE_KASHO":
-        score = -1;
-        reasons.push("KASHO_REQUIRES_SEPARATE_RISK_POLICY");
-        break;
-      case "BUY_HOKUM_EXPOSED": {
-        const suit = bidding.exposedCard?.suit;
-        const trumpCount = suit
-          ? bidding.ownHand.filter((card) => card.suit === suit).length
-          : 0;
-        score = trumpCount * 14 + sunValue * 0.35;
-        if (trumpCount >= 3) reasons.push("TRUMP_LENGTH");
-        if (bidding.ownHand.some((card) => card.rank === "J" && card.suit === suit)) reasons.push("TRUMP_J");
-        if (bidding.ownHand.some((card) => card.rank === "9" && card.suit === suit)) reasons.push("TRUMP_9");
-        break;
-      }
-      case "BUY_HOKUM": {
-        const suit = bidding.exposedCard?.suit;
-        const trumpCount = suit
-          ? bidding.ownHand.filter((card) => card.suit === suit).length
-          : 0;
-        score = trumpCount * 12 + sunValue * 0.25;
-        if (trumpCount >= 3) reasons.push("TRUMP_LENGTH");
-        break;
-      }
-      case "BUY_SUN":
-        score = sunValue;
-        if (sunValue >= 40) reasons.push("SUN_CONTROL");
-        if (bidding.ownHand.filter((card) => card.rank === "A").length >= 2) reasons.push("ACE_CONTROL");
-        break;
-      case "BUY_ASHKAL":
-        score = sunValue * 0.85;
-        reasons.push("ASHKAL_VALUE");
-        break;
-    }
+  if (!ranking.shouldPass && ranking.selected) {
+    selectedType = ranking.selected.action;
+    selectedSuit = ranking.selected.action === "BUY_HOKUM" ? ranking.selected.suit : null;
+    reasonCodes.push(...ranking.selected.reasonCodes);
+  } else {
+    reasonCodes.push("PASS_POLICY");
+  }
 
-    const action: BiddingAction = {
-      type,
-      actionId: `ai-baseline:${observation.roundId}:${observation.playerId}:${type}`,
-      ...(type === "BUY_HOKUM" && bidding.exposedCard
-        ? { suit: bidding.exposedCard.suit }
-        : {}),
+  const turn = bidding.bidding.turnNumber ?? observation.stateVersion;
+
+  const action: BiddingAction = {
+    type: selectedType,
+    actionId: `ai-bidding:${observation.roundId}:t${turn}:${observation.playerId}:${selectedType}`,
+    ...(selectedType === "BUY_HOKUM" && selectedSuit ? { suit: selectedSuit } : {}),
+  } as BiddingAction;
+
+  const candidates = ranking.candidates.map((candidate) => {
+    const candidateAction: BiddingAction = {
+      type: candidate.action,
+      actionId: `ai-bidding:${observation.roundId}:t${turn}:${observation.playerId}:${candidate.action}`,
+      ...(candidate.action === "BUY_HOKUM" ? { suit: candidate.suit } : {}),
     } as BiddingAction;
 
     return {
-      action: { type: "BID", action } as AIAction,
-      heuristicScore: score,
-      reasons,
+      action: { type: "BID", action: candidateAction } as AIAction,
+      heuristicScore: candidate.score,
     };
   });
 
-  const selected = [...ranked].sort(compareCandidate)[0]!;
   return {
-    action: selected.action,
+    action: { type: "BID", action } as AIAction,
     trace: {
-      selectedAction: selected.action,
-      candidates: ranked.map(({ action, heuristicScore }) => ({ action, heuristicScore })),
-      reasonCodes: selected.reasons,
+      selectedAction: { type: "BID", action } as AIAction,
+      candidates,
+      reasonCodes,
     },
   };
 }
