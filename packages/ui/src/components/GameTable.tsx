@@ -1,4 +1,5 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import React from "react";
+import { StyleSheet, Text, View } from "react-native";
 import {
   teamOfSeat,
   type BalootDeclaration,
@@ -19,9 +20,13 @@ import {
   type Suit,
   type TeamId,
 } from "@sakkah-baloot/game-engine";
-import { BiddingPanel } from "./BiddingPanel";
-
-type BiddingActionType = BiddingAction["type"];
+import { BiddingPanel, type BiddingActionType } from "./BiddingPanel";
+import { CardButton } from "./CardButton";
+import { CardView, isRedSuit, suitArabic, suitSymbol } from "./CardView";
+import { ProjectPanel, projectLabel } from "./ProjectPanel";
+import { RoundResult } from "./RoundResult";
+import { SeatView, seatArabicName } from "./SeatView";
+import { TrickView } from "./TrickView";
 
 export interface GameTableProps {
   readonly dealerSeat: Seat;
@@ -97,11 +102,13 @@ export function GameTable({
 
   const playerIsActing = !isFrozen && !isRoundFinished && activeSeat === playerSeat;
   const actions = playerIsActing ? legalActions : [];
-  const effectiveBiddingOptions: readonly BiddingActionOption[] = playerIsActing && !game
-    ? (legalOptions && legalOptions.length > 0
+  const effectiveBiddingOptions: readonly BiddingActionOption[] =
+    playerIsActing && !game
+      ? legalOptions && legalOptions.length > 0
         ? legalOptions
-        : actions.map((type) => ({ type, label: type } as BiddingActionOption)))
-    : [];
+        : actions.map((type) => ({ type, label: type } as BiddingActionOption))
+      : [];
+
   const trickCards = game?.currentTrick ?? [];
   const isRoundComplete = roundScore !== null && !isFrozen;
   const lastCompletedTrick: CompletedTrick | null =
@@ -118,7 +125,7 @@ export function GameTable({
   const effectiveLegalCardIds = isFrozen ? [] : (playerIsActing ? legalCardIds : []);
 
   return (
-    <View style={styles.screen}>
+    <View style={styles.screen} testID="game-table">
       <View style={styles.table}>
         {/* Decorative inner table felt border */}
         <View style={styles.tableInnerRing} pointerEvents="none" />
@@ -139,7 +146,11 @@ export function GameTable({
               {purchaserSeat ? (
                 <View style={styles.purchaserBadge}>
                   <Text style={styles.purchaserText}>
-                    المشتري: <Text style={styles.purchaserSeatHighlight}>{seatArabicName(purchaserSeat)}</Text> ({teamLabel(teamOfSeat(purchaserSeat))})
+                    المشتري:{" "}
+                    <Text style={styles.purchaserSeatHighlight}>
+                      {seatArabicName(purchaserSeat)}
+                    </Text>{" "}
+                    ({teamLabel(teamOfSeat(purchaserSeat))})
                   </Text>
                 </View>
               ) : null}
@@ -159,9 +170,12 @@ export function GameTable({
           ) : null}
         </View>
 
+        {/* Action Feedback Banner */}
         {actionFeedback ? (
           <View style={styles.actionFeedback} pointerEvents="none">
-            <Text style={styles.actionFeedbackText}>{formatActionFeedback(actionFeedback)}</Text>
+            <Text style={styles.actionFeedbackText}>
+              {formatActionFeedback(actionFeedback)}
+            </Text>
           </View>
         ) : null}
 
@@ -172,6 +186,7 @@ export function GameTable({
           team={teamOfSeat("NORTH") === "NORTH_SOUTH" ? "LANA" : "LAHUM"}
           active={!isFrozen && !isRoundFinished && activeSeat === "NORTH"}
           isDealer={dealerSeat === "NORTH"}
+          isHuman={false}
           cardCount={cardCountForSeat(game, "NORTH")}
           style={styles.north}
         />
@@ -183,6 +198,7 @@ export function GameTable({
           team={teamOfSeat("WEST") === "NORTH_SOUTH" ? "LANA" : "LAHUM"}
           active={!isFrozen && !isRoundFinished && activeSeat === "WEST"}
           isDealer={dealerSeat === "WEST"}
+          isHuman={false}
           cardCount={cardCountForSeat(game, "WEST")}
           style={styles.west}
         />
@@ -194,6 +210,7 @@ export function GameTable({
           team={teamOfSeat("EAST") === "NORTH_SOUTH" ? "LANA" : "LAHUM"}
           active={!isFrozen && !isRoundFinished && activeSeat === "EAST"}
           isDealer={dealerSeat === "EAST"}
+          isHuman={false}
           cardCount={cardCountForSeat(game, "EAST")}
           style={styles.east}
         />
@@ -327,6 +344,29 @@ export function GameTable({
   );
 }
 
+function cardCountForSeat(game: GameState | null, seat: Seat): number | undefined {
+  if (!game) return undefined;
+  const player = Object.entries(game.players).find(([, playerSeat]) => playerSeat === seat)?.[0];
+  return player ? (game.hands[player]?.length ?? 0) : undefined;
+}
+
+function seatRoleLabel(seat: Seat, playerSeat: Seat): string {
+  if (seat === playerSeat) return "أنت";
+  if (teamOfSeat(seat) === teamOfSeat(playerSeat)) return "الشريك";
+  return "خصم";
+}
+
+function teamLabel(team: TeamId): string {
+  return team === "NORTH_SOUTH" ? "لنا" : "لهم";
+}
+
+function formatPhase(phase: string): string {
+  if (phase === "FIRST_ROUND") return "المزايدة: الدورة الأولى";
+  if (phase === "SECOND_ROUND") return "المزايدة: الدورة الثانية";
+  if (phase === "CONTRACT_SELECTED") return "تم اختيار اللعب";
+  return phase;
+}
+
 function formatActionFeedback(value: string): string {
   return value
     .replace("NORTH", "الشمال")
@@ -343,503 +383,6 @@ function formatActionFeedback(value: string): string {
     .replace("DIAMONDS", "ديمن")
     .replace("HEARTS", "هارت")
     .replace("SPADES", "سبيد");
-}
-
-function BidHistory({
-  history,
-}: {
-  history: readonly {
-    readonly actionId: string;
-    readonly turnNumber: number;
-    readonly seat: Seat;
-    readonly phase: "FIRST_ROUND" | "SECOND_ROUND";
-    readonly action: BiddingActionType;
-    readonly stateVersion: number;
-  }[];
-}) {
-  if (history.length === 0) return null;
-  return (
-    <View style={styles.bidHistory}>
-      <Text style={styles.bidHistoryTitle}>سجل المزايدة</Text>
-      <View style={styles.bidHistoryRows}>
-        {history.slice(-6).map((item) => (
-          <View key={item.actionId} style={styles.bidHistoryRow}>
-            <Text style={styles.bidHistorySeat}>{seatArabicName(item.seat)}</Text>
-            <Text style={styles.bidHistoryAction}>{biddingActionArabic(item.action)}</Text>
-          </View>
-        ))}
-      </View>
-    </View>
-  );
-}
-
-function biddingActionArabic(action: BiddingActionType): string {
-  switch (action) {
-    case "PASS": return "بس";
-    case "BUY_SUN": return "صن";
-    case "BUY_HOKUM_EXPOSED": return "حكم المكشوف";
-    case "BUY_HOKUM": return "حكم";
-    case "BUY_ASHKAL": return "أشكال";
-    case "DECLARE_KASHO": return "كاشو";
-  }
-}
-
-function TrickView({
-  plays,
-  activeSeat,
-  lastCompletedTrick,
-  frozenTrick,
-}: {
-  plays: readonly GameState["currentTrick"][number][];
-  activeSeat: Seat;
-  lastCompletedTrick: CompletedTrick | null;
-  frozenTrick: CompletedTrick | null;
-}) {
-  const seats: readonly Seat[] = ["NORTH", "EAST", "SOUTH", "WEST"] as const;
-  const isFrozen = frozenTrick !== null;
-  const currentPlays = isFrozen ? frozenTrick.plays : plays;
-  const winnerSeat = isFrozen ? frozenTrick.winnerSeat : null;
-  const trickNum = isFrozen
-    ? frozenTrick.trickNumber
-    : (lastCompletedTrick ? lastCompletedTrick.trickNumber : null);
-
-  return (
-    <View style={styles.trickContainer}>
-      {/* Completed trick winner banner during 2-second hold */}
-      {isFrozen && winnerSeat ? (
-        <View style={styles.frozenWinnerBanner}>
-          <Text style={styles.frozenWinnerText}>
-            🏆 الأكلة {trickNum} — فاز بها: <Text style={styles.frozenWinnerHighlight}>{seatArabicName(winnerSeat)}</Text> ({teamLabel(teamOfSeat(winnerSeat))})
-          </Text>
-        </View>
-      ) : lastCompletedTrick && plays.length === 0 ? (
-        <View style={styles.lastWinnerBadge}>
-          <Text style={styles.lastWinnerText}>
-            الأكلة {lastCompletedTrick.trickNumber} فاز بها: <Text style={styles.lastWinnerHighlight}>{seatArabicName(lastCompletedTrick.winnerSeat)}</Text> ({teamLabel(teamOfSeat(lastCompletedTrick.winnerSeat))})
-          </Text>
-        </View>
-      ) : null}
-
-      {/* 4-Compass Trick Arena */}
-      <View style={styles.trickArena}>
-        {seats.map((seat) => {
-          const play = currentPlays.find((p) => p.seat === seat);
-          const isSeatActive = !isFrozen && activeSeat === seat && !play;
-          const isWinnerCard = isFrozen && winnerSeat === seat;
-          const slotStyle = getTrickSlotStyle(seat);
-          const isLana = teamOfSeat(seat) === "NORTH_SOUTH";
-
-          if (play) {
-            return (
-              <View key={seat} style={[styles.trickCardSlot, slotStyle]}>
-                <View
-                  style={[
-                    styles.trickSeatTag,
-                    isLana ? styles.seatTagLana : styles.seatTagLahum,
-                    isWinnerCard && styles.seatTagWinner,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.trickSeatTagText,
-                      isWinnerCard && styles.trickSeatTagTextWinner,
-                    ]}
-                  >
-                    {isWinnerCard ? `👑 ${seatArabicName(seat)}` : seatArabicName(seat)}
-                  </Text>
-                </View>
-                <CardView
-                  card={play.card}
-                  size="medium"
-                  highlight={isWinnerCard}
-                  winnerGlow={isWinnerCard}
-                />
-              </View>
-            );
-          }
-
-          return (
-            <View key={seat} style={[styles.trickEmptySlot, slotStyle, isSeatActive && styles.trickActiveEmptySlot]}>
-              <Text style={[styles.trickEmptySlotText, isSeatActive && styles.trickActiveEmptyText]}>
-                {isSeatActive ? "يلعب الآن" : seatArabicName(seat)}
-              </Text>
-            </View>
-          );
-        })}
-      </View>
-    </View>
-  );
-}
-
-function getTrickSlotStyle(seat: Seat) {
-  switch (seat) {
-    case "NORTH": return styles.trickNorth;
-    case "SOUTH": return styles.trickSouth;
-    case "EAST": return styles.trickEast;
-    case "WEST": return styles.trickWest;
-  }
-}
-
-function CardButton({
-  card,
-  enabled,
-  index,
-  total,
-  onPress,
-}: {
-  card: Card;
-  enabled: boolean;
-  index: number;
-  total: number;
-  onPress?: ((cardId: CardId) => void) | undefined;
-}) {
-  const offset = index - (total - 1) / 2;
-  const rotation = `${offset * 2.2}deg`;
-  const translateY = enabled ? -10 : 0;
-  const transform = [{ rotate: rotation }, { translateY }];
-
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={`ورقة ${card.rank} ${suitArabic(card.suit)}`}
-      accessibilityHint={enabled ? "اضغط للعب هذه الورقة" : "هذه الورقة غير قانونية في الدور الحالي"}
-      accessibilityState={{ disabled: !enabled }}
-      disabled={!enabled}
-      onPress={() => onPress?.(card.id)}
-      style={({ pressed }) => [
-        styles.cardButton,
-        { transform: [{ rotate: rotation }, { translateY: pressed && enabled ? -16 : translateY }] },
-        enabled ? styles.cardEnabled : styles.cardDisabled,
-        pressed && enabled ? styles.cardPressed : null,
-      ]}
-    >
-      <CardView card={card} highlight={enabled} />
-    </Pressable>
-  );
-}
-
-function SeatView({
-  label,
-  seatRole,
-  team,
-  active,
-  isDealer,
-  cardCount,
-  style,
-}: {
-  label: Seat;
-  seatRole: string;
-  team: "LANA" | "LAHUM";
-  active: boolean;
-  isDealer: boolean;
-  cardCount?: number | undefined;
-  style?: object;
-}) {
-  return (
-    <View style={[styles.seatPod, style]}>
-      <View
-        style={[
-          styles.avatarWrap,
-          team === "LANA" ? styles.avatarLana : styles.avatarLahum,
-          active && styles.avatarActive,
-        ]}
-      >
-        <Text style={[styles.avatarInitial, team === "LANA" ? styles.avatarInitialLana : styles.avatarInitialLahum]}>
-          {seatInitial(label)}
-        </Text>
-        {isDealer ? (
-          <View style={styles.dealerChip}>
-            <Text style={styles.dealerChipText}>D</Text>
-          </View>
-        ) : null}
-      </View>
-      <View style={[styles.seatBadge, active && styles.seatBadgeActive]}>
-        <View style={styles.seatHeaderRow}>
-          <Text style={[styles.seatLabel, active && styles.seatLabelActive]}>{seatArabicName(label)}</Text>
-          {active ? (
-            <View style={styles.activeTurnPill}>
-              <Text style={styles.activeTurnPillText}>دوره</Text>
-            </View>
-          ) : null}
-        </View>
-        <View style={styles.seatMetaRow}>
-          <Text style={styles.seatSub}>{seatRole}</Text>
-          {cardCount !== undefined ? <Text style={styles.cardCount}>🂠 {cardCount}</Text> : null}
-        </View>
-      </View>
-    </View>
-  );
-}
-
-function cardCountForSeat(game: GameState | null, seat: Seat): number | undefined {
-  if (!game) return undefined;
-  const player = Object.entries(game.players).find(([, playerSeat]) => playerSeat === seat)?.[0];
-  return player ? (game.hands[player]?.length ?? 0) : undefined;
-}
-
-function projectLabel(type: ProjectCandidate["type"]): string {
-  switch (type) {
-    case "SERA": return "سِرَا";
-    case "FIFTY": return "خمسين";
-    case "HUNDRED": return "مية";
-    case "FOUR_HUNDRED": return "أربعمية";
-  }
-}
-
-function formatProjectCards(cards: readonly CardId[]): string {
-  return cards
-    .map((id) => {
-      const [suit, rank] = id.split("-");
-      return suit && rank ? `${rank}${suitSymbol(suit as Suit)}` : id;
-    })
-    .join(" ");
-}
-
-function ProjectPanel({
-  candidates,
-  declared,
-  onProject,
-}: {
-  candidates: readonly ProjectCandidate[];
-  declared: readonly ProjectDeclaration[];
-  onProject?: ((projectId: string) => void) | undefined;
-}) {
-  const declaredIds = new Set(declared.map((item) => item.candidate.id));
-  const available = candidates.filter((candidate) => !declaredIds.has(candidate.id));
-  if (available.length === 0) return null;
-
-  return (
-    <View style={styles.projectPanel}>
-      <View style={styles.projectHeaderRow}>
-        <Text style={styles.projectTitle}>إعلان المشاريع المتاحة</Text>
-      </View>
-      <View style={styles.projectChoices}>
-        {available.map((candidate) => (
-          <Pressable
-            key={candidate.id}
-            accessibilityRole="button"
-            onPress={() => onProject?.(candidate.id)}
-            disabled={!onProject}
-            style={({ pressed }) => [styles.projectChoice, pressed && styles.projectChoicePressed]}
-          >
-            <Text style={styles.projectChoiceTitle}>
-              {projectLabel(candidate.type)} (+{candidate.qaydValue} قيد)
-            </Text>
-            <Text style={styles.projectChoiceCards}>{formatProjectCards(candidate.cards)}</Text>
-          </Pressable>
-        ))}
-      </View>
-    </View>
-  );
-}
-
-function CardView({
-  card,
-  size = "standard",
-  highlight = false,
-  winnerGlow = false,
-}: {
-  card: Card | null;
-  size?: "standard" | "medium" | "compact";
-  highlight?: boolean;
-  winnerGlow?: boolean;
-}) {
-  if (!card) {
-    return (
-      <View
-        style={[
-          styles.card,
-          size === "medium" && styles.mediumCard,
-          size === "compact" && styles.compactCard,
-          styles.emptyCard,
-        ]}
-      >
-        <Text style={styles.emptyCardText}>—</Text>
-      </View>
-    );
-  }
-
-  const red = isRedSuit(card);
-
-  return (
-    <View
-      style={[
-        styles.card,
-        size === "medium" && styles.mediumCard,
-        size === "compact" && styles.compactCard,
-        highlight && styles.cardHighlight,
-        winnerGlow && styles.cardWinnerGlow,
-      ]}
-    >
-      {/* Top corner rank and suit */}
-      <View style={styles.cardCornerTop}>
-        <Text style={[styles.rank, size === "compact" && styles.compactRank, red && styles.redColor]}>
-          {card.rank}
-        </Text>
-        <Text style={[styles.suitIconSmall, size === "compact" && styles.compactSuitIcon, red && styles.redColor]}>
-          {suitSymbol(card.suit)}
-        </Text>
-      </View>
-
-      {/* Center suit symbol */}
-      <Text
-        style={[
-          styles.centerSuit,
-          size === "medium" && styles.mediumCenterSuit,
-          size === "compact" && styles.compactCenterSuit,
-          red && styles.redColor,
-        ]}
-      >
-        {suitSymbol(card.suit)}
-      </Text>
-
-      {/* Bottom corner rank and suit */}
-      <View style={styles.cardCornerBottom}>
-        <Text style={[styles.rank, size === "compact" && styles.compactRank, red && styles.redColor]}>
-          {card.rank}
-        </Text>
-        <Text style={[styles.suitIconSmall, size === "compact" && styles.compactSuitIcon, red && styles.redColor]}>
-          {suitSymbol(card.suit)}
-        </Text>
-      </View>
-    </View>
-  );
-}
-
-
-
-function suitSymbol(suit: Suit): string {
-  switch (suit) {
-    case "CLUBS": return "♣";
-    case "DIAMONDS": return "♦";
-    case "HEARTS": return "♥";
-    case "SPADES": return "♠";
-  }
-}
-
-function suitArabic(suit: Suit): string {
-  switch (suit) {
-    case "CLUBS": return "شيريا";
-    case "DIAMONDS": return "ديمن";
-    case "HEARTS": return "هاص";
-    case "SPADES": return "سبيد";
-  }
-}
-
-function seatArabicName(seat: Seat): string {
-  switch (seat) {
-    case "NORTH": return "الشمال";
-    case "WEST": return "الغرب";
-    case "EAST": return "الشرق";
-    case "SOUTH": return "الجنوب";
-  }
-}
-
-function seatRoleLabel(seat: Seat, playerSeat: Seat): string {
-  if (seat === playerSeat) return "أنت";
-  if (teamOfSeat(seat) === teamOfSeat(playerSeat)) return "الشريك";
-  return "خصم";
-}
-
-function teamLabel(team: TeamId): string {
-  return team === "NORTH_SOUTH" ? "لنا" : "لهم";
-}
-
-function seatInitial(seat: Seat): string {
-  switch (seat) {
-    case "NORTH": return "ش";
-    case "WEST": return "غ";
-    case "EAST": return "ق";
-    case "SOUTH": return "ج";
-  }
-}
-
-function availableHokumSuits(exposedSuit: Suit | null): readonly Suit[] {
-  return (["CLUBS", "DIAMONDS", "HEARTS", "SPADES"] as const).filter((suit) => suit !== exposedSuit);
-}
-
-function isRedSuit(card: Card): boolean {
-  return card.suit === "DIAMONDS" || card.suit === "HEARTS";
-}
-
-function formatPhase(phase: string): string {
-  if (phase === "FIRST_ROUND") return "المزايدة: الدورة الأولى";
-  if (phase === "SECOND_ROUND") return "المزايدة: الدورة الثانية";
-  if (phase === "CONTRACT_SELECTED") return "تم اختيار اللعب";
-  return phase;
-}
-
-function RoundResult({
-  score,
-  matchScore,
-  matchEnd,
-  onNextRound,
-}: {
-  score: RoundScoreBreakdown;
-  matchScore: MatchScore;
-  matchEnd: MatchEndResult;
-  onNextRound?: (() => void) | undefined;
-}) {
-  const canContinue = matchEnd.status !== "FINISHED";
-  return (
-    <View style={styles.resultCard}>
-      <Text style={styles.resultTitle}>نتيجة الجولة</Text>
-
-      <View style={styles.resultGrid}>
-        <View style={styles.resultCol}>
-          <Text style={[styles.resultColHeader, styles.textLana]}>لنا (شمال + جنوب)</Text>
-          <Text style={styles.resultRow}>الأبناط: {score.cardRaw.NORTH_SOUTH}</Text>
-          <Text style={styles.resultRow}>المشاريع: {score.projectQaid.NORTH_SOUTH}</Text>
-          <Text style={styles.resultRow}>البلوت: {score.balootQaid.NORTH_SOUTH}</Text>
-          <Text style={styles.resultQaidTotal}>القيد: {score.finalQaid.NORTH_SOUTH}</Text>
-        </View>
-
-        <View style={styles.resultDivider} />
-
-        <View style={styles.resultCol}>
-          <Text style={[styles.resultColHeader, styles.textLahum]}>لهم (شرق + غرب)</Text>
-          <Text style={styles.resultRow}>الأبناط: {score.cardRaw.EAST_WEST}</Text>
-          <Text style={styles.resultRow}>المشاريع: {score.projectQaid.EAST_WEST}</Text>
-          <Text style={styles.resultRow}>البلوت: {score.balootQaid.EAST_WEST}</Text>
-          <Text style={styles.resultQaidTotal}>القيد: {score.finalQaid.EAST_WEST}</Text>
-        </View>
-      </View>
-
-      {score.kabootTeamId ? (
-        <View style={styles.badgeKaboot}>
-          <Text style={styles.badgeKabootText}>كابوت لصالح: {score.kabootTeamId === "NORTH_SOUTH" ? "لنا" : "لهم"}</Text>
-        </View>
-      ) : null}
-
-      {score.reverseKaboot ? (
-        <View style={styles.badgeReverse}>
-          <Text style={styles.badgeReverseText}>ريبيرس كابوت</Text>
-        </View>
-      ) : null}
-
-      <View style={styles.matchScoreBar}>
-        <Text style={styles.matchScoreLabel}>الصكّة:</Text>
-        <Text style={styles.matchScoreNumbers}>
-          {matchScore.NORTH_SOUTH} لنا — {matchScore.EAST_WEST} لهم
-        </Text>
-      </View>
-
-      {matchEnd.status === "FINISHED" ? (
-        <Text style={styles.finishedStatus}>
-          انتهت الصكّة · الفائز: {matchEnd.winnerTeamId === "NORTH_SOUTH" ? "لنا" : "لهم"}
-        </Text>
-      ) : null}
-      {matchEnd.status === "EXTRA_DEAL" ? <Text style={styles.extraDealStatus}>تعادل — توزيع إضافي</Text> : null}
-
-      {canContinue ? (
-        <Pressable accessibilityRole="button" onPress={onNextRound} style={styles.nextRoundBtn}>
-          <Text style={styles.nextRoundBtnText}>
-            {matchEnd.status === "EXTRA_DEAL" ? "توزيع إضافي" : "الجولة التالية"}
-          </Text>
-        </Pressable>
-      ) : null}
-    </View>
-  );
 }
 
 const styles = StyleSheet.create({
@@ -873,14 +416,14 @@ const styles = StyleSheet.create({
   topHudBar: {
     position: "absolute",
     top: 6,
-    flexDirection: "row",
+    flexDirection: "row-reverse",
     alignItems: "center",
     justifyContent: "space-between",
     width: "92%",
     zIndex: 25,
   },
   contractHud: {
-    flexDirection: "row",
+    flexDirection: "row-reverse",
     alignItems: "center",
     gap: 6,
     backgroundColor: "rgba(5, 18, 14, 0.85)",
@@ -902,7 +445,7 @@ const styles = StyleSheet.create({
     fontWeight: "900",
   },
   purchaserBadge: {
-    flexDirection: "row",
+    flexDirection: "row-reverse",
     alignItems: "center",
   },
   purchaserText: {
@@ -940,516 +483,9 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "800",
   },
-  center: {
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 10,
-    width: "100%",
-  },
-  balootBanner: {
-    marginBottom: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-    backgroundColor: "rgba(245, 158, 11, 0.22)",
-    borderWidth: 1,
-    borderColor: "#F59E0B",
-    alignItems: "center",
-  },
-  balootBannerText: {
-    color: "#FDE68A",
-    fontSize: 10,
-    fontWeight: "900",
-  },
-  declaredProjectsContainer: {
-    marginBottom: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-    backgroundColor: "rgba(5, 18, 14, 0.8)",
-    borderWidth: 1,
-    borderColor: "rgba(52, 211, 153, 0.3)",
-    alignItems: "center",
-    gap: 2,
-  },
-  declaredProjectsTitle: {
-    color: "#6EE7B7",
-    fontSize: 8,
-    fontWeight: "800",
-  },
-  declaredProjectList: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 4,
-    justifyContent: "center",
-  },
-  declaredChip: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 5,
-    backgroundColor: "rgba(52, 211, 153, 0.15)",
-    borderWidth: 1,
-    borderColor: "rgba(52, 211, 153, 0.3)",
-  },
-  declaredChipText: {
-    color: "#A7F3D0",
-    fontSize: 8,
-    fontWeight: "800",
-  },
-  projectPanel: {
-    marginBottom: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    borderRadius: 10,
-    backgroundColor: "rgba(5, 18, 14, 0.9)",
-    borderWidth: 1,
-    borderColor: "rgba(212, 175, 55, 0.3)",
-    maxWidth: 280,
-    alignItems: "center",
-  },
-  projectHeaderRow: {
-    marginBottom: 4,
-  },
-  projectTitle: {
-    color: "#E8D49B",
-    fontSize: 9,
-    fontWeight: "900",
-  },
-  projectChoices: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    gap: 4,
-  },
-  projectChoice: {
-    minWidth: 80,
-    paddingHorizontal: 6,
-    paddingVertical: 4,
-    borderRadius: 7,
-    backgroundColor: "rgba(30, 41, 59, 0.95)",
-    borderWidth: 1,
-    borderColor: "rgba(165, 180, 252, 0.4)",
-    alignItems: "center",
-  },
-  projectChoicePressed: {
-    opacity: 0.72,
-  },
-  projectChoiceTitle: {
-    color: "#EDE9FE",
-    fontSize: 9,
-    fontWeight: "900",
-  },
-  projectChoiceCards: {
-    color: "#C7D2FE",
-    fontSize: 7,
-    marginTop: 1,
-  },
-  exposedContainer: {
-    alignItems: "center",
-    backgroundColor: "rgba(5, 18, 14, 0.8)",
-    padding: 8,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "rgba(212, 175, 55, 0.4)",
-  },
-  exposedBadge: {
-    marginBottom: 5,
-  },
-  exposedBadgeText: {
-    color: "#F5E6BF",
-    fontSize: 9,
-    fontWeight: "800",
-  },
-  trickContainer: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  frozenWinnerBanner: {
-    marginBottom: 4,
-    backgroundColor: "rgba(245, 158, 11, 0.25)",
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 8,
-    borderWidth: 1.5,
-    borderColor: "#F59E0B",
-  },
-  frozenWinnerText: {
-    color: "#FEF3C7",
-    fontSize: 10,
-    fontWeight: "900",
-  },
-  frozenWinnerHighlight: {
-    color: "#FDE68A",
-    fontWeight: "900",
-  },
-  lastWinnerBadge: {
-    marginBottom: 4,
-    backgroundColor: "rgba(5, 18, 14, 0.85)",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "rgba(212, 175, 55, 0.3)",
-  },
-  lastWinnerText: {
-    color: "#CBD5E1",
-    fontSize: 9,
-    fontWeight: "700",
-  },
-  lastWinnerHighlight: {
-    color: "#FCD34D",
-    fontWeight: "900",
-  },
-  trickArena: {
-    width: 250,
-    height: 165,
-    position: "relative",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  trickCardSlot: {
-    position: "absolute",
-    alignItems: "center",
-    gap: 2,
-    zIndex: 10,
-  },
-  trickEmptySlot: {
-    position: "absolute",
-    width: 46,
-    height: 66,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderStyle: "dashed",
-    borderColor: "rgba(255, 255, 255, 0.15)",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.15)",
-  },
-  trickActiveEmptySlot: {
-    borderColor: "#34D399",
-    borderWidth: 1.5,
-    backgroundColor: "rgba(52, 211, 153, 0.1)",
-  },
-  trickEmptySlotText: {
-    color: "#64748B",
-    fontSize: 8,
-    fontWeight: "700",
-    textAlign: "center",
-  },
-  trickActiveEmptyText: {
-    color: "#34D399",
-    fontWeight: "900",
-  },
-  trickNorth: {
-    top: 2,
-    left: 102,
-  },
-  trickSouth: {
-    bottom: 2,
-    left: 102,
-  },
-  trickEast: {
-    right: 12,
-    top: 48,
-  },
-  trickWest: {
-    left: 12,
-    top: 48,
-  },
-  trickSeatTag: {
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-    borderRadius: 4,
-    borderWidth: 1,
-  },
-  seatTagLana: {
-    backgroundColor: "rgba(16, 185, 129, 0.2)",
-    borderColor: "rgba(52, 211, 153, 0.4)",
-  },
-  seatTagLahum: {
-    backgroundColor: "rgba(239, 68, 68, 0.2)",
-    borderColor: "rgba(248, 113, 113, 0.4)",
-  },
-  seatTagWinner: {
-    backgroundColor: "rgba(245, 158, 11, 0.35)",
-    borderColor: "#F59E0B",
-    borderWidth: 1.5,
-  },
-  trickSeatTagText: {
-    color: "#F8FAFC",
-    fontSize: 7,
-    fontWeight: "800",
-  },
-  trickSeatTagTextWinner: {
-    color: "#FFFBEB",
-    fontWeight: "900",
-  },
-  seatPod: {
-    position: "absolute",
-    alignItems: "center",
-    zIndex: 15,
-  },
-  north: {
-    top: 36,
-  },
-  west: {
-    left: 8,
-    top: "34%",
-  },
-  east: {
-    right: 8,
-    top: "34%",
-  },
-  south: {
-    position: "absolute",
-    bottom: 2,
-    left: 0,
-    right: 0,
-    alignItems: "center",
-    zIndex: 20,
-  },
-  southTurnRibbon: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: "rgba(5, 18, 14, 0.8)",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-    marginBottom: 2,
-  },
-  turnDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  turnDotActive: {
-    backgroundColor: "#34D399",
-  },
-  turnDotInactive: {
-    backgroundColor: "#94A3B8",
-  },
-  turnDotFrozen: {
-    backgroundColor: "#F59E0B",
-  },
-  southTurnText: {
-    color: "#94A3B8",
-    fontSize: 9,
-    fontWeight: "700",
-  },
-  southTurnTextActive: {
-    color: "#6EE7B7",
-    fontWeight: "900",
-  },
-  avatarWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1.5,
-    borderColor: "rgba(255, 255, 255, 0.2)",
-    position: "relative",
-  },
-  avatarLana: {
-    backgroundColor: "#164434",
-  },
-  avatarLahum: {
-    backgroundColor: "#332222",
-  },
-  avatarActive: {
-    borderColor: "#F7E5A9",
-    borderWidth: 2.5,
-  },
-  avatarInitial: {
-    fontSize: 13,
-    fontWeight: "900",
-  },
-  avatarInitialLana: {
-    color: "#34D399",
-  },
-  avatarInitialLahum: {
-    color: "#F87171",
-  },
-  dealerChip: {
-    position: "absolute",
-    bottom: -2,
-    right: -2,
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: "#D97706",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "#0C2E23",
-  },
-  dealerChipText: {
-    color: "#FFF",
-    fontSize: 8,
-    fontWeight: "900",
-  },
-  seatBadge: {
-    backgroundColor: "rgba(5, 18, 14, 0.8)",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-    alignItems: "center",
-    marginTop: 2,
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.1)",
-  },
-  seatBadgeActive: {
-    borderColor: "#D4AF37",
-    backgroundColor: "rgba(10, 35, 26, 0.95)",
-  },
-  seatHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 3,
-  },
-  seatLabel: {
-    color: "#E2E8F0",
-    fontSize: 9,
-    fontWeight: "700",
-  },
-  seatLabelActive: {
-    color: "#FDE68A",
-    fontWeight: "900",
-  },
-  activeTurnPill: {
-    backgroundColor: "#059669",
-    paddingHorizontal: 4,
-    paddingVertical: 1,
-    borderRadius: 4,
-  },
-  activeTurnPillText: {
-    color: "#FFFFFF",
-    fontSize: 7,
-    fontWeight: "900",
-  },
-  seatSub: {
-    color: "#94A3B8",
-    fontSize: 7,
-  },
-  seatMetaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  cardCount: {
-    color: "#CBD5E1",
-    fontSize: 7,
-    fontWeight: "800",
-  },
-  hand: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "flex-end",
-    height: 74,
-    marginTop: 1,
-  },
-  cardButton: {
-    marginHorizontal: 2,
-    borderRadius: 6,
-  },
-  cardEnabled: {
-    opacity: 1,
-  },
-  cardPressed: {
-    opacity: 0.92,
-  },
-  cardDisabled: {
-    opacity: 0.45,
-  },
-  card: {
-    width: 46,
-    height: 66,
-    borderRadius: 6,
-    backgroundColor: "#FFFFFF",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 3,
-    paddingHorizontal: 4,
-    borderWidth: 1,
-    borderColor: "#D1D5DB",
-  },
-  mediumCard: {
-    width: 44,
-    height: 64,
-  },
-  compactCard: {
-    width: 36,
-    height: 52,
-    paddingVertical: 2,
-    paddingHorizontal: 3,
-  },
-  cardHighlight: {
-    borderColor: "#D4AF37",
-    borderWidth: 2,
-  },
-  cardWinnerGlow: {
-    borderColor: "#F59E0B",
-    borderWidth: 2.5,
-    backgroundColor: "#FFFDF5",
-  },
-  emptyCard: {
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
-    borderColor: "rgba(255, 255, 255, 0.15)",
-  },
-  emptyCardText: {
-    color: "#64748B",
-    fontSize: 12,
-  },
-  cardCornerTop: {
-    alignSelf: "flex-start",
-    alignItems: "center",
-    lineHeight: 1,
-  },
-  cardCornerBottom: {
-    alignSelf: "flex-end",
-    alignItems: "center",
-    transform: [{ rotate: "180deg" }],
-    lineHeight: 1,
-  },
-  rank: {
-    color: "#0F172A",
-    fontSize: 12,
-    fontWeight: "900",
-    lineHeight: 12,
-  },
-  compactRank: {
-    fontSize: 10,
-    lineHeight: 10,
-  },
-  suitIconSmall: {
-    color: "#0F172A",
-    fontSize: 9,
-    lineHeight: 9,
-  },
-  compactSuitIcon: {
-    fontSize: 8,
-    lineHeight: 8,
-  },
-  centerSuit: {
-    color: "#0F172A",
-    fontSize: 18,
-    lineHeight: 18,
-  },
-  mediumCenterSuit: {
-    fontSize: 16,
-    lineHeight: 16,
-  },
-  compactCenterSuit: {
-    fontSize: 13,
-    lineHeight: 13,
-  },
-  redColor: {
-    color: "#DC2626",
-  },
   actionFeedback: {
     position: "absolute",
-    top: 44,
+    top: 40,
     alignSelf: "center",
     zIndex: 40,
     paddingHorizontal: 10,
@@ -1464,324 +500,141 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: "900",
   },
-  bidHistory: {
-    marginTop: 4,
-    maxWidth: 250,
+  north: {
+    position: "absolute",
+    top: 36,
     alignSelf: "center",
-    paddingHorizontal: 8,
-    paddingVertical: 5,
+  },
+  south: {
+    position: "absolute",
+    bottom: 8,
+    alignSelf: "center",
+    alignItems: "center",
+    width: "100%",
+  },
+  east: {
+    position: "absolute",
+    right: 8,
+    top: "38%",
+  },
+  west: {
+    position: "absolute",
+    left: 8,
+    top: "38%",
+  },
+  center: {
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 10,
+    width: "100%",
+  },
+  balootBanner: {
+    marginBottom: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 8,
+    backgroundColor: "rgba(212, 175, 55, 0.18)",
+    borderWidth: 1,
+    borderColor: "#D4AF37",
+    alignItems: "center",
+  },
+  balootBannerText: {
+    color: "#FDE68A",
+    fontSize: 10,
+    fontWeight: "900",
+  },
+  declaredProjectsContainer: {
+    marginBottom: 6,
+    alignItems: "center",
+    gap: 3,
+  },
+  declaredProjectsTitle: {
+    color: "#94A3B8",
+    fontSize: 8,
+    fontWeight: "800",
+  },
+  declaredProjectList: {
+    flexDirection: "row-reverse",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: 4,
+  },
+  declaredChip: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 5,
+    backgroundColor: "rgba(56, 189, 248, 0.15)",
+    borderWidth: 1,
+    borderColor: "rgba(56, 189, 248, 0.4)",
+  },
+  declaredChipText: {
+    color: "#BAE6FD",
+    fontSize: 8,
+    fontWeight: "800",
+  },
+  exposedContainer: {
+    alignItems: "center",
+    gap: 6,
+    padding: 8,
+    borderRadius: 12,
+    backgroundColor: "rgba(5, 18, 14, 0.8)",
+    borderWidth: 1,
+    borderColor: "rgba(212, 175, 55, 0.3)",
+  },
+  exposedBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    backgroundColor: "rgba(212, 175, 55, 0.2)",
+  },
+  exposedBadgeText: {
+    color: "#FDE68A",
+    fontSize: 9,
+    fontWeight: "800",
+  },
+  southTurnRibbon: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     borderRadius: 10,
     backgroundColor: "rgba(5, 18, 14, 0.88)",
     borderWidth: 1,
-    borderColor: "rgba(212, 175, 55, 0.25)",
+    borderColor: "rgba(255, 255, 255, 0.1)",
+    marginBottom: 4,
   },
-  bidHistoryTitle: {
-    color: "#F5E6BF",
-    fontSize: 9,
-    fontWeight: "900",
-    textAlign: "center",
-    marginBottom: 3,
+  turnDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
   },
-  bidHistoryRows: {
-    gap: 2,
+  turnDotActive: {
+    backgroundColor: "#10B981",
+    shadowColor: "#10B981",
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
   },
-  bidHistoryRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 5,
+  turnDotInactive: {
+    backgroundColor: "#64748B",
   },
-  bidHistorySeat: {
-    color: "#CBD5E1",
-    fontSize: 8,
-    fontWeight: "800",
-    minWidth: 38,
-    textAlign: "right",
+  turnDotFrozen: {
+    backgroundColor: "#F59E0B",
   },
-  bidHistoryAction: {
-    color: "#FDE68A",
-    fontSize: 8,
-    fontWeight: "900",
-  },
-    biddingPanel: {
-    width: 292,
-    maxWidth: "94%",
-    marginBottom: 3,
-    paddingHorizontal: 9,
-    paddingVertical: 7,
-    borderRadius: 14,
-    backgroundColor: "rgba(5, 18, 14, 0.96)",
-    borderWidth: 1,
-    borderColor: "rgba(212, 175, 55, 0.45)",
-    alignItems: "stretch",
-    gap: 5,
-  },
-  biddingPanelHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  biddingPanelTitle: {
-    color: "#F5E6BF",
-    fontSize: 11,
-    fontWeight: "900",
-  },
-  biddingPanelPhase: {
+  southTurnText: {
     color: "#94A3B8",
-    fontSize: 8,
-    fontWeight: "700",
-    marginTop: 1,
-  },
-  biddingExposedMini: {
-    minWidth: 44,
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 7,
-    backgroundColor: "rgba(212, 175, 55, 0.12)",
-    borderWidth: 1,
-    borderColor: "rgba(212, 175, 55, 0.3)",
-    alignItems: "center",
-  },
-  biddingExposedMiniLabel: {
-    color: "#D8C28A",
-    fontSize: 7,
+    fontSize: 9,
     fontWeight: "700",
   },
-  biddingExposedMiniValue: {
+  southTurnTextActive: {
     color: "#F8FAFC",
-    fontSize: 10,
-    fontWeight: "900",
-    marginTop: 1,
+    fontWeight: "800",
   },
-  biddingPanelHint: {
-    color: "#CBD5E1",
-    fontSize: 8,
-    fontWeight: "700",
-    textAlign: "center",
-  },
-  biddingPrimaryRow: {
+  hand: {
     flexDirection: "row",
-    flexWrap: "wrap",
     justifyContent: "center",
-    gap: 4,
-  },
-  biddingSuitSection: {
-    gap: 3,
-  },
-  biddingSectionLabel: {
-    color: "#D8C28A",
-    fontSize: 8,
-    fontWeight: "800",
-    textAlign: "center",
-  },
-  biddingSuitRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    gap: 4,
-  },
-  biddingPassRow: {
-    alignItems: "center",
-    paddingTop: 1,
-  },
-  biddingRecent: {
-    paddingTop: 4,
-    borderTopWidth: 1,
-    borderTopColor: "rgba(255, 255, 255, 0.08)",
-  },
-  biddingRecentTitle: {
-    color: "#94A3B8",
-    fontSize: 7,
-    fontWeight: "800",
-    textAlign: "center",
-    marginBottom: 2,
-  },
-  biddingRecentRows: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    gap: 3,
-  },
-  biddingRecentRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 2,
-    paddingHorizontal: 4,
-    paddingVertical: 2,
-    borderRadius: 4,
-    backgroundColor: "rgba(255, 255, 255, 0.04)",
-  },
-  biddingRecentSeat: {
-    color: "#CBD5E1",
-    fontSize: 7,
-    fontWeight: "700",
-  },
-  biddingRecentAction: {
-    color: "#FDE68A",
-    fontSize: 7,
-    fontWeight: "900",
-  },
-  actionBtnPressed: {
-    opacity: 0.72,
-    transform: [{ scale: 0.97 }],
-  },
-  actionBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 10,
-    backgroundColor: "#1E293B",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.15)",
-  },
-  actionBtnText: {
-    color: "#FFFFFF",
-    fontSize: 10,
-    fontWeight: "800",
-    textAlign: "center",
-  },
-  actionSun: {
-    backgroundColor: "#B45309",
-    borderColor: "#FCD34D",
-  },
-  actionHokum: {
-    backgroundColor: "#047857",
-    borderColor: "#6EE7B7",
-  },
-  actionAshkal: {
-    backgroundColor: "#4338CA",
-    borderColor: "#A5B4FC",
-  },
-  actionPass: {
-    backgroundColor: "rgba(239, 68, 68, 0.25)",
-    borderColor: "rgba(239, 68, 68, 0.6)",
-  },
-  actionKasho: {
-    backgroundColor: "#6D28D9",
-    borderColor: "#DDD6FE",
-  },
-  actionDefault: {
-    backgroundColor: "#1E293B",
-  },
-  resultCard: {
-    minWidth: 260,
-    maxWidth: 320,
-    padding: 10,
-    borderRadius: 14,
-    backgroundColor: "#071B14",
-    borderWidth: 1.5,
-    borderColor: "#D4AF37",
-    gap: 5,
-  },
-  resultTitle: {
-    color: "#F5E6BF",
-    fontSize: 14,
-    fontWeight: "900",
-    textAlign: "center",
-  },
-  resultGrid: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    backgroundColor: "rgba(0, 0, 0, 0.35)",
-    padding: 6,
-    borderRadius: 8,
-  },
-  resultCol: {
-    flex: 1,
-    gap: 2,
-  },
-  resultColHeader: {
-    fontSize: 10,
-    fontWeight: "800",
-    marginBottom: 1,
-  },
-  textLana: { color: "#34D399" },
-  textLahum: { color: "#F87171" },
-  resultRow: {
-    color: "#CBD5E1",
-    fontSize: 9,
-  },
-  resultQaidTotal: {
-    color: "#F5E6BF",
-    fontSize: 11,
-    fontWeight: "900",
-    marginTop: 2,
-    paddingTop: 1,
-    borderTopWidth: 1,
-    borderTopColor: "rgba(212, 175, 55, 0.3)",
-  },
-  resultDivider: {
-    width: 1,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-    marginHorizontal: 6,
-  },
-  badgeKaboot: {
-    backgroundColor: "rgba(245, 158, 11, 0.2)",
-    paddingVertical: 2,
-    paddingHorizontal: 6,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "#F59E0B",
-    alignItems: "center",
-  },
-  badgeKabootText: {
-    color: "#FDE68A",
-    fontSize: 9,
-    fontWeight: "800",
-  },
-  badgeReverse: {
-    backgroundColor: "rgba(239, 68, 68, 0.2)",
-    paddingVertical: 2,
-    paddingHorizontal: 6,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "#EF4444",
-    alignItems: "center",
-  },
-  badgeReverseText: {
-    color: "#FCA5A5",
-    fontSize: 9,
-    fontWeight: "800",
-  },
-  matchScoreBar: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: "rgba(212, 175, 55, 0.1)",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  matchScoreLabel: {
-    color: "#D8C28A",
-    fontSize: 9,
-    fontWeight: "700",
-  },
-  matchScoreNumbers: {
-    color: "#FFFFFF",
-    fontSize: 10,
-    fontWeight: "800",
-  },
-  finishedStatus: {
-    color: "#34D399",
-    fontSize: 11,
-    fontWeight: "900",
-    textAlign: "center",
-  },
-  extraDealStatus: {
-    color: "#FCD34D",
-    fontSize: 10,
-    fontWeight: "800",
-    textAlign: "center",
-  },
-  nextRoundBtn: {
-    backgroundColor: "#D4AF37",
-    paddingVertical: 6,
-    borderRadius: 10,
-    alignItems: "center",
-  },
-  nextRoundBtnText: {
-    color: "#05130E",
-    fontSize: 11,
-    fontWeight: "900",
+    alignItems: "flex-end",
+    height: 72,
+    paddingHorizontal: 12,
   },
 });
